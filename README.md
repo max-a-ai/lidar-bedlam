@@ -8,7 +8,11 @@ selective-attention fusion model.
 ```bash
 uv sync
 git submodule update --init
-uv run lidar-bedlam
+bash scripts/link_data.sh          # data/ symlinks to the NAS and local RAID
+uv run python -m lidar_bedlam.body.convert_smpl \
+    data/body_models/smpl/SMPL_NEUTRAL.pkl \
+    data/generated/body_models/smpl/SMPL_NEUTRAL.pkl
+uv run pytest
 ```
 
 ## Verify

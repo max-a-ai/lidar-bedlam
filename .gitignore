@@ -20,9 +20,9 @@ build/
 
 # Experiment tracking / data / checkpoints
 wandb/
-data/
-outputs/
-checkpoints/
+/data/
+/outputs/
+/checkpoints/
 *.ckpt
 *.pth
 *.pkl
@@ -31,3 +31,4 @@ checkpoints/
 
 # Third-party body models (licensed, never commit)
 body_models/
+/logs/

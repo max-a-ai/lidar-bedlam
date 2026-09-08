@@ -6,7 +6,16 @@ authors = [
     { name = "max.buettner", email = "max.buettner@hm.edu" }
 ]
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "numpy>=2.0",
+    "torch>=2.9",
+    "smplx>=0.1.28",
+    "pyarrow>=17",
+    "pillow>=10",
+    "openexr>=3.3",
+    "pyyaml>=6",
+    "scipy>=1.18.1",
+]
 
 [project.scripts]
 lidar-bedlam = "lidar_bedlam.app:main"
@@ -22,7 +31,18 @@ packages = ["src/lidar_bedlam"]
 dev = [
     "ruff>=0.8",
     "mypy>=1.11",
+    "pytest>=8",
+    "types-pyyaml",
+    "scipy-stubs>=1.18.1.0",
 ]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
 
 [tool.ruff]
 line-length = 79
@@ -48,6 +68,13 @@ quote-style = "double"
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src"]
+files = ["src", "tests", "scripts"]
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["smplx", "smplx.*", "OpenExr", "OpenEXR", "Imath", "pyarrow", "pyarrow.*", "PIL", "PIL.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

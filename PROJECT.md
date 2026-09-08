@@ -7,7 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
-- 2026-09-08 — Audited BEDLAM v1 on the NAS (complete, 6.54 TB, depth = planar z-depth in cm), decided to skip BEDLAM 2.0, surveyed real datasets, scaffolded the uv repo with five baseline submodules and wrote the plan.
+- 2026-09-08 — Audited BEDLAM v1 (complete, planar z-depth in cm), skipped BEDLAM 2.0, scaffolded the repo with five baseline submodules, pushed to GitHub, and built the verified data pipeline (SLOPER4D, LiDARHuman26M, Waymo, BEDLAM loaders, torch dataset, losses, metrics, 21 tests).
 
 ## Contributions
 
@@ -23,12 +23,12 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Run the official xxh128 validation on the NAS itself for `png`, `depth`, `masks`, `gt` (`scripts/validate_bedlam_on_nas.sh`).
 - [ ] Choose the sequence subset (start with `20221024_*` groups at 6 fps, then scale).
 - [ ] Extract png + depth + masks + gt for the subset from the NAS tars to `/mnt/md0/lidar-bedlam/raw` (stream through `tar`, never copy whole tars).
-- [ ] Implement `bedlam.camera`: parse camera CSV (Unreal cm, yaw/pitch/roll) into OpenCV K, R, t; unit test against the be_seq comments.
+- [ ] Parse the camera CSV extrinsics (Unreal cm, yaw/pitch/roll) into world->camera transforms (needed once SMPL-X bodies are placed in the world).
 - [ ] Implement `bedlam.bodies`: map `be_seq.csv` body rows + start_frame to SMPL-X animation frames; convert SMPL-X to SMPL with `smplx2smpl.pkl`; produce per-person SMPL params in camera frame.
 - [ ] Verify GT alignment: project SMPL joints with K/R/t onto the png and compare with body masks (IoU > 0.9 on a few frames).
 - [ ] Implement `lidar.simulate`: depth (planar z, cm) to camera-frame point cloud; ray-cast a spinning LiDAR pattern (32/64/128/256 beams, configurable vertical FOV, azimuth resolution, range, noise, dropout) from a LiDAR origin at a configurable extrinsic offset to the camera.
-- [ ] Implement occlusion augmentation for point clouds (random box/plane cut-outs, self-occlusion from a shifted origin, partial-body crops) and per-person cropping via body+clothing masks.
-- [ ] Write the sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, cam translation, visibility flags, beam count) and the dataset index.
+- [ ] Implement occlusion augmentation for point clouds (random box/plane cut-outs, self-occlusion from a shifted origin, partial-body crops).
+- [ ] Write the generated sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, box3d, beam count) and a `SampleSource` for it.
 - [ ] Generate the v0 dataset (one group), inspect 20 samples visually, then generate the full subset.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels).
 
@@ -39,12 +39,13 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Selective cross-attention head: joint-group routing masks (hands/ankles/head from image tokens; torso/legs/global orient/betas/translation from LiDAR tokens) with a learnable gate; log gate values.
 - [ ] Losses: SMPL params, 3D joints, 2D reprojection, and an explicit 3D translation loss in the camera frame.
 - [ ] Training script `main.py` with `--wandb-project lidar-bedlam --wandb-name <run>` (entity `erik_hm`), config in `configs/`.
-- [ ] Data loaders: synthetic (C1) + real (Waymo keypoints, SLOPER4D, LiDARHuman26M) with per-source sampling weights.
+- [ ] Weighted multi-source sampler over `HumanPoseDataset` (synthetic vs real weights).
+- [ ] Evaluation script (`lidar_bedlam/evaluation/`) that runs a model over a source and reports MPJPE / PA-MPJPE / PVE / translation error / box mAP.
 - [ ] Smoke train on 1 k samples, then full run on the synthetic set.
 
 ### C3 — Experiments and ablations
 
-- [ ] Evaluation protocol: MPJPE, PA-MPJPE, PVE, and 3D placement error (root translation error, per-distance bins).
+- [ ] Freeze the evaluation protocol (COCO-17 joints for cross-dataset comparison, distance bins, IoU thresholds) in `docs/data_pipeline.md`.
 - [ ] Baseline runners for CameraHMR, TokenHMR, LiDAR-HMR, SAM 3D Body (MHR to joints), LIF-Net on the real validation sets.
 - [ ] Main table: synthetic-only, real-only, synthetic + real (weighted), on SLOPER4D and LiDARHuman26M; Waymo keypoint eval.
 - [ ] Ablation after hand-in: beam count 32/64/128/256, occlusion augmentation on/off, LiDAR extrinsic shift augmentation, routing masks off, image-only vs LiDAR-only.
@@ -63,4 +64,8 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-08 — BEDLAM 2.0 size research and decision to skip.
 - [x] 2026-09-08 — Real dataset survey (`docs/datasets.md`).
 - [x] 2026-09-08 — Depth semantics verified: planar z-depth, cm, sky 1e8 (`docs/bedlam_audit.md`).
-- [x] 2026-09-08 — Repo scaffold (uv, hatchling, ruff, mypy strict, vault) and five baseline submodules.
+- [x] 2026-09-08 — Repo scaffold (uv, hatchling, ruff, mypy strict, vault) and five baseline submodules; pushed to github.com/max-a-ai/lidar-bedlam.
+- [x] 2026-09-08 — `data/` symlinks (`scripts/link_data.sh`), chumpy-free SMPL conversion, SMPL frame-change verified.
+- [x] 2026-09-08 — Loaders for SLOPER4D, LiDARHuman26M, Waymo (pose_complete_4) and BEDLAM raw frames, sharing one schema; reprojection checks pass.
+- [x] 2026-09-08 — `HumanPoseDataset` (torch), `FusionLoss`, pose metrics (MPJPE, PA-MPJPE, PVE) and 3D box AP/mAP + translation error; 21 unit tests.
+- [x] 2026-09-08 — `scripts/extract_bedlam.py` streaming extraction; first group extracting at 6 fps.

@@ -6,15 +6,17 @@ Generated: 2026-09-08
 
 ## Status Snapshot
 
-Scaffold in place, five baseline submodules cloned, dataset audit done. All
-three quality gates pass:
+Data pipeline done and verified on real samples (see
+`docs/data_pipeline.md`): loaders for SLOPER4D, LiDARHuman26M, Waymo and
+BEDLAM raw frames, a torch dataset, losses, metrics and 21 tests. All
+quality gates pass:
 
 - `uv run ruff check src/`
 - `uv run ruff format --check src/`
 - `uv run mypy src/` (strict)
 
-Next up: BEDLAM body-data download, then `bedlam.camera` / `bedlam.bodies`
-parsers (see `PROJECT.md`).
+Next up: BEDLAM body-data download (user), then SMPL-X body placement and
+the LiDAR simulator (see `PROJECT.md`).
 
 ---
 
@@ -46,6 +48,9 @@ trainings must run within two weeks of 2026-09-08.
 | Experiment tracking | wandb entity `erik_hm`, project `lidar-bedlam` | standing rule, auth via `~/.netrc` |
 | Baselines | git submodules in `third_party/` | CameraHMR, TokenHMR, LiDAR-HMR, sam-3d-body, lif (own LIF-Net) |
 | Progress log / todos | `PROJECT.md` | user-requested format; vault files point to it |
+| Runtime deps | numpy, torch (cu126 index), smplx, scipy, pyarrow, pillow, openexr, pyyaml | torch for models; smplx for SMPL; scipy rotations; pyarrow for Waymo parquet; openexr for BEDLAM depth |
+| src layout | `src/lidar_bedlam/` | tests import the installed package, not the checkout; the hyphenated repo name cannot be a Python package anyway |
+| Sample convention | OpenCV camera frame, metres, up = -y | see `docs/data_pipeline.md` |
 
 ---
 
@@ -58,16 +63,24 @@ lidar-bedlam/
 │   ├── progress.md              # Gantt; log lives in PROJECT.md
 │   └── todo.md                  # pointer; todos live in PROJECT.md
 ├── configs/                     # training / simulation configs (yaml)
+├── data/                        # git-ignored symlinks, made by scripts/link_data.sh
 ├── docs/
 │   ├── bedlam_audit.md          # what is on the NAS, depth semantics
+│   ├── data_pipeline.md         # schema, conventions, losses, metrics
 │   ├── datasets.md              # real + synthetic dataset survey
 │   └── research_notes.md        # sourced web research (BEDLAM2, baselines)
 ├── scripts/
+│   ├── link_data.sh             # creates data/ symlinks
+│   ├── extract_bedlam.py        # streams frames out of the NAS tars
 │   └── validate_bedlam_on_nas.sh
 ├── src/lidar_bedlam/
-│   ├── __init__.py
-│   ├── __main__.py
-│   └── app.py
+│   ├── io.py                    # PCD / PLY / EXR / image readers
+│   ├── geometry/                # camera, rotations, crop, boxes
+│   ├── body/                    # SMPL wrapper, legacy pkl conversion
+│   ├── data/                    # schema, base pipeline, loaders, torch dataset
+│   ├── losses/                  # FusionLoss
+│   └── metrics/                 # pose + detection metrics
+├── tests/                       # pytest (uv run pytest)
 ├── third_party/                 # submodules: CameraHMR TokenHMR LiDAR-HMR sam-3d-body lif
 ├── PROJECT.md                   # daily log + structured todos (source of truth)
 ├── instructions.md              # agent coding standards
@@ -101,6 +114,11 @@ files" or open the canvas by path.
   SAM 3D Body in the HF cache, LiDAR-HMR only via Baidu pan (local checkout
   `~/Documents/LiDAR-HMR` has `models/graphormer/data`).
 - The NAS is sshfs: read archives with streaming `tar`, never `du` or copy.
+- `data/` is created by `scripts/link_data.sh`; `data/generated` is the
+  local RAID (`/mnt/md0/lidar-bedlam`) holding the converted SMPL model,
+  extracted BEDLAM frames and later the generated dataset.
+- Waymo comes from the `waymo_pose_complete_4` crops made for LIF-Net
+  (3D and 3D_2D subsets, split files at its root), not from the parquet.
 
 ---
 
