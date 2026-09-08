@@ -1,0 +1,15 @@
+[submodule "third_party/TokenHMR"]
+	path = third_party/TokenHMR
+	url = https://github.com/saidwivedi/TokenHMR.git
+[submodule "third_party/LiDAR-HMR"]
+	path = third_party/LiDAR-HMR
+	url = https://github.com/soullessrobot/LiDAR-HMR.git
+[submodule "third_party/sam-3d-body"]
+	path = third_party/sam-3d-body
+	url = https://github.com/facebookresearch/sam-3d-body.git
+[submodule "third_party/lif"]
+	path = third_party/lif
+	url = git@gitlab.lrz.de:iv/publications/lif.git
+[submodule "third_party/CameraHMR"]
+	path = third_party/CameraHMR
+	url = https://github.com/pixelite1201/CameraHMR.git

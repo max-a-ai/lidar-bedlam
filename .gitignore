@@ -1,0 +1,33 @@
+# UV / Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Type checker / lint caches
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Experiment tracking / data / checkpoints
+wandb/
+data/
+outputs/
+checkpoints/
+*.ckpt
+*.pth
+*.pkl
+*.npz
+!src/**/*.npz
+
+# Third-party body models (licensed, never commit)
+body_models/
