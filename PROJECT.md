@@ -7,6 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
+- 2026-09-09 — Located the missing SMPL/SMPL-X labels (BEDLAM project server only, not on Hugging Face), wrote the fetch script, and finished extracting the first BEDLAM group (17,778 person-frames at 6 fps).
 - 2026-09-08 — Audited BEDLAM v1 (complete, planar z-depth in cm), skipped BEDLAM 2.0, scaffolded the repo with five baseline submodules, pushed to GitHub, and built the verified data pipeline (SLOPER4D, LiDARHuman26M, Waymo, BEDLAM loaders, torch dataset, losses, metrics, 21 tests).
 
 ## Contributions
@@ -19,13 +20,11 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ### C1 — Dataset from BEDLAM
 
-- [ ] Download BEDLAM body data (SMPL-X animations + neutral ground truth) from bedlam.is.tue.mpg.de into `/mnt/md0/lidar-bedlam/bedlam_body` (user runs it; not on the NAS).
+- [ ] Download the BEDLAM training labels with `bash scripts/fetch_bedlam_labels.sh` (needs the BEDLAM login; `bedlam-labels-smpl.zip` = SMPL, `all_npz_12_training.zip` = SMPL-X; per-image params already in the camera frame, so no body placement is needed).
+- [ ] Write `data/bedlam.py` label attachment: join the npz records (`imgname`, `center`, `scale`, `pose_cam`, `shape`, `trans_cam`, `cam_int`, `gtkps`) to the extracted frames and person masks; verify by projecting SMPL joints onto the png.
 - [ ] Run the official xxh128 validation on the NAS itself for `png`, `depth`, `masks`, `gt` (`scripts/validate_bedlam_on_nas.sh`).
-- [ ] Choose the sequence subset (start with `20221024_*` groups at 6 fps, then scale).
-- [ ] Extract png + depth + masks + gt for the subset from the NAS tars to `/mnt/md0/lidar-bedlam/raw` (stream through `tar`, never copy whole tars).
-- [ ] Parse the camera CSV extrinsics (Unreal cm, yaw/pitch/roll) into world->camera transforms (needed once SMPL-X bodies are placed in the world).
-- [ ] Implement `bedlam.bodies`: map `be_seq.csv` body rows + start_frame to SMPL-X animation frames; convert SMPL-X to SMPL with `smplx2smpl.pkl`; produce per-person SMPL params in camera frame.
-- [ ] Verify GT alignment: project SMPL joints with K/R/t onto the png and compare with body masks (IoU > 0.9 on a few frames).
+- [ ] Extract the remaining groups at 6 fps with `scripts/extract_bedlam.py` (first group done: 100 sequences, 17,778 person-frames, 9.8 GB).
+- [ ] Match label records to mask person ids (labels are per body, masks are per person index) via projected-joint-in-mask tests.
 - [ ] Implement `lidar.simulate`: depth (planar z, cm) to camera-frame point cloud; ray-cast a spinning LiDAR pattern (32/64/128/256 beams, configurable vertical FOV, azimuth resolution, range, noise, dropout) from a LiDAR origin at a configurable extrinsic offset to the camera.
 - [ ] Implement occlusion augmentation for point clouds (random box/plane cut-outs, self-occlusion from a shifted origin, partial-body crops).
 - [ ] Write the generated sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, box3d, beam count) and a `SampleSource` for it.

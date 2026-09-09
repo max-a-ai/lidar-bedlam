@@ -20,9 +20,20 @@ the NAS itself (see `docs/bedlam_audit.md`).
 | mp4 | 22 GB | 20 GB |
 | gt (camera CSV + `be_seq.csv`) | 21 MB | 100 MB |
 
-Missing on the NAS and needed for SMPL-X labels: the BEDLAM **body data**
-download (SMPL-X animation files / neutral ground-truth motion info), which the
-image `gt` tars only reference by body name (e.g. `rp_henry_posed_001_1084`).
+Missing on the NAS and needed for SMPL labels: the BEDLAM **training labels**.
+They are not on the Hugging Face mirror (which holds exactly the image data the
+NAS has: png, mp4, masks, gt CSV, plus depth in `BEDLAM-depth`). They live on
+the project download server (`download.is.tue.mpg.de`, domain `bedlam`, BEDLAM
+login required):
+
+| File | Content | Used by |
+|---|---|---|
+| `bedlam-labels-smpl.zip` | per-image **SMPL** params in the camera frame (`pose_cam`, `shape`, `trans_cam`, `cam_int`, `cam_ext`, `gtkps`, `center`, `scale`, `imgname`), one npz per sequence group | CameraHMR |
+| `bedlam_labels/all_npz_12_training.zip` | the same in **SMPL-X** | official BEDLAM training code |
+
+`scripts/fetch_bedlam_labels.sh` downloads both into `data/generated/bedlam_labels`.
+The raw SMPL-X animation files (body data) are a separate download on the same
+page and are not needed when the labels are used.
 
 ### BEDLAM 2.0 (not on NAS, decision: skip)
 
