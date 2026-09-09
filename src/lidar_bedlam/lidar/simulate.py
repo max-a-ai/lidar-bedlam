@@ -1,7 +1,7 @@
 """Spinning-LiDAR simulation against a rendered depth map.
 
 The depth map (planar z, metres) of a pinhole camera is the only scene
-geometry we have. Every LiDAR beam is a ray from the sensor origin; we
+geometry we have. Every LiDAR channel is a ray from the sensor origin; we
 march along it, look up the rendered depth at the projected pixel, and
 take the first crossing of the ray with the depth surface. This is exact
 for a sensor at the camera origin and a good approximation for a sensor
@@ -28,35 +28,76 @@ FloatArray = NDArray[np.float64]
 
 @dataclass(frozen=True)
 class LidarSpec:
-    """A spinning LiDAR: ``beams`` elevations over a vertical FOV."""
+    """A spinning LiDAR: ``channels`` elevations over a vertical FOV.
+
+    Azimuth sampling follows the sensor's ``horizontal_steps`` per full
+    revolution (Ouster modes: 512 / 1024 / 2048), so a camera with a
+    horizontal FOV of ``h`` degrees sees ``h / 360 * horizontal_steps``
+    columns of the scan (90 deg at 1024 steps = 256 columns).
+    """
 
     name: str
-    beams: int
+    channels: int
     elevation_min_deg: float
     elevation_max_deg: float
-    azimuth_res_deg: float
+    horizontal_steps: int = 1024
     max_range_m: float = 80.0
     min_range_m: float = 0.5
     range_noise_std_m: float = 0.02
     dropout: float = 0.0
 
     @property
+    def azimuth_res_deg(self) -> float:
+        """Azimuth step in degrees."""
+        return 360.0 / self.horizontal_steps
+
+    @property
     def elevations_deg(self) -> FloatArray:
-        """Beam elevations, top to bottom, evenly spaced."""
+        """Channel elevations, top to bottom, evenly spaced."""
         return np.linspace(
-            self.elevation_max_deg, self.elevation_min_deg, self.beams
+            self.elevation_max_deg, self.elevation_min_deg, self.channels
         )
 
 
-# Presets. Ouster-like sensors share a 45 deg vertical FOV; the beam count
-# sets the angular resolution. "waymo64" mimics the Waymo top LiDAR.
-PRESETS: dict[str, LidarSpec] = {
-    "os32": LidarSpec("os32", 32, -22.5, 22.5, 0.35),
-    "os64": LidarSpec("os64", 64, -22.5, 22.5, 0.35),
-    "os128": LidarSpec("os128", 128, -22.5, 22.5, 0.35),
-    "os256": LidarSpec("os256", 256, -22.5, 22.5, 0.175),
-    "waymo64": LidarSpec("waymo64", 64, -17.6, 2.4, 0.14, 75.0),
+# Ouster families: vertical FOV and range differ, channels are 32/64/128.
+OUSTER_FAMILIES: dict[str, tuple[float, float]] = {
+    "OS0": (45.0, 50.0),  # half vertical FOV (deg), max range (m)
+    "OS1": (22.5, 120.0),
+    "OS2": (11.25, 240.0),
 }
+
+
+def ouster(family: str, channels: int, steps: int = 1024) -> LidarSpec:
+    """Ouster-style spec, e.g. ``ouster("OS1", 64)`` -> ``OS1-64``.
+
+    256 channels do not exist as a product; they are a resolution ablation.
+    """
+    half_fov, max_range = OUSTER_FAMILIES[family]
+    return LidarSpec(
+        f"{family}-{channels}", channels, -half_fov, half_fov, steps, max_range
+    )
+
+
+PRESETS: dict[str, LidarSpec] = {
+    "OS1-32": ouster("OS1", 32),
+    "OS1-64": ouster("OS1", 64),
+    "OS1-128": ouster("OS1", 128),
+    "OS1-256": ouster("OS1", 256),
+    "OS0-128": ouster("OS0", 128),
+    "OS2-128": ouster("OS2", 128),
+    # Waymo top LiDAR: 64 channels, -17.6..2.4 deg, ~2650 columns per rev
+    "waymo64": LidarSpec("waymo64", 64, -17.6, 2.4, 2650, 75.0),
+}
+
+
+@dataclass(frozen=True)
+class AzimuthWindow:
+    """The part of a revolution that falls into a camera image."""
+
+    hfov_deg: float
+    az_min_deg: float
+    az_max_deg: float
+    columns: int  # number of azimuth steps inside the camera HFOV
 
 
 def sensor_pose(
@@ -81,20 +122,31 @@ class LidarScan:
     """Simulated returns in the camera frame."""
 
     points: NDArray[np.float32]  # (N, 3)
-    beam: NDArray[np.int32]  # (N,) beam index, 0 = top
+    channel: NDArray[np.int32]  # (N,) channel index, 0 = top
+    column: NDArray[np.int32]  # (N,) azimuth step index on the 360 deg grid
     azimuth_deg: NDArray[np.float32]  # (N,)
     range_m: NDArray[np.float32]  # (N,) measured range (with noise)
     pixel: NDArray[np.int32]  # (N, 2) hit pixel (u, v) in the depth map
 
 
-def _beam_directions(
+def _ray_directions(
     spec: LidarSpec, az_min: float, az_max: float
-) -> tuple[FloatArray, NDArray[np.int32], FloatArray]:
-    """Unit directions (R, 3) in the sensor frame for the given azimuths."""
-    az = np.arange(az_min, az_max + 1e-9, spec.azimuth_res_deg)
+) -> tuple[FloatArray, NDArray[np.int32], NDArray[np.int32], FloatArray]:
+    """Unit directions (R, 3) in the sensor frame, on the global grid.
+
+    Azimuth samples are multiples of the step so the columns are the same
+    ones a real scan would have; returns directions, channel index, column
+    index and azimuth in degrees.
+    """
+    res = spec.azimuth_res_deg
+    cols = np.arange(
+        int(np.ceil(az_min / res)), int(np.floor(az_max / res)) + 1
+    )
+    az = cols * res
     el = spec.elevations_deg
     az_g, el_g = np.meshgrid(np.deg2rad(az), np.deg2rad(el))
-    beam_g = np.broadcast_to(np.arange(spec.beams)[:, None], az_g.shape)
+    ch_g = np.broadcast_to(np.arange(spec.channels)[:, None], az_g.shape)
+    col_g = np.broadcast_to(cols[None, :] % spec.horizontal_steps, az_g.shape)
     # azimuth about the -y (up) axis, elevation towards -y
     x = np.cos(el_g) * np.sin(az_g)
     y = -np.sin(el_g)
@@ -102,23 +154,32 @@ def _beam_directions(
     dirs = np.stack([x, y, z], axis=-1).reshape(-1, 3)
     return (
         dirs,
-        beam_g.reshape(-1).astype(np.int32),
+        ch_g.reshape(-1).astype(np.int32),
+        col_g.reshape(-1).astype(np.int32),
         np.rad2deg(az_g).reshape(-1),
     )
 
 
-def camera_azimuth_span(
-    camera: PinholeCamera, camera_from_sensor: NDArray[np.floating]
-) -> tuple[float, float]:
-    """Azimuth range (deg, sensor frame) that can hit the camera image."""
-    half = np.rad2deg(np.arctan((camera.width / 2.0) / camera.fx))
-    yaw = float(
-        np.rad2deg(
-            np.arctan2(camera_from_sensor[0, 2], camera_from_sensor[2, 2])
-        )
+def camera_hfov_deg(camera: PinholeCamera) -> float:
+    """Horizontal field of view of a pinhole camera in degrees."""
+    return float(2.0 * np.rad2deg(np.arctan((camera.width / 2.0) / camera.fx)))
+
+
+def azimuth_window(
+    camera: PinholeCamera,
+    spec: LidarSpec,
+    camera_from_sensor: NDArray[np.floating] | None = None,
+) -> AzimuthWindow:
+    """Azimuth range (sensor frame) and column count covering the image."""
+    pose = (
+        np.eye(4)
+        if camera_from_sensor is None
+        else np.asarray(camera_from_sensor)
     )
-    margin = 2.0
-    return -half - yaw - margin, half - yaw + margin
+    hfov = camera_hfov_deg(camera)
+    yaw = float(np.rad2deg(np.arctan2(pose[0, 2], pose[2, 2])))
+    columns = int(round(hfov / 360.0 * spec.horizontal_steps))
+    return AzimuthWindow(hfov, -hfov / 2 - yaw, hfov / 2 - yaw, columns)
 
 
 def _march(
@@ -187,8 +248,11 @@ def simulate(
         if camera_from_sensor is None
         else np.asarray(camera_from_sensor)
     )
-    az_min, az_max = camera_azimuth_span(camera, pose)
-    dirs_s, beam, az = _beam_directions(spec, az_min, az_max)
+    window = azimuth_window(camera, spec, pose)
+    margin = 2.0  # rays slightly outside the image still march (offsets)
+    dirs_s, channel, column, az = _ray_directions(
+        spec, window.az_min_deg - margin, window.az_max_deg + margin
+    )
     dirs = dirs_s @ pose[:3, :3].T
     origin = pose[:3, 3]
     depth = np.asarray(depth_m, dtype=np.float64)
@@ -203,7 +267,8 @@ def simulate(
     pixel = np.stack([pix[hit] % w, pix[hit] // w], axis=-1)
     return LidarScan(
         points=pts.astype(np.float32),
-        beam=beam[hit],
+        channel=channel[hit],
+        column=column[hit],
         azimuth_deg=az[hit].astype(np.float32),
         range_m=t.astype(np.float32),
         pixel=pixel.astype(np.int32),
@@ -215,16 +280,18 @@ def select_mask(scan: LidarScan, mask: NDArray[np.bool_]) -> LidarScan:
     keep = mask[scan.pixel[:, 1], scan.pixel[:, 0]]
     return LidarScan(
         points=scan.points[keep],
-        beam=scan.beam[keep],
+        channel=scan.channel[keep],
+        column=scan.column[keep],
         azimuth_deg=scan.azimuth_deg[keep],
         range_m=scan.range_m[keep],
         pixel=scan.pixel[keep],
     )
 
 
-def with_beams(spec: LidarSpec, beams: int) -> LidarSpec:
-    """Same sensor with a different beam count (resolution ablation)."""
-    return replace(spec, name=f"{spec.name}-{beams}", beams=beams)
+def with_channels(spec: LidarSpec, channels: int) -> LidarSpec:
+    """Same sensor with a different channel count (resolution ablation)."""
+    family = spec.name.split("-")[0]
+    return replace(spec, name=f"{family}-{channels}", channels=channels)
 
 
 def sensor_from_camera(camera_from_sensor: NDArray[np.floating]) -> FloatArray:

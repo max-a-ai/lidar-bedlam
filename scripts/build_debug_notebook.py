@@ -36,7 +36,7 @@ What the repository can do right now, on real files:
 
 1. BEDLAM frames (image, depth, masks) and the simulated LiDAR on top of them
 2. Every person as a dense 3D surface (and later the SMPL mesh) with the simulated LiDAR returns
-3. LiDAR resolution (32 / 64 / 128 / 256 beams) from two sensor viewpoints
+3. LiDAR resolution (Ouster OS1 with 32 / 64 / 128 / 256 channels) from two sensor viewpoints
 4. Real datasets (SLOPER4D, LiDARHuman26M, Waymo) with LiDAR-to-mesh distances
 5. A training batch, the losses, and the selective-attention model forward pass
 
@@ -56,7 +56,7 @@ from lidar_bedlam.body.smpl import SmplModel
 from lidar_bedlam.data.base import add_smpl_derived, crop_sample
 from lidar_bedlam.data.bedlam import CM_TO_M, BedlamFramesSource
 from lidar_bedlam.io import read_exr_depth
-from lidar_bedlam.lidar.simulate import PRESETS, select_mask, sensor_pose, simulate
+from lidar_bedlam.lidar.simulate import PRESETS, azimuth_window, camera_hfov_deg, select_mask, sensor_pose, simulate
 from lidar_bedlam.viz import (
     box_trace, draw_mask_outline, draw_points, figure_3d, mesh_trace,
     point_to_surface_distance, points_trace,
@@ -132,15 +132,26 @@ for s, ppl in zip(samples, persons):
     fig.show()
 """)
 
-md(
-    "## 3. Simulated LiDAR (os64) on the image: background + person masks + returns coloured by beam"
-)
+md("""
+## 3. Simulated LiDAR on the image: background + person masks + returns coloured by channel
+
+Sensor: Ouster OS1-64 (64 channels over 45 deg vertical FOV, 1024 azimuth steps per
+revolution). Only the azimuth window inside the camera's horizontal FOV is simulated;
+the table below gives that window in columns for the three Ouster horizontal modes.
+""")
+
+code("""
+print(f"{'sample':60s} {'HFOV':>7s} {'512':>5s} {'1024':>5s} {'2048':>5s}")
+for s in samples:
+    cols = [azimuth_window(s.camera, PRESETS["OS1-64"]).columns * m // 1024 for m in (512, 1024, 2048)]
+    print(f"{s.meta.key:60s} {camera_hfov_deg(s.camera):6.1f}° {cols[0]:5d} {cols[1]:5d} {cols[2]:5d}")
+""")
 
 code("""
 fig, axes = plt.subplots(5, 1, figsize=(16, 45))
 scans = []
 for ax, s, depth, ppl in zip(axes, samples, depths, persons):
-    scan = simulate(depth, s.camera, PRESETS["os64"], rng=rng)
+    scan = simulate(depth, s.camera, PRESETS["OS1-64"], rng=rng)
     scans.append(scan)
     ax.imshow(s.image)
     for p in ppl:
@@ -149,18 +160,19 @@ for ax, s, depth, ppl in zip(axes, samples, depths, persons):
     for p in ppl:
         hit |= p.mask
     person_scan = select_mask(scan, hit)
-    sc = draw_points(ax, scan.pixel, scan.beam, size=2, cmap="turbo")
+    sc = draw_points(ax, scan.pixel, scan.channel, size=2, cmap="turbo")
     draw_points(ax, person_scan.pixel, size=10, label=f"on persons: {len(person_scan.points)}")
     ax.legend(loc="upper right"); ax.set_xticks([]); ax.set_yticks([])
-    ax.set_title(f"{s.meta.key}: os64 scene returns {len(scan.points)}, on persons {len(person_scan.points)}")
-    fig.colorbar(sc, ax=ax, fraction=0.02, label="beam index (0 = top)")
+    w = azimuth_window(s.camera, PRESETS["OS1-64"])
+    ax.set_title(f"{s.meta.key}: OS1-64, {w.columns} columns in {w.hfov_deg:.1f}° HFOV, scene returns {len(scan.points)}, on persons {len(person_scan.points)}")
+    fig.colorbar(sc, ax=ax, fraction=0.02, label="channel (0 = top)")
 plt.tight_layout(); plt.show()
 """)
 
 md("""
 ## 4. Per person: simulated LiDAR returns against the surface (and the SMPL mesh once available)
 
-Red = os64 returns on this person, grey = dense clothed surface. When the SMPL labels are attached,
+Red = OS1-64 returns on this person, grey = dense clothed surface. When the SMPL labels are attached,
 the body mesh will be drawn too, so the LiDAR-to-body distance (the clothing offset that also exists
 on real data) can be inspected directly.
 """)
@@ -170,12 +182,12 @@ for s, scan, ppl in zip(samples, scans, persons):
     p = ppl[0]
     sel = select_mask(scan, p.mask)
     traces = [points_trace(person_surface(p), "dense clothed surface", color="lightgrey", size=1.2),
-              points_trace(sel.points, f"os64 returns ({len(sel.points)})", color="red", size=3)]
+              points_trace(sel.points, f"OS1-64 returns ({len(sel.points)})", color="red", size=3)]
     figure_3d(traces, f"{p.meta.key}: LiDAR returns vs surface", height=550).show()
 """)
 
 md("""
-## 5. Resolution and viewpoint: 32 / 64 / 128 / 256 beams, sensor at the camera + 10 cm up, and 1 m to the right
+## 5. Resolution and viewpoint: OS1 with 32 / 64 / 128 / 256 channels (1024 steps/rev), sensor 10 cm above the camera, and 1 m to the right
 """)
 
 code("""
@@ -185,7 +197,7 @@ for p in ppl:
     person_mask |= p.mask
 viewpoints = {"10 cm above camera": sensor_pose(np.array([0.0, -0.10, 0.0])),
               "1 m right of camera": sensor_pose(np.array([1.0, 0.0, 0.0]))}
-beams = ["os32", "os64", "os128", "os256"]
+beams = ["OS1-32", "OS1-64", "OS1-128", "OS1-256"]
 x0, y0, x1, y1 = s.bbox_xyxy
 pad = 60
 fig, axes = plt.subplots(len(beams), len(viewpoints), figsize=(14, 22))
@@ -197,7 +209,7 @@ for r, name in enumerate(beams):
         grid_scans[(name, vname)] = sel
         ax = axes[r, c]
         ax.imshow(s.image)
-        draw_points(ax, sel.pixel, sel.beam, size=12, cmap="turbo")
+        draw_points(ax, sel.pixel, sel.channel, size=12, cmap="turbo")
         ax.set_xlim(x0 - pad, x1 + pad); ax.set_ylim(y1 + pad, y0 - pad)
         ax.set_title(f"{name}, {vname}: {len(sel.points)} returns on person(s)")
         ax.set_xticks([]); ax.set_yticks([])
@@ -211,7 +223,7 @@ for vname in viewpoints:
         sel = grid_scans[(name, vname)]
         pm = ppl[0].mask[sel.pixel[:, 1], sel.pixel[:, 0]]
         traces.append(points_trace(sel.points[pm], f"{name} ({int(pm.sum())})", size=3))
-    figure_3d(traces, f"{ppl[0].meta.key}: beam counts from {vname} (toggle in legend)", height=600).show()
+    figure_3d(traces, f"{ppl[0].meta.key}: channel counts from {vname} (toggle in legend)", height=600).show()
 """)
 
 md("""

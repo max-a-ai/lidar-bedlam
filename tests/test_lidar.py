@@ -9,14 +9,16 @@ from lidar_bedlam.lidar.augment import OcclusionConfig, occlude
 from lidar_bedlam.lidar.simulate import (
     PRESETS,
     LidarSpec,
+    azimuth_window,
+    ouster,
     select_mask,
     sensor_pose,
     simulate,
-    with_beams,
+    with_channels,
 )
 
 CAM = PinholeCamera.from_hfov(60.0, 320, 180)
-NOISELESS = LidarSpec("test", 32, -15.0, 15.0, 1.0, range_noise_std_m=0.0)
+NOISELESS = LidarSpec("test-32", 32, -15.0, 15.0, 360, range_noise_std_m=0.0)
 
 
 def _wall(z: float) -> np.ndarray:
@@ -27,8 +29,9 @@ def test_wall_from_camera_origin() -> None:
     scan = simulate(_wall(5.0), CAM, NOISELESS, rng=np.random.default_rng(0))
     assert len(scan.points) > 500
     assert np.allclose(scan.points[:, 2], 5.0, atol=0.02)
-    # every beam of the spec that looks into the image is present
-    assert scan.beam.min() >= 0 and scan.beam.max() < NOISELESS.beams
+    # every channel of the spec that looks into the image is present
+    assert scan.channel.min() >= 0 and scan.channel.max() < NOISELESS.channels
+    assert scan.column.min() >= 0 and scan.column.max() < 360
     # ranges are consistent with the geometry (r = z / cos)
     r = np.linalg.norm(scan.points, axis=1)
     assert np.allclose(r, scan.range_m, atol=1e-4)
@@ -58,21 +61,31 @@ def test_occluder_in_front_of_wall() -> None:
     assert len(sel.points) == near.sum()
 
 
-def test_beam_count_scales_density() -> None:
+def test_channel_count_scales_density() -> None:
     depth = _wall(8.0)
-    n32 = len(simulate(depth, CAM, with_beams(NOISELESS, 32)).points)
-    n64 = len(simulate(depth, CAM, with_beams(NOISELESS, 64)).points)
+    n32 = len(simulate(depth, CAM, with_channels(NOISELESS, 32)).points)
+    n64 = len(simulate(depth, CAM, with_channels(NOISELESS, 64)).points)
     assert 1.8 < n64 / n32 < 2.2
+
+
+def test_azimuth_window_columns() -> None:
+    cam90 = PinholeCamera(50.0, 50.0, 49.5, 49.5, 100, 100)  # 90 deg HFOV
+    w = azimuth_window(cam90, ouster("OS1", 64, steps=1024))
+    assert abs(w.hfov_deg - 90.0) < 1e-9 and w.columns == 256
+    assert azimuth_window(cam90, ouster("OS0", 32, steps=2048)).columns == 512
+    assert ouster("OS2", 128).elevation_max_deg == 11.25
 
 
 def test_presets_and_dropout() -> None:
     for name, spec in PRESETS.items():
-        assert spec.name == name and spec.beams > 0
-    spec = LidarSpec("d", 16, -10, 10, 1.0, range_noise_std_m=0.0, dropout=0.5)
+        assert spec.name == name and spec.channels > 0
+    spec = LidarSpec(
+        "d-16", 16, -10, 10, 360, range_noise_std_m=0.0, dropout=0.5
+    )
     full = simulate(
         _wall(5.0),
         CAM,
-        LidarSpec("f", 16, -10, 10, 1.0, range_noise_std_m=0.0),
+        LidarSpec("f-16", 16, -10, 10, 360, range_noise_std_m=0.0),
     )
     half = simulate(_wall(5.0), CAM, spec, rng=np.random.default_rng(1))
     assert 0.35 < len(half.points) / len(full.points) < 0.65

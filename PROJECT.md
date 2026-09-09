@@ -7,6 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
+- 2026-09-09 (evening) — LiDAR presets renamed to Ouster families (OS0/OS1/OS2, 32-256 channels, 512/1024/2048 steps per revolution) with the camera HFOV mapped to a column window; notebook updated.
 - 2026-09-09 (later) — Implemented and tested the selective-attention fusion model (ViT-H with TokenHMR weights, point tokenizer, gated decoder, SMPL heads) and the executed `debug/capabilities.ipynb` visualising BEDLAM, simulated LiDAR at 4 resolutions and 2 viewpoints, real datasets and the model.
 - 2026-09-09 — Located the missing SMPL/SMPL-X labels (project server only), wrote the fetch script, finished extracting the first BEDLAM group (17,778 person-frames), and built the tested LiDAR simulator (32/64/128/256 beams, sensor offsets) plus occlusion augmentation.
 - 2026-09-08 — Audited BEDLAM v1 (complete, planar z-depth in cm), skipped BEDLAM 2.0, scaffolded the repo with five baseline submodules, pushed to GitHub, and built the verified data pipeline (SLOPER4D, LiDARHuman26M, Waymo, BEDLAM loaders, torch dataset, losses, metrics, 21 tests).
