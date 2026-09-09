@@ -1,0 +1,14 @@
+Waymo Open (car)
+  base: vehicle: x fwd, y left, z up, origin rear axle / ground
+  source: validation/{camera,lidar}_calibration/10203656353524179475_7625_000_7645_000.parquet
+  base_link
+    ├─ lidar  LIDAR_FRONT      t=(+4.07, +0.00, +0.69) m, rot   1.0 deg
+    ├─ lidar  LIDAR_REAR       t=(-1.16, +0.00, +0.46) m, rot 179.3 deg
+    ├─ lidar  LIDAR_SIDE_LEFT  t=(+3.25, +1.02, +0.98) m, rot  89.6 deg
+    ├─ lidar  LIDAR_SIDE_RIGHT t=(+3.25, -1.02, +0.98) m, rot  90.1 deg
+    ├─ lidar  LIDAR_TOP        t=(+1.43, +0.00, +2.18) m, rot 148.4 deg
+    ├─ camera CAM_FRONT        t=(+1.54, -0.02, +2.12) m, rot   0.9 deg, 1920x1280 px, f=2059
+    ├─ camera CAM_FRONT_LEFT   t=(+1.50, +0.10, +2.12) m, rot  45.3 deg, 1920x1280 px, f=2061
+    ├─ camera CAM_FRONT_RIGHT  t=(+1.49, -0.10, +2.12) m, rot  45.1 deg, 1920x1280 px, f=2052
+    ├─ camera CAM_SIDE_LEFT    t=(+1.43, +0.12, +2.12) m, rot  90.2 deg, 1920x886 px, f=2055
+    └─ camera CAM_SIDE_RIGHT   t=(+1.43, -0.12, +2.12) m, rot  89.9 deg, 1920x886 px, f=2068

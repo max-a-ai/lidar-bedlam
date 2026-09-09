@@ -120,7 +120,7 @@ subsampling, never dropping below a minimum point count.
 |---|---|
 | `vit.py` | ViT backbone with ViTPose parameter names; `load_backbone_weights` loads the ViT-H weights from the TokenHMR/HMR2 checkpoints (0 missing / 0 unexpected keys). Positional embeddings are interpolated to the 256x256 crop grid. |
 | `point_encoder.py` | `PointTokenizer`: Fourier-encoded points, farthest-point-sampled centres with kNN pooling, small transformer. Output tokens carry absolute 3D positions (the spatial cue). |
-| `selective_attention.py` | `SelectiveDecoder`: 12 joint-group queries (root, torso, head, arms, hands, legs, feet, shape). Each layer cross-attends to image tokens and LiDAR tokens separately and mixes them with a per-query gate initialised from a modality prior (image for head, hands, feet; LiDAR for root, torso, legs, shape). Gates are returned per layer for logging and ablation. |
+| `selective_attention.py` | `SelectiveDecoder`: 12 joint-group queries (root, torso, head, arms, hands, legs, feet, shape). Each layer cross-attends to image tokens and LiDAR tokens separately and mixes them with a per-query gate initialised from a modality prior: LiDAR for the 3D cues (root = centre, placement and global orientation; torso; shape), camera for the semantic cues (head and head orientation, arms, hands, legs, feet). Gates are returned per layer for logging and ablation. |
 | `fusion.py` | `SelectiveFusionModel`: heads for 6D rotations per group, betas, and the root translation as (pelvis pixel offset, log depth) resolved through the crop intrinsics; differentiable SMPL layer gives vertices, joints, projected 2D joints and the 7-vector 3D box so every term of `FusionLoss` applies. |
 
 Sizes with ViT-H: 660 M parameters, 29 M trainable with the backbone frozen.
@@ -167,3 +167,55 @@ scan, and intensity, since the simulator has no reflectivity.
 
 The interactive notebook section 5b exposes all of these per sample and
 person with a 4 x 3 resolution checkbox grid.
+
+## Sensor rigs (`lidar_bedlam/rigs/`)
+
+`SensorRig` is a star graph: a base link and one `Sensor` per LiDAR / camera /
+radar with `base_from_sensor` (4x4, sensor pose in the base frame), optional
+intrinsics, and `optical_from_sensor` (the dataset's camera axes to OpenCV).
+`rig.tree_text()` prints the connection tree with positions and rotation
+angles; `rigs.plot.rigs_figure([...])` draws up to three rigs side by side
+with per-sensor xyz triads (red, green, blue), dotted links to the base, and
+orange camera frustums from the intrinsics. Loaders:
+
+| Dataset | Mount | Base frame | Source |
+|---|---|---|---|
+| Waymo Open (v2 parquet) | car | vehicle: x fwd, y left, z up, rear axle | `camera_calibration` + `lidar_calibration` of one segment; camera axes x fwd (Waymo) |
+| nuScenes | car | ego: x fwd, y left, z up, rear axle | `calibrated_sensor.json` (quaternion w,x,y,z + translation, camera intrinsics) |
+| SLOPER4D | helmet | head LiDAR: x fwd, y left, z up | `dataset_params.json` (`lidar2cam`, intrinsics) |
+| AVA (own car) | car | export ego at the roof LiDAR | nuScenes-format export `nas_drive2/car_data/dataset/nuscenes_sample` (7 cams 2200x1200 + LIDAR_TOP) |
+| FUSE-Bike (own bicycle) | bicycle | export ego at the top LiDAR | nuScenes-format export `bike_data/.../fusebike` (1 cam + 2 LiDARs + concatenated) |
+
+Every extrinsic is checked to be a proper rigid transform on load. The
+notebook section 9 has a checkbox table to show up to three rigs.
+`scripts/export_rigs.py` writes every rig to the Obsidian vault
+(`.vault-lidar-bedlam/rigs/<slug>.{png,html,glb,txt}`) and the note
+`rigs.md` that embeds them; the GLB is a coloured rod mesh for 3D viewers.
+
+## Ego motion and LiDAR rolling shutter (`lidar/motion.py`)
+
+A spinning LiDAR at 10 Hz sweeps the camera window column by column (a
+52 deg window takes 14 ms, 90 deg takes 25 ms). On a moving platform every
+column is measured from a different position; uncompensated datasets hand
+such distorted clouds to the model. `apply_rolling_shutter(scan, EgoMotion,
+window)` distorts a static-scene scan accordingly: `p_reported = p_true -
+v * (t - t_ref)` per column, with an optional yaw rate about the up axis; the
+reference time is the window centre (the image time) by default.
+
+Ego speed is a `SpeedSetting(mean_kmh, std_kmh)` in 10 km/h steps, sampled
+per sample and clipped to `[0, max]`. Presets: `STATIONARY` (0 ± 0) and
+`WAYMO_URBAN` (20 ± 20, max 70). The latter follows the ego-speed
+distribution measured on 40 Waymo validation segments (7,866 frames):
+
+| statistic | km/h |
+|---|---|
+| mean | 25.2 |
+| std | 22.5 |
+| median | 20.6 |
+| p90 | 63.3 |
+| stopped (< 5 km/h) | 25 % |
+
+Recommendation for the Waymo transfer: train with `WAYMO_URBAN`; the clipped
+normal reproduces the stop fraction and the 0-60 km/h spread. At 20 km/h the
+shift across a 52 deg window is 8 cm, at 60 km/h 24 cm, on the order of the
+body width, so it matters for placement.

@@ -37,6 +37,7 @@ debug = [
     "nbconvert>=7.17.1",
     "nbformat>=5.11.1",
     "plotly>=7.0.0",
+    "trimesh>=5.1.0",
 ]
 dev = [
     "ruff>=0.8",

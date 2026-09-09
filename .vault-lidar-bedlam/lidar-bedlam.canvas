@@ -4,8 +4,7 @@
       "fromNode": "a1b2c3d4e5f60001",
       "fromSide": "bottom",
       "id": "edge0001aaaaaaaa",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "toNode": "a1b2c3d4e5f60011",
       "toSide": "top"
     },
@@ -13,8 +12,7 @@
       "fromNode": "a1b2c3d4e5f60001",
       "fromSide": "bottom",
       "id": "edge0002aaaaaaaa",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "toNode": "a1b2c3d4e5f60012",
       "toSide": "top"
     },
@@ -22,8 +20,7 @@
       "fromNode": "a1b2c3d4e5f60001",
       "fromSide": "bottom",
       "id": "edge0003aaaaaaaa",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "toNode": "a1b2c3d4e5f60013",
       "toSide": "top"
     }
@@ -34,8 +31,7 @@
       "height": 800,
       "id": "a1b2c3d4e5f60100",
       "label": "DONE",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "group",
       "width": 1400,
       "x": -300,
@@ -46,8 +42,7 @@
       "height": 800,
       "id": "a1b2c3d4e5f60101",
       "label": "OPEN",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "group",
       "width": 520,
       "x": 1180,
@@ -57,9 +52,8 @@
       "color": "4",
       "height": 160,
       "id": "a1b2c3d4e5f60000",
-      "styleAttributes": {
-      },
-      "text": "# lidar-bedlam — Dashboard\n\n**Green** = done · **Red** = open",
+      "styleAttributes": {},
+      "text": "# lidar-bedlam \u2014 Dashboard\n\n**Green** = done \u00b7 **Red** = open",
       "type": "text",
       "width": 760,
       "x": 100,
@@ -69,8 +63,7 @@
       "file": "HANDOFF.md",
       "height": 380,
       "id": "a1b2c3d4e5f60001",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "file",
       "width": 420,
       "x": -260,
@@ -80,8 +73,7 @@
       "file": "README.md",
       "height": 380,
       "id": "a1b2c3d4e5f60002",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "file",
       "width": 420,
       "x": 200,
@@ -91,8 +83,7 @@
       "file": "instructions.md",
       "height": 380,
       "id": "a1b2c3d4e5f60003",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "file",
       "width": 420,
       "x": 660,
@@ -103,8 +94,7 @@
       "file": ".vault-lidar-bedlam/progress.md",
       "height": 300,
       "id": "a1b2c3d4e5f60011",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "file",
       "width": 420,
       "x": -260,
@@ -115,8 +105,7 @@
       "file": ".vault-lidar-bedlam/todo.md",
       "height": 300,
       "id": "a1b2c3d4e5f60012",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "file",
       "width": 420,
       "x": 200,
@@ -126,12 +115,21 @@
       "file": "pyproject.toml",
       "height": 300,
       "id": "a1b2c3d4e5f60013",
-      "styleAttributes": {
-      },
+      "styleAttributes": {},
       "type": "file",
       "width": 420,
       "x": 660,
       "y": 180
+    },
+    {
+      "file": "rigs.md",
+      "height": 400,
+      "id": "a1b2c3d4e5f60200",
+      "styleAttributes": {},
+      "type": "file",
+      "width": 520,
+      "x": 1180,
+      "y": 560
     }
   ]
 }

@@ -33,3 +33,4 @@ wandb/
 body_models/
 /logs/
 /debug/*.executed.ipynb
+/.vault-lidar-bedlam/rigs/plotly.min.js

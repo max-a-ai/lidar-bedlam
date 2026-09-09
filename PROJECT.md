@@ -7,6 +7,10 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
+- 2026-09-10 (late) — Decided the ablation plan (`docs/ablations.md`): merged the extrinsics studies into a ball-radius sweep, added the resolution ablation, dropped rolling shutter as an ablation; routed legs and arms to the camera prior; EG 2027 LaTeX skeleton started.
+- 2026-09-10 (night) — Ego speed settings (10 km/h steps, Waymo-measured preset 20 ± 20 km/h) and LiDAR rolling-shutter distortion, exposed in the notebook.
+- 2026-09-10 (night) — Added the own AVA car and FUSE-Bike rigs (nuScenes exports) and exported all five rigs to the Obsidian vault as PNG, interactive HTML, GLB and tree text with a `rigs.md` note.
+- 2026-09-10 (later) — Sensor-rig capability: calibration trees for Waymo, nuScenes and SLOPER4D with per-sensor axes and camera frustums, plus a checkbox-table notebook section; other NAS datasets surveyed for calibration.
 - 2026-09-10 — Added sensor-level and image augmentations (cover, channel dropout, jitter, outliers, miscalibration, erasing, colour, blur, JPEG, bbox jitter), wired them into the dataset, and an interactive notebook section with the 4x3 resolution grid.
 - 2026-09-09 (evening) — LiDAR presets renamed to Ouster families (OS0/OS1/OS2, 32-256 channels, 512/1024/2048 steps per revolution) with the camera HFOV mapped to a column window; notebook updated.
 - 2026-09-09 (later) — Implemented and tested the selective-attention fusion model (ViT-H with TokenHMR weights, point tokenizer, gated decoder, SMPL heads) and the executed `debug/capabilities.ipynb` visualising BEDLAM, simulated LiDAR at 4 resolutions and 2 viewpoints, real datasets and the model.
@@ -28,6 +32,7 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Run the official xxh128 validation on the NAS itself for `png`, `depth`, `masks`, `gt` (`scripts/validate_bedlam_on_nas.sh`).
 - [ ] Extract the remaining groups at 6 fps with `scripts/extract_bedlam.py` (first group done: 100 sequences, 17,778 person-frames, 9.8 GB).
 - [ ] Match label records to mask person ids (labels are per body, masks are per person index) via projected-joint-in-mask tests.
+- [ ] Apply `SpeedSetting` + `apply_rolling_shutter` in the generation pipeline (per-sample speed, sweep over the camera window).
 - [ ] Write the generated sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, box3d, beam count) and a `SampleSource` for it.
 - [ ] Generate the v0 dataset (one group), inspect 20 samples visually, then generate the full subset.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels).
@@ -40,13 +45,21 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Evaluation script (`lidar_bedlam/evaluation/`) that runs a model over a source and reports MPJPE / PA-MPJPE / PVE / translation error / box mAP.
 - [ ] Smoke train on 1 k samples, then full run on the synthetic set.
 
-### C3 — Experiments and ablations
+### C3 — Experiments and ablations (plan: `docs/ablations.md`)
 
 - [ ] Freeze the evaluation protocol (COCO-17 joints for cross-dataset comparison, distance bins, IoU thresholds) in `docs/data_pipeline.md`.
 - [ ] Baseline runners for CameraHMR, TokenHMR, LiDAR-HMR, SAM 3D Body (MHR to joints), LIF-Net on the real validation sets.
-- [ ] Main table: synthetic-only, real-only, synthetic + real (weighted), on SLOPER4D and LiDARHuman26M; Waymo keypoint eval.
-- [ ] Ablation after hand-in: beam count 32/64/128/256, occlusion augmentation on/off, LiDAR extrinsic shift augmentation, routing masks off, image-only vs LiDAR-only.
-- [ ] Ablation after hand-in: clothing vs body-only points (BEDLAM masks make this possible).
+- [ ] Main table: synthetic-only, real-only, synthetic + real (weighted), on SLOPER4D, LiDARHuman26M and Waymo (keypoints).
+- [ ] Ablation 6.1/6.2 selective attention: learned gates, no gate, hard routing, image only, LiDAR only (4 extra runs, 1/3 schedule).
+- [ ] Ablation 6.3 extrinsics: LiDAR fixed to the target rig vs ball r = 0.25 m vs r = 1.0 m, evaluated on Waymo and SLOPER4D (2 extra runs).
+- [ ] Ablation 6.4 resolution: all 12 channel x step settings vs the target's setting only (1 extra run).
+- [ ] After hand-in, ablation 6.5 realism: no augmentation, no occlusion (2 extra runs).
+- [ ] Paper: fill `paper/main.tex` (Eurographics 2027 skeleton) with the tables above.
+
+### C1b — Data for specific sensor setups
+
+- [ ] Decide which additional rigs to add (see the heads-up list in the chat / `docs/datasets.md`).
+- [ ] Generate synthetic samples for a chosen rig: place the BEDLAM camera at a rig camera, simulate the rig's LiDAR(s) from their calibrated offsets.
 
 ### Housekeeping
 
@@ -70,4 +83,7 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-09 — `scripts/fetch_bedlam_labels.sh` and documentation of where the SMPL/SMPL-X labels live.
 - [x] 2026-09-09 — `models/`: ViT (loads TokenHMR ViT-H), point tokenizer, selective gated decoder, SMPL heads with differentiable SMPL, 10 tests; losses already covered.
 - [x] 2026-09-09 — `debug/capabilities.ipynb` generated and executed without errors (22 cells).
+- [x] 2026-09-10 — `lidar/motion.py`: `SpeedSetting`, `EgoMotion`, `apply_rolling_shutter`; Waymo ego-speed statistics measured; 4 tests.
+- [x] 2026-09-10 — `rigs/`: AVA and FUSE-Bike loaders via the nuScenes format; `export.py` + `scripts/export_rigs.py` (PNG/HTML/GLB into the vault); 2 tests.
+- [x] 2026-09-10 — `rigs/`: Waymo, nuScenes, SLOPER4D calibration loaders, tree print, plotly rig figures, 5 tests; notebook section 9.
 - [x] 2026-09-10 — Point and image augmentation configs (`PointAugmentConfig`, `ImageAugmentConfig`) wired into `HumanPoseDataset`; 6 tests; interactive notebook section 5b.

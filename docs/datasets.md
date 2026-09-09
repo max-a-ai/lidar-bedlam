@@ -94,3 +94,28 @@ copy in `~/Documents/ILfusion/data/body_models`. Never commit them.
 | LIF-Net (IV 2025, ours) | `third_party/lif` | RGB + LiDAR | SMPL | `~/nas_drive/methods/lif/evals` |
 
 Full web research notes with sources are in `docs/research_notes.md`.
+
+## Sensor calibration on the NAS (survey 2026-09-10)
+
+Implemented rigs: Waymo (car), nuScenes (car), SLOPER4D (helmet). Candidates
+with complete, directly readable calibration, ranked:
+
+| Rank | Dataset | Platform | Calibration | Notes |
+|---|---|---|---|---|
+| 1 | argoverse2 (Sensor) | car | `calibration/egovehicle_SE3_sensor.feather` (quat + t, sensor->ego) + `intrinsics.feather` | 2 LiDAR, 7 ring + 2 stereo cams, extracted |
+| 2 | zenseact (ZOD) | car | `sequences/*/calibration.json`: cam/lidar/radar 4x4 + Kannala intrinsics | simplest format |
+| 3 | nuplan / navsim | car | navsim pkl: `sensor2lidar` R/t + K per cam, `lidar2ego` | 8 cams + merged Hesai LiDAR |
+| 4 | CODa_full | ground robot | ROS YAML `calib_os1_to_{cam0..,vnav,base}` + intrinsics | only real non-car rig with a body base frame |
+| 5 | A9 r02 (TUMTraf S110) | infrastructure pole | OpenLABEL `coordinate_systems` tree (4x4 per parent) | 2 Ouster + 2 Basler |
+| 6 | dair-v2x | car + infrastructure | per-frame JSON R/t (`lidar_to_camera`, `lidar_to_novatel`) + `cam_K` | Hesai40 + cam + Novatel |
+| 7 | recorded_scenarios_splitted (fusebike) | bicycle (own recording) | nuScenes `calibrated_sensor.json`: 2 LiDAR + 1 cam | loads with the nuScenes loader |
+| 8 | nuReasoning | car | `metadata.json` inside 1 GB zips: 8 cams `sensor2lidar` quat + t | needs zip reading |
+| 9 | kitti raw / KITTI | car | `calib_*.txt`: 4 cams, Velodyne, OXTS IMU | classic 3x4 text |
+| 10 | OpenLane-V2 | car | per-frame json: 7 ring cams K + extrinsics | cameras only |
+| 11 | A9 r00/r01 | infrastructure gantry | camera json in HD-map frame | cameras only |
+| 12 | opv2v / v2xset / v2xsim2 | simulation (CARLA) | per-frame yaml / nuScenes json | synthetic |
+
+No rig calibration on disk: LiDARHuman26M (hard-coded in the loader), HSC4D
+(trajectory only), RELI11D, LaserHuman, Human-M3 (incomplete), FreeMotion
+(zips; per-camera K only), v2v4real (LiDAR pose only), KITScenes-Multimodal,
+Bench2Drive, EMDB (archives only), cityscapes, JAAD, PIE, ECP, MMHU, inD.

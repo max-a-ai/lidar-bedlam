@@ -1,0 +1,16 @@
+nuScenes (car)
+  base: ego: x fwd, y left, z up, origin rear axle / ground
+  source: nuscenes/v1.0-mini/calibrated_sensor.json
+  base_link
+    ├─ lidar  LIDAR_TOP        t=(+0.94, +0.00, +1.84) m, rot  89.9 deg
+    ├─ radar  RADAR_BACK_LEFT  t=(-0.56, +0.63, +0.53) m, rot 174.4 deg
+    ├─ radar  RADAR_BACK_RIGHT t=(-0.56, -0.62, +0.53) m, rot 176.1 deg
+    ├─ radar  RADAR_FRONT      t=(+3.41, +0.00, +0.50) m, rot   0.2 deg
+    ├─ radar  RADAR_FRONT_LEFT t=(+2.42, +0.80, +0.78) m, rot  88.4 deg
+    ├─ radar  RADAR_FRONT_RIGHT t=(+2.42, -0.80, +0.77) m, rot  91.0 deg
+    ├─ camera CAM_BACK         t=(+0.03, +0.00, +1.58) m, rot 119.5 deg, 1600x900 px, f=809
+    ├─ camera CAM_BACK_LEFT    t=(+1.04, +0.48, +1.59) m, rot  92.4 deg, 1600x900 px, f=1257
+    ├─ camera CAM_BACK_RIGHT   t=(+1.01, -0.48, +1.56) m, rot 165.9 deg, 1600x900 px, f=1260
+    ├─ camera CAM_FRONT        t=(+1.70, +0.02, +1.51) m, rot 120.0 deg, 1600x900 px, f=1266
+    ├─ camera CAM_FRONT_LEFT   t=(+1.52, +0.49, +1.51) m, rot  95.0 deg, 1600x900 px, f=1273
+    └─ camera CAM_FRONT_RIGHT  t=(+1.55, -0.49, +1.50) m, rot 156.2 deg, 1600x900 px, f=1261

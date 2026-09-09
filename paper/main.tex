@@ -1,0 +1,376 @@
+% ---------------------------------------------------------------------------
+% Eurographics 2027 full-paper submission (Computer Graphics Forum special issue)
+% Preamble mirrors eg-style/egPublStyle-cgf/EGauthorGuidelines-cgf-sub.tex.
+% TODO: after logging in to SRMv2, diff against the EG_2027 package's
+%       EGauthorGuidelines-conf-sub.tex (see SUBMISSION_NOTES.md) and adopt
+%       its mode switch if it differs from \JournalSubmission.
+% ---------------------------------------------------------------------------
+\documentclass{egpubl}
+
+% --- for  CGF Journal
+\JournalSubmission    % submission (anonymous) mode
+% \JournalPaper       % final version
+
+% !! *please* don't change anything above
+% !! unless you REALLY know what you are doing
+% ------------------------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage{dfadobe}
+
+\usepackage{cite}  % comment out for biblatex with backend=biber
+% ---------------------------
+%\biberVersion
+\BibtexOrBiblatex
+% ---------------------------
+\electronicVersion
+\PrintedOrElectronic
+\ifpdf \usepackage[pdftex]{graphicx} \pdfcompresslevel=9
+\else \usepackage[dvips]{graphicx} \fi
+
+\usepackage{egweblnk}
+% end of EG prologue
+% ------------------------------------------------------------------------
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+
+% Working-draft helpers. Remove before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+% ------------------------------------------------------------------------
+\title[Synthetic LiDAR-Camera Data for Human Pose and Shape Estimation]%
+      {Synthetic LiDAR-Camera Data for Human Pose and Shape Estimation}
+
+% Anonymous submission: use the SRMv2 submission ID instead of author names.
+\author[SUBMISSION ID]{SUBMISSION ID}
+
+% ------------------------------------------------------------------------
+\begin{document}
+
+% TODO: teaser figure -- BEDLAM RGB frame, simulated LiDAR sweep, fused SMPL
+% estimate with 3D box, and a real SLOPER4D/Waymo result side by side.
+% \teaser{
+%   \includegraphics[width=0.9\linewidth]{figures/teaser}
+%   \centering
+%   \caption{TODO}
+%   \label{fig:teaser}
+% }
+
+\maketitle
+
+% ------------------------------------------------------------------------
+\begin{abstract}
+% TODO (1-2 sentences per point): the problem (real LiDAR-camera SMPL data
+% is scarce and rarely has metric 3D placement); the dataset (LiDAR
+% simulated from BEDLAM depth with Ouster-style beam presets and randomised
+% sensor placement); the model (selective-attention fusion that routes 3D
+% cues to LiDAR and semantic cues to the camera); the result (synthetic
+% pre-training improves SMPL and 3D placement on SLOPER4D, LiDARHuman26M
+% and Waymo).
+\todo{Write abstract.}
+\end{abstract}
+
+% ------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+% TODO: motivate LiDAR-camera human mesh recovery (metric depth, outdoor,
+% robotics/AV) and the lack of large real datasets with SMPL labels.
+% TODO: why synthetic: BEDLAM already provides depth, SMPL-X and camera
+% intrinsics, so a physically plausible LiDAR sweep can be derived per frame.
+% TODO: contributions list:
+% (i)   a synthetic LiDAR-camera SMPL dataset generated from BEDLAM depth,
+%       with Ouster-style beam presets, rolling shutter and randomised
+%       sensor placement in a ball around the camera;
+% (ii)  a selective-attention fusion model that routes 3D cues
+%       (translation, box, depth-dependent joints) to LiDAR tokens and
+%       semantic cues (pose, shape, identity) to image tokens;
+% (iii) evidence that synthetic data improves real-world SMPL estimation,
+%       including camera-frame 3D placement, on SLOPER4D, LiDARHuman26M
+%       and Waymo.
+\todo{Write introduction.}
+
+% ------------------------------------------------------------------------
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Image-based human mesh recovery}
+% TODO: HMR lineage to ViT-based models; TokenHMR~\cite{dwivedi2024tokenhmr}
+% and CameraHMR~\cite{patel2025camerahmr}; SAM 3D Body~\cite{sam3dbody2025}.
+% Note: none recover metric camera-frame translation reliably without depth.
+\todo{Image HMR paragraph.}
+
+\subsection{LiDAR-based human mesh recovery}
+% TODO: LiDARCap / LiDARHuman26M~\cite{li2022lidarcap},
+% LiDAR-HMR~\cite{fan2023lidarhmr}, SLOPER4D baselines~\cite{dai2023sloper4d};
+% sparse points give metric position but weak pose/shape detail.
+\todo{LiDAR HMR paragraph.}
+
+\subsection{LiDAR-camera fusion}
+% TODO: fusion for 3D detection (Waymo-style pipelines) and for humans
+% (LIF-Net~\cite{lifnet}); contrast early/late fusion with our per-query
+% modality gating.
+\todo{Fusion paragraph.}
+
+\subsection{Synthetic data for human pose}
+% TODO: BEDLAM~\cite{black2023bedlam} and its use for image HMR; no prior
+% work derives LiDAR from it; domain gap discussion.
+\todo{Synthetic data paragraph.}
+
+% ------------------------------------------------------------------------
+\section{Synthetic Dataset Generation}
+\label{sec:dataset}
+
+\subsection{BEDLAM source and ground truth}
+% TODO: which BEDLAM sequences/cameras are used, the SMPL(-X) bodies,
+% depth maps and intrinsics; how we convert SMPL-X labels to SMPL and
+% express translation in the camera frame; per-person 3D boxes from the
+% posed mesh.
+\todo{Describe BEDLAM inputs and labels.}
+
+\subsection{LiDAR simulation}
+% TODO: Ouster-style presets as (channels x steps per revolution), the
+% vertical FoV per family, and the azimuth window that overlaps the camera
+% frustum. Sensor placement: origin sampled in a ball around the camera
+% centre with an orientation that keeps the subject in view; ray casting
+% against the BEDLAM depth map with range/intensity/return fields.
+\todo{Describe beam model, sampling, and depth ray casting.}
+
+\subsection{Realism}
+% TODO: rolling shutter coupled to ego speed (per-column timestamps and
+% motion of the sensor during one revolution); occlusion augmentation
+% (dropouts, self/scene occluders); noise, range-dependent dropout and
+% intensity augmentation.
+\todo{Describe rolling shutter, ego speed, occlusions, augmentations.}
+
+\subsection{Statistics}
+% TODO: number of frames / subjects / sweeps, distribution of range,
+% points-per-person, sensor offsets; comparison table against SLOPER4D,
+% LiDARHuman26M and Waymo.
+\todo{Dataset statistics and comparison table.}
+
+\begin{table*}[t]
+  \centering
+  \caption{Dataset comparison. \todo{fill}}
+  \label{tab:dataset_stats}
+  \begin{tabular}{@{}lrrrrl@{}}
+    \toprule
+    Dataset & Frames & Subjects & Points/person & Range (m) & SMPL GT \\
+    \midrule
+    SLOPER4D~\cite{dai2023sloper4d}  & -- & -- & -- & -- & -- \\
+    LiDARHuman26M~\cite{li2022lidarcap} & -- & -- & -- & -- & -- \\
+    Waymo~\cite{sun2020waymo}        & -- & -- & -- & -- & -- \\
+    Ours (synthetic)                  & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+% ------------------------------------------------------------------------
+\section{Selective-Attention Fusion}
+\label{sec:method}
+
+\subsection{Backbones}
+% TODO: ViT-H image encoder (patch tokens + camera intrinsics conditioning);
+% point tokenizer (voxel/kNN grouping into point tokens with positional
+% encodings in the camera frame).
+\todo{Describe image and point backbones.}
+
+\subsection{Joint-group queries and modality gates}
+% TODO: a small set of learned queries per joint group (torso, limbs, head,
+% global); each query attends to image and LiDAR tokens through separate
+% cross-attention branches; a per-query gate mixes the two so that 3D
+% placement is driven by LiDAR and semantics by the image.
+\todo{Describe queries, cross-attention routing and gating.}
+
+\subsection{Outputs}
+% TODO: SMPL pose/shape heads, camera-frame translation head, and 3D box
+% (centre, size, yaw) head; how the box is tied to the SMPL mesh.
+\todo{Describe output heads.}
+
+\subsection{Losses}
+% TODO: SMPL parameter loss, 3D/2D joint losses, vertex loss, translation
+% loss, box regression/IoU loss, and the weighting schedule.
+\todo{Describe losses.}
+
+% ------------------------------------------------------------------------
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Datasets and protocol}
+% TODO: SLOPER4D, LiDARHuman26M and Waymo splits; how real sequences are
+% converted to our format (camera frame, SMPL); training regimes
+% synthetic-only / real-only / synthetic+real.
+% Metrics: MPJPE, PA-MPJPE, PVE (mm); translation error (cm);
+% 3D box AP / mAP (IoU thresholds TODO).
+\todo{Describe datasets, splits, metrics.}
+
+\subsection{Baselines}
+% TODO: CameraHMR~\cite{patel2025camerahmr}, TokenHMR~\cite{dwivedi2024tokenhmr},
+% LiDAR-HMR~\cite{fan2023lidarhmr}, SAM 3D Body~\cite{sam3dbody2025},
+% LIF-Net~\cite{lifnet}; how each is evaluated for translation / boxes.
+\todo{Describe baselines.}
+
+\subsection{Main results}
+% TODO: Table~\ref{tab:main} discussion: synthetic-only transfer, real-only,
+% synthetic+real; gains concentrated in translation and box metrics.
+\todo{Discuss main results.}
+
+\begin{table*}[t]
+  \centering
+  \caption{Main results on SLOPER4D, LiDARHuman26M and Waymo. Lower is better for MPJPE, PA-MPJPE, PVE (mm) and translation error (cm); higher is better for 3D box AP / mAP. \todo{fill}}
+  \label{tab:main}
+  \begin{tabular}{@{}llcrrrrrr@{}}
+    \toprule
+    Method & Input & Training data & MPJPE & PA-MPJPE & PVE & Trans.\ err. & Box AP & mAP \\
+    \midrule
+    CameraHMR~\cite{patel2025camerahmr} & RGB   & real      & -- & -- & -- & -- & -- & -- \\
+    TokenHMR~\cite{dwivedi2024tokenhmr} & RGB   & real      & -- & -- & -- & -- & -- & -- \\
+    SAM 3D Body~\cite{sam3dbody2025}    & RGB   & real      & -- & -- & -- & -- & -- & -- \\
+    LiDAR-HMR~\cite{fan2023lidarhmr}    & LiDAR & real      & -- & -- & -- & -- & -- & -- \\
+    LIF-Net~\cite{lifnet}               & RGB+LiDAR & real  & -- & -- & -- & -- & -- & -- \\
+    \midrule
+    Ours & RGB+LiDAR & synthetic only      & -- & -- & -- & -- & -- & -- \\
+    Ours & RGB+LiDAR & real only           & -- & -- & -- & -- & -- & -- \\
+    Ours & RGB+LiDAR & synthetic + real    & -- & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+% ------------------------------------------------------------------------
+\section{Ablation Studies}
+\label{sec:ablation}
+
+\subsection{Selective attention: pose accuracy}
+% TODO: replace gated routing with concatenation / early fusion / late
+% fusion; report MPJPE, PA-MPJPE, PVE.
+\todo{Discuss Table~\ref{tab:abl_attention_pose}.}
+
+\begin{table}[t]
+  \centering
+  \caption{Fusion variants: pose accuracy. \todo{fill}}
+  \label{tab:abl_attention_pose}
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Fusion & MPJPE & PA-MPJPE & PVE \\
+    \midrule
+    Image only            & -- & -- & -- \\
+    LiDAR only            & -- & -- & -- \\
+    Early fusion (concat) & -- & -- & -- \\
+    Late fusion           & -- & -- & -- \\
+    Selective attention (ours) & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Selective attention: LiDAR impact on 3D box and mAP}
+% TODO: same variants, translation error and box AP/mAP; show that gating
+% lets LiDAR own placement without hurting pose.
+\todo{Discuss Table~\ref{tab:abl_attention_box}.}
+
+\begin{table}[t]
+  \centering
+  \caption{Fusion variants: 3D placement. \todo{fill}}
+  \label{tab:abl_attention_box}
+  \begin{tabular}{@{}lrrr@{}}
+    \toprule
+    Fusion & Trans.\ err. & Box AP & mAP \\
+    \midrule
+    Image only            & -- & -- & -- \\
+    LiDAR only            & -- & -- & -- \\
+    Early fusion (concat) & -- & -- & -- \\
+    Late fusion           & -- & -- & -- \\
+    Selective attention (ours) & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Sensor extrinsics: fixed rig vs.\ random placement}
+% Decided plan (docs/ablations.md): camera as is, LiDAR fixed to the target
+% rig (Waymo / SLOPER4D calibration tree) vs. random placement in a ball of
+% radius 0.25 m vs. 1.0 m around the camera; evaluate on Waymo and SLOPER4D.
+% Note: both target rigs have 6-10 cm camera-LiDAR baselines, so the sweep
+% tells how much placement variance synthesis needs.
+\todo{Discuss Table~\ref{tab:abl_extrinsics}.}
+
+\begin{table*}[t]
+  \centering
+  \caption{Sensor placement during synthesis. \todo{fill}}
+  \label{tab:abl_extrinsics}
+  \begin{tabular}{@{}llrrrrrr@{}}
+    \toprule
+    Placement & Test set & MPJPE & PA-MPJPE & PVE & Trans.\ err. & Box AP & mAP \\
+    \midrule
+    Fixed to rig & Waymo    & -- & -- & -- & -- & -- & -- \\
+    Random ball  & Waymo    & -- & -- & -- & -- & -- & -- \\
+    Fixed to rig & SLOPER4D & -- & -- & -- & -- & -- & -- \\
+    Random ball  & SLOPER4D & -- & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\subsection{LiDAR resolution: channels and steps per revolution}
+% TODO: sweep Ouster presets (e.g. 32/64/128 channels x 512/1024/2048 steps);
+% accuracy vs. points per person.
+\todo{Discuss Table~\ref{tab:abl_resolution}.}
+
+\begin{table*}[t]
+  \centering
+  \caption{LiDAR resolution. \todo{fill}}
+  \label{tab:abl_resolution}
+  \begin{tabular}{@{}rrrrrrrr@{}}
+    \toprule
+    Channels & Steps/rev & MPJPE & PA-MPJPE & PVE & Trans.\ err. & Box AP & mAP \\
+    \midrule
+    32  & 512  & -- & -- & -- & -- & -- & -- \\
+    32  & 1024 & -- & -- & -- & -- & -- & -- \\
+    64  & 1024 & -- & -- & -- & -- & -- & -- \\
+    128 & 1024 & -- & -- & -- & -- & -- & -- \\
+    128 & 2048 & -- & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+\subsection{Realism: augmentations and occlusions}
+% Decided plan: augmentations (image + point) and occlusions are ablated
+% after hand-in. Rolling shutter with ego speed is a synthesis option
+% (Section 3.3) but not an ablation: Waymo's top-LiDAR points are
+% motion-compensated by the official tooling, so the effect cannot show on
+% the primary target.
+\todo{Discuss Table~\ref{tab:abl_realism}.}
+
+\begin{table*}[t]
+  \centering
+  \caption{Realism components in synthesis. \todo{fill}}
+  \label{tab:abl_realism}
+  \begin{tabular}{@{}lrrrrrr@{}}
+    \toprule
+    Configuration & MPJPE & PA-MPJPE & PVE & Trans.\ err. & Box AP & mAP \\
+    \midrule
+    Full (ours)                        & -- & -- & -- & -- & -- & -- \\
+    without augmentations              & -- & -- & -- & -- & -- & -- \\
+    without occlusions                 & -- & -- & -- & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table*}
+
+% ------------------------------------------------------------------------
+\section{Limitations}
+\label{sec:limitations}
+% TODO: depth-derived LiDAR misses multi-return and material effects;
+% BEDLAM scenes are indoor/urban-limited; SMPL (not SMPL-X) outputs;
+% single-person focus.
+\todo{Write limitations.}
+
+% ------------------------------------------------------------------------
+\section{Conclusion}
+\label{sec:conclusion}
+% TODO: restate the three contributions and the headline gain in metric
+% placement; future work on multi-person and temporal models.
+\todo{Write conclusion.}
+
+% ------------------------------------------------------------------------
+\bibliographystyle{eg-alpha-doi}
+\bibliography{refs}
+
+\end{document}

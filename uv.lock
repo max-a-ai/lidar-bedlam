@@ -963,6 +963,7 @@ debug = [
     { name = "nbconvert" },
     { name = "nbformat" },
     { name = "plotly" },
+    { name = "trimesh" },
 ]
 dev = [
     { name = "mypy" },
@@ -994,6 +995,7 @@ debug = [
     { name = "nbconvert", specifier = ">=7.17.1" },
     { name = "nbformat", specifier = ">=5.11.1" },
     { name = "plotly", specifier = ">=7.0.0" },
+    { name = "trimesh", specifier = ">=5.1.0" },
 ]
 dev = [
     { name = "mypy", specifier = ">=1.11" },
@@ -2026,6 +2028,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2c/2e/a7fbfe268c8a3b32546930c0297c101d65a4a14c304ad5790a9f478f0e4e/traitlets-5.16.1.tar.gz", hash = "sha256:ed900c2b631aa3a112811139fa97b8d2c3bad5e989656bba4b7e52c7852c18c1", size = 166137, upload-time = "2026-08-03T08:32:36.848Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ad/66/0d785f0bc5e4315a96c989bb476d0fc07ea4f85132550c7b156ca2035d52/traitlets-5.16.1-py3-none-any.whl", hash = "sha256:f775618166caa0396c8e337099240f2bd3e5e917d203b2e6fbe21a58d3cb1f6b", size = 86211, upload-time = "2026-08-03T08:32:34.48Z" },
+]
+
+[[package]]
+name = "trimesh"
+version = "5.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/21/3f/a13d797349fdd00a8586b60d6b71df849e1766e2002729697a265b27a773/trimesh-5.1.0.tar.gz", hash = "sha256:927aa8748af8b84cb969c8f53270d929e546f2beada77a2bc234b605fddf1454", size = 870501, upload-time = "2026-08-31T18:28:55.464Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/c8/5ede3b786ef58e0076e9ca748b2c1787183f85e5ad8133373715c31248f9/trimesh-5.1.0-py3-none-any.whl", hash = "sha256:0fa85d1d131e321b683c00747c20090200b92071298b905ea588f609eb204c89", size = 750004, upload-time = "2026-08-31T18:28:53.746Z" },
 ]
 
 [[package]]

@@ -121,10 +121,15 @@ def test_forward_without_smpl() -> None:
     assert out["betas"].shape == (2, 10) and out["transl"].shape == (2, 3)
     assert out["gates"].shape == (2, 2, len(JOINT_GROUPS))
     assert ((out["gates"] >= 0) & (out["gates"] <= 1)).all()
-    # image prior: hands start image-heavy, torso LiDAR-heavy
-    names = [g.name for g in JOINT_GROUPS]
+    # routing prior: 3D groups start LiDAR-heavy, semantic groups image-heavy
+    from lidar_bedlam.models.selective_attention import LIDAR_GROUPS
+
     g0 = out["gates"][0, 0]
-    assert g0[names.index("left_hand")] > 0.8 > 0.2 > g0[names.index("torso")]
+    for i, g in enumerate(JOINT_GROUPS):
+        if g.name in LIDAR_GROUPS:
+            assert g0[i] < 0.2
+        else:
+            assert g0[i] > 0.8
 
 
 @pytest.mark.skipif(not SMPL_DIR.exists(), reason="SMPL model files absent")

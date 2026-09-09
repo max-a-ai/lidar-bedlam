@@ -25,21 +25,26 @@ class JointGroup:
     image_prior: float  # logit; > 0 prefers image, < 0 prefers LiDAR
 
 
-# SMPL joint indices, see body.smpl.SMPL_JOINT_NAMES
+# SMPL joint indices, see body.smpl.SMPL_JOINT_NAMES. Routing prior:
+# 3D cues (body centre, absolute placement, global orientation, shape)
+# from LiDAR; semantic cues (arms, legs, hands, head and its orientation)
+# from the camera.
 JOINT_GROUPS: tuple[JointGroup, ...] = (
     JointGroup("root", (0,), -2.0),
     JointGroup("torso", (3, 6, 9, 12, 13, 14), -2.0),
     JointGroup("head", (15,), 2.0),
-    JointGroup("left_arm", (16, 18), 1.0),
-    JointGroup("right_arm", (17, 19), 1.0),
+    JointGroup("left_arm", (16, 18), 2.0),
+    JointGroup("right_arm", (17, 19), 2.0),
     JointGroup("left_hand", (20, 22), 2.0),
     JointGroup("right_hand", (21, 23), 2.0),
-    JointGroup("left_leg", (1, 4), -2.0),
-    JointGroup("right_leg", (2, 5), -2.0),
+    JointGroup("left_leg", (1, 4), 2.0),
+    JointGroup("right_leg", (2, 5), 2.0),
     JointGroup("left_foot", (7, 10), 2.0),
     JointGroup("right_foot", (8, 11), 2.0),
     JointGroup("shape", (), -2.0),
 )
+
+LIDAR_GROUPS = ("root", "torso", "shape")
 
 
 class SelectiveLayer(nn.Module):
