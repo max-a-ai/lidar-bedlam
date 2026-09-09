@@ -68,6 +68,20 @@ class BedlamFramesSource(SampleSource):
         group, seq, frame, person = self._index[index]
         return SampleMeta(self.name, f"{group}/{seq}", frame, person)
 
+    def frame_persons(self, index: int) -> list[int]:
+        """Indices of all persons in the same frame as ``index``."""
+        group, seq, frame, _ = self._index[index]
+        return [
+            i
+            for i, (g, s, f, _p) in enumerate(self._index)
+            if (g, s, f) == (group, seq, frame)
+        ]
+
+    def depth_path(self, index: int) -> Path:
+        """Path of the depth EXR of the sample's frame."""
+        group, seq, frame, _ = self._index[index]
+        return self.root / group / "depth" / seq / f"{seq}_{frame}_depth.exr"
+
     def _camera_row(
         self, group: str, seq: str, frame: str
     ) -> dict[str, float]:

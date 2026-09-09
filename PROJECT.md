@@ -7,6 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
+- 2026-09-09 (later) — Implemented and tested the selective-attention fusion model (ViT-H with TokenHMR weights, point tokenizer, gated decoder, SMPL heads) and the executed `debug/capabilities.ipynb` visualising BEDLAM, simulated LiDAR at 4 resolutions and 2 viewpoints, real datasets and the model.
 - 2026-09-09 — Located the missing SMPL/SMPL-X labels (project server only), wrote the fetch script, finished extracting the first BEDLAM group (17,778 person-frames), and built the tested LiDAR simulator (32/64/128/256 beams, sensor offsets) plus occlusion augmentation.
 - 2026-09-08 — Audited BEDLAM v1 (complete, planar z-depth in cm), skipped BEDLAM 2.0, scaffolded the repo with five baseline submodules, pushed to GitHub, and built the verified data pipeline (SLOPER4D, LiDARHuman26M, Waymo, BEDLAM loaders, torch dataset, losses, metrics, 21 tests).
 
@@ -31,10 +32,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ### C2 — Selective-attention fusion model
 
-- [ ] Port the ViT image encoder + TokenHMR/HMR2 head loading from `third_party/lif` into `src/lidar_bedlam/models` (typed, no global config object).
-- [ ] Point encoder for sparse human LiDAR (PointNet++ from lif or a small point transformer).
-- [ ] Selective cross-attention head: joint-group routing masks (hands/ankles/head from image tokens; torso/legs/global orient/betas/translation from LiDAR tokens) with a learnable gate; log gate values.
-- [ ] Losses: SMPL params, 3D joints, 2D reprojection, and an explicit 3D translation loss in the camera frame.
+- [ ] Add the SMPL mesh overlays to the BEDLAM cells of `debug/capabilities.ipynb` once the labels are attached.
 - [ ] Training script `main.py` with `--wandb-project lidar-bedlam --wandb-name <run>` (entity `erik_hm`), config in `configs/`.
 - [ ] Weighted multi-source sampler over `HumanPoseDataset` (synthetic vs real weights).
 - [ ] Evaluation script (`lidar_bedlam/evaluation/`) that runs a model over a source and reports MPJPE / PA-MPJPE / PVE / translation error / box mAP.
@@ -68,3 +66,5 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-08 — `scripts/extract_bedlam.py` streaming extraction; first group extracted at 6 fps (17,778 person-frames).
 - [x] 2026-09-09 — `lidar/simulate.py` ray-marching LiDAR simulator with presets os32/os64/os128/os256/waymo64, sensor offsets, noise, dropout; `lidar/augment.py` occlusions; 6 tests.
 - [x] 2026-09-09 — `scripts/fetch_bedlam_labels.sh` and documentation of where the SMPL/SMPL-X labels live.
+- [x] 2026-09-09 — `models/`: ViT (loads TokenHMR ViT-H), point tokenizer, selective gated decoder, SMPL heads with differentiable SMPL, 10 tests; losses already covered.
+- [x] 2026-09-09 — `debug/capabilities.ipynb` generated and executed without errors (22 cells).

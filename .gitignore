@@ -32,3 +32,4 @@ wandb/
 # Third-party body models (licensed, never commit)
 body_models/
 /logs/
+/debug/*.executed.ipynb

@@ -13,6 +13,7 @@ uv run python -m lidar_bedlam.body.convert_smpl \
     data/body_models/smpl/SMPL_NEUTRAL.pkl \
     data/generated/body_models/smpl/SMPL_NEUTRAL.pkl
 uv run pytest
+uv run jupyter lab debug/capabilities.ipynb   # what the repo can do, on real data
 ```
 
 ## Verify
