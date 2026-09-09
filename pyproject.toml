@@ -95,5 +95,5 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["build_debug_notebook"]
+module = ["build_debug_notebook", "verify_notebook"]
 disallow_untyped_calls = false

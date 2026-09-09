@@ -131,7 +131,10 @@ files" or open the canvas by path.
   Eurographics 2027 full papers: abstract 25 Sep 2026, paper 1 Oct 2026
   (`paper/SUBMISSION_NOTES.md`).
 - The debug notebook is generated code: edit `scripts/build_debug_notebook.py`,
-  rebuild, and execute with `jupyter nbconvert --execute` from `debug/`.
+  rebuild, and verify with `scripts/verify_notebook.py` (executes every cell,
+  fails on cell or widget errors; widget cells wait out the short timeout).
+- BEDLAM labels are downloaded to `data/generated/bedlam_labels/` (SMPL
+  extracted under `smpl/`, SMPL-X zip present).
 - Waymo comes from the `waymo_pose_complete_4` crops made for LIF-Net
   (3D and 3D_2D subsets, split files at its root), not from the parquet.
 

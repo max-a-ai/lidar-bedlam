@@ -4,8 +4,7 @@ The notebook is generated from code so it stays in sync with the package;
 edit this script, not the notebook. Execute it to verify::
 
     uv run python scripts/build_debug_notebook.py
-    uv run jupyter nbconvert --to notebook --execute \
-        debug/capabilities.ipynb --output capabilities.executed.ipynb
+    uv run python scripts/verify_notebook.py
 """
 
 from __future__ import annotations
