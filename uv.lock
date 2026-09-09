@@ -956,6 +956,7 @@ dependencies = [
 [package.dev-dependencies]
 debug = [
     { name = "ipykernel" },
+    { name = "ipywidgets" },
     { name = "jupyter" },
     { name = "matplotlib" },
     { name = "nbclient" },
@@ -986,6 +987,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 debug = [
     { name = "ipykernel", specifier = ">=7.3.0" },
+    { name = "ipywidgets", specifier = ">=8.1.9" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "matplotlib", specifier = ">=3.11.1" },
     { name = "nbclient", specifier = ">=0.11.0" },

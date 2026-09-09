@@ -20,7 +20,9 @@ from lidar_bedlam.data.base import (
     crop_sample,
     sample_points,
 )
+from lidar_bedlam.data.image_augment import ImageAugmentConfig, augment_image
 from lidar_bedlam.data.schema import CroppedSample
+from lidar_bedlam.lidar.augment import PointAugmentConfig, augment_points
 
 IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
@@ -40,8 +42,14 @@ class HumanPoseDataset(Dataset[Item]):
         n_points: int = 1024,
         padding: float = 1.2,
         seed: int = 0,
+        point_augment: PointAugmentConfig | None = None,
+        image_augment: ImageAugmentConfig | None = None,
+        n_channels: int = 64,
     ) -> None:
         self.sources = list(sources)
+        self.point_augment = point_augment
+        self.image_augment = image_augment
+        self.n_channels = n_channels
         self.smpl_model = smpl_model
         self.out_size = out_size
         self.n_points = n_points
@@ -62,6 +70,19 @@ class HumanPoseDataset(Dataset[Item]):
         sample = source.load(local)
         if self.smpl_model is not None:
             add_smpl_derived(sample, self.smpl_model)
+        if self.image_augment is not None:
+            sample.image, sample.bbox_xyxy = augment_image(
+                sample.image, sample.bbox_xyxy, self.image_augment, self._rng
+            )
+        if self.point_augment is not None:
+            channel = sample.extra.get("channel")
+            sample.points = augment_points(
+                sample.points,
+                None if channel is None else channel.astype(np.int64),
+                self.n_channels,
+                self.point_augment,
+                self._rng,
+            )
         return crop_sample(sample, self.out_size, self.padding)
 
     def __getitem__(self, index: int) -> Item:

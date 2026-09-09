@@ -140,3 +140,30 @@ LiDAR-to-mesh distance (median over points) on the shown samples: SLOPER4D
 1.3 cm, LiDARHuman26M 7.8 cm (5.4 cm mean over 21 samples; the IMU-based
 ground truth of that dataset is noisier, the SMPL convention was verified
 against the alternatives, which give more than 12 cm).
+
+## Augmentation (`lidar/augment.py`, `data/image_augment.py`)
+
+Point cloud, applied in `HumanPoseDataset` when `point_augment` is set
+(`PointAugmentConfig`), in this order:
+
+| Effect | Function | Models |
+|---|---|---|
+| object occlusion: half-space, box cut-out, legs/head cut, subsampling | `occlude`, `height_cut_fraction`, `axis_cut_fraction` | other people, cars, furniture, partial views |
+| sensor cover (azimuth / channel bands) | `cover_mask`, `SensorCover` | dirt or objects on the sensor, mounting obstructions |
+| channel dropout | `drop_channels` | dead or weak channels, low-reflectivity returns |
+| jitter (isotropic) and range jitter (along the ray) | `jitter`, `range_jitter` | range noise of the sensor |
+| outliers | `add_outliers` | dust, edge returns, blooming |
+| calibration error | `miscalibrated_pose` | LiDAR-camera extrinsic error |
+| resolution (channels x steps per revolution) | `ouster(family, channels, steps)` | 32/64/128/256 x 512/1024/2048 = 12 settings |
+
+Image (`ImageAugmentConfig`): random erasing inside the person box, cover of
+one image side, brightness / contrast / saturation, Gaussian blur, JPEG
+re-encoding, and bbox jitter (detector noise; the crop follows the jittered
+box, the labels do not move).
+
+Not implemented on purpose for now: horizontal flip (needs a consistent
+mirror of SMPL parameters, points and joints), motion distortion of the
+scan, and intensity, since the simulator has no reflectivity.
+
+The interactive notebook section 5b exposes all of these per sample and
+person with a 4 x 3 resolution checkbox grid.

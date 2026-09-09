@@ -7,6 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
+- 2026-09-10 — Added sensor-level and image augmentations (cover, channel dropout, jitter, outliers, miscalibration, erasing, colour, blur, JPEG, bbox jitter), wired them into the dataset, and an interactive notebook section with the 4x3 resolution grid.
 - 2026-09-09 (evening) — LiDAR presets renamed to Ouster families (OS0/OS1/OS2, 32-256 channels, 512/1024/2048 steps per revolution) with the camera HFOV mapped to a column window; notebook updated.
 - 2026-09-09 (later) — Implemented and tested the selective-attention fusion model (ViT-H with TokenHMR weights, point tokenizer, gated decoder, SMPL heads) and the executed `debug/capabilities.ipynb` visualising BEDLAM, simulated LiDAR at 4 resolutions and 2 viewpoints, real datasets and the model.
 - 2026-09-09 — Located the missing SMPL/SMPL-X labels (project server only), wrote the fetch script, finished extracting the first BEDLAM group (17,778 person-frames), and built the tested LiDAR simulator (32/64/128/256 beams, sensor offsets) plus occlusion augmentation.
@@ -69,3 +70,4 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-09 — `scripts/fetch_bedlam_labels.sh` and documentation of where the SMPL/SMPL-X labels live.
 - [x] 2026-09-09 — `models/`: ViT (loads TokenHMR ViT-H), point tokenizer, selective gated decoder, SMPL heads with differentiable SMPL, 10 tests; losses already covered.
 - [x] 2026-09-09 — `debug/capabilities.ipynb` generated and executed without errors (22 cells).
+- [x] 2026-09-10 — Point and image augmentation configs (`PointAugmentConfig`, `ImageAugmentConfig`) wired into `HumanPoseDataset`; 6 tests; interactive notebook section 5b.

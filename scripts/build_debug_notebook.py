@@ -227,6 +227,115 @@ for vname in viewpoints:
 """)
 
 md("""
+## 5b. Interactive: sample, person, the 12 resolutions, occlusions and jitter
+
+Pick a sample and a person, tick any of the 4 x 3 resolutions (channels x azimuth steps per
+revolution), choose the viewpoint, cover part of the camera image and part of the LiDAR
+window, add object occlusion, jitter, outliers, channel dropout and a calibration error.
+Every change re-renders the 2D overlay (one panel per ticked resolution) and the 3D plot.
+""")
+
+code("""
+import ipywidgets as W
+from IPython.display import display, clear_output
+from lidar_bedlam.lidar.simulate import ouster
+from lidar_bedlam.lidar.augment import (
+    SensorCover, add_outliers, axis_cut_fraction, cover_mask, drop_channels,
+    height_cut_fraction, jitter, miscalibrated_pose,
+)
+from lidar_bedlam.data.image_augment import cover_side
+
+CHANNELS, STEPS = [32, 64, 128, 256], [512, 1024, 2048]
+sample_dd = W.Dropdown(options=[(f"{s.meta.sequence.split('/')[-1]} f{s.meta.frame}", i) for i, s in enumerate(samples)], description="sample")
+person_dd = W.Dropdown(description="person")
+def _refresh_persons(*_):
+    person_dd.options = [(f"person {p.meta.person}", j) for j, p in enumerate(persons[sample_dd.value])]
+    person_dd.value = 0
+sample_dd.observe(_refresh_persons, "value"); _refresh_persons()
+grid_boxes = {(c, st): W.Checkbox(value=(c == 64 and st == 1024), indent=False, layout=W.Layout(width="70px")) for c in CHANNELS for st in STEPS}
+cells = [W.Label("channels \\\\ steps")] + [W.Label(str(st), layout=W.Layout(width="70px")) for st in STEPS]
+for c in CHANNELS:
+    cells += [W.Label(f"{c} channels", layout=W.Layout(width="110px"))] + [grid_boxes[(c, st)] for st in STEPS]
+grid = W.GridBox(cells, layout=W.Layout(grid_template_columns="110px 70px 70px 70px"))
+family_dd = W.Dropdown(options=["OS0", "OS1", "OS2"], value="OS1", description="family")
+viewpoint_dd = W.Dropdown(options=[("camera", 0), ("10 cm above", 1), ("1 m right", 2)], description="viewpoint")
+cam_side = W.Dropdown(options=["none", "left", "right", "top", "bottom"], description="camera cover")
+cam_frac = W.FloatSlider(0.3, min=0.0, max=0.8, step=0.05, description="cover frac", continuous_update=False)
+lidar_left = W.FloatSlider(0.0, min=0.0, max=0.9, step=0.05, description="LiDAR left", continuous_update=False)
+lidar_right = W.FloatSlider(0.0, min=0.0, max=0.9, step=0.05, description="LiDAR right", continuous_update=False)
+lidar_top = W.FloatSlider(0.0, min=0.0, max=0.9, step=0.05, description="LiDAR top", continuous_update=False)
+lidar_bottom = W.FloatSlider(0.0, min=0.0, max=0.9, step=0.05, description="LiDAR bottom", continuous_update=False)
+obj_occ = W.Dropdown(options=["none", "legs", "head", "left side", "right side", "front"], description="object occl.")
+obj_frac = W.FloatSlider(0.4, min=0.05, max=0.9, step=0.05, description="occl. frac", continuous_update=False)
+jitter_s = W.FloatSlider(0.0, min=0.0, max=0.1, step=0.005, description="jitter [m]", continuous_update=False, readout_format=".3f")
+outlier_s = W.FloatSlider(0.0, min=0.0, max=0.3, step=0.01, description="outliers", continuous_update=False)
+chdrop_s = W.FloatSlider(0.0, min=0.0, max=0.8, step=0.05, description="chan. dropout", continuous_update=False)
+miscal_s = W.FloatSlider(0.0, min=0.0, max=3.0, step=0.1, description="miscalib [deg]", continuous_update=False)
+out = W.Output()
+
+def render(*_):
+    with out:
+        clear_output(wait=True)
+        if sample_dd.value is None or person_dd.value is None:
+            return
+        s, depth = samples[sample_dd.value], depths[sample_dd.value]
+        p = persons[sample_dd.value][person_dd.value]
+        pose = [np.eye(4), sensor_pose(np.array([0.0, -0.1, 0.0])), sensor_pose(np.array([1.0, 0.0, 0.0]))][viewpoint_dd.value]
+        rng_i = np.random.default_rng(0)
+        if miscal_s.value > 0:
+            pose = miscalibrated_pose(pose, miscal_s.value, 0.01 * miscal_s.value, rng_i)
+        image = s.image if cam_side.value == "none" else cover_side(s.image, cam_side.value, cam_frac.value)
+        cover = SensorCover(lidar_left.value, lidar_right.value, lidar_top.value, lidar_bottom.value)
+        results = {}
+        for (c, st), cb in grid_boxes.items():
+            if not cb.value:
+                continue
+            spec = ouster(family_dd.value, c, st)
+            scan = select_mask(simulate(depth, s.camera, spec, pose, rng_i), p.mask)
+            w = azimuth_window(s.camera, spec, pose)
+            keep = cover_mask(scan.channel, scan.azimuth_deg, c, w.az_min_deg, w.az_max_deg, cover)
+            if chdrop_s.value > 0:
+                keep &= drop_channels(scan.channel, c, chdrop_s.value, rng_i)
+            pts, pix, ch = scan.points[keep].astype(np.float64), scan.pixel[keep], scan.channel[keep]
+            if obj_occ.value != "none" and len(pts):
+                k = {"legs": lambda: height_cut_fraction(pts, obj_frac.value, True),
+                     "head": lambda: height_cut_fraction(pts, obj_frac.value, False),
+                     "left side": lambda: axis_cut_fraction(pts, 0, obj_frac.value, True),
+                     "right side": lambda: axis_cut_fraction(pts, 0, obj_frac.value, False),
+                     "front": lambda: axis_cut_fraction(pts, 2, obj_frac.value, True)}[obj_occ.value]()
+                pts, pix, ch = pts[k], pix[k], ch[k]
+            pts = jitter(pts, jitter_s.value, rng_i)
+            if outlier_s.value > 0:
+                pts = add_outliers(pts, outlier_s.value, 0.3, rng_i)
+            results[(c, st)] = (pts, pix, ch, w.columns)
+        n = max(len(results), 1); ncols = min(n, 3); nrows = int(np.ceil(n / ncols))
+        fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 7 * nrows), squeeze=False)
+        x0, y0, x1, y1 = p.bbox_xyxy; pad = 60
+        for ax, ((c, st), (pts, pix, ch, ncol)) in zip(axes.flat, results.items()):
+            ax.imshow(image); draw_mask_outline(ax, p.mask, "yellow")
+            if len(pix):
+                draw_points(ax, pix, ch, size=14, cmap="turbo")
+            ax.set_xlim(x0 - pad, x1 + pad); ax.set_ylim(y1 + pad, y0 - pad); ax.set_xticks([]); ax.set_yticks([])
+            ax.set_title(f"{family_dd.value}-{c} @ {st} steps ({ncol} cols): {len(pts)} pts")
+        for ax in list(axes.flat)[len(results):]:
+            ax.axis("off")
+        plt.tight_layout(); plt.show()
+        traces = [points_trace(person_surface(p), "dense surface", color="lightgrey", size=1.0)]
+        for (c, st), (pts, _, _, _) in results.items():
+            if len(pts):
+                traces.append(points_trace(pts, f"{family_dd.value}-{c} @ {st} ({len(pts)})", size=3))
+        figure_3d(traces, f"{p.meta.key}: selected resolutions (toggle in legend)", height=650).show()
+
+for w in [sample_dd, person_dd, family_dd, viewpoint_dd, cam_side, cam_frac, lidar_left, lidar_right,
+          lidar_top, lidar_bottom, obj_occ, obj_frac, jitter_s, outlier_s, chdrop_s, miscal_s, *grid_boxes.values()]:
+    w.observe(render, "value")
+ui = W.VBox([W.HBox([sample_dd, person_dd, family_dd, viewpoint_dd]), grid,
+             W.HBox([cam_side, cam_frac]), W.HBox([lidar_left, lidar_right]), W.HBox([lidar_top, lidar_bottom]),
+             W.HBox([obj_occ, obj_frac]), W.HBox([jitter_s, outlier_s]), W.HBox([chdrop_s, miscal_s])])
+display(ui, out); render()
+""")
+
+md("""
 ## 6. Real datasets: LiDAR points vs the ground-truth SMPL mesh
 
 This is the distance that transfers to real data: points lie on clothing and sensor noise,
