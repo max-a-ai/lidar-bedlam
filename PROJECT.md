@@ -7,7 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
-- 2026-09-09 — Located the missing SMPL/SMPL-X labels (BEDLAM project server only, not on Hugging Face), wrote the fetch script, and finished extracting the first BEDLAM group (17,778 person-frames at 6 fps).
+- 2026-09-09 — Located the missing SMPL/SMPL-X labels (project server only), wrote the fetch script, finished extracting the first BEDLAM group (17,778 person-frames), and built the tested LiDAR simulator (32/64/128/256 beams, sensor offsets) plus occlusion augmentation.
 - 2026-09-08 — Audited BEDLAM v1 (complete, planar z-depth in cm), skipped BEDLAM 2.0, scaffolded the repo with five baseline submodules, pushed to GitHub, and built the verified data pipeline (SLOPER4D, LiDARHuman26M, Waymo, BEDLAM loaders, torch dataset, losses, metrics, 21 tests).
 
 ## Contributions
@@ -25,8 +25,6 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Run the official xxh128 validation on the NAS itself for `png`, `depth`, `masks`, `gt` (`scripts/validate_bedlam_on_nas.sh`).
 - [ ] Extract the remaining groups at 6 fps with `scripts/extract_bedlam.py` (first group done: 100 sequences, 17,778 person-frames, 9.8 GB).
 - [ ] Match label records to mask person ids (labels are per body, masks are per person index) via projected-joint-in-mask tests.
-- [ ] Implement `lidar.simulate`: depth (planar z, cm) to camera-frame point cloud; ray-cast a spinning LiDAR pattern (32/64/128/256 beams, configurable vertical FOV, azimuth resolution, range, noise, dropout) from a LiDAR origin at a configurable extrinsic offset to the camera.
-- [ ] Implement occlusion augmentation for point clouds (random box/plane cut-outs, self-occlusion from a shifted origin, partial-body crops).
 - [ ] Write the generated sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, box3d, beam count) and a `SampleSource` for it.
 - [ ] Generate the v0 dataset (one group), inspect 20 samples visually, then generate the full subset.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels).
@@ -67,4 +65,6 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-08 — `data/` symlinks (`scripts/link_data.sh`), chumpy-free SMPL conversion, SMPL frame-change verified.
 - [x] 2026-09-08 — Loaders for SLOPER4D, LiDARHuman26M, Waymo (pose_complete_4) and BEDLAM raw frames, sharing one schema; reprojection checks pass.
 - [x] 2026-09-08 — `HumanPoseDataset` (torch), `FusionLoss`, pose metrics (MPJPE, PA-MPJPE, PVE) and 3D box AP/mAP + translation error; 21 unit tests.
-- [x] 2026-09-08 — `scripts/extract_bedlam.py` streaming extraction; first group extracting at 6 fps.
+- [x] 2026-09-08 — `scripts/extract_bedlam.py` streaming extraction; first group extracted at 6 fps (17,778 person-frames).
+- [x] 2026-09-09 — `lidar/simulate.py` ray-marching LiDAR simulator with presets os32/os64/os128/os256/waymo64, sensor offsets, noise, dropout; `lidar/augment.py` occlusions; 6 tests.
+- [x] 2026-09-09 — `scripts/fetch_bedlam_labels.sh` and documentation of where the SMPL/SMPL-X labels live.

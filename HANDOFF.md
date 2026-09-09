@@ -71,6 +71,7 @@ lidar-bedlam/
 │   └── research_notes.md        # sourced web research (BEDLAM2, baselines)
 ├── scripts/
 │   ├── link_data.sh             # creates data/ symlinks
+│   ├── fetch_bedlam_labels.sh   # SMPL/SMPL-X labels from the BEDLAM server
 │   ├── extract_bedlam.py        # streams frames out of the NAS tars
 │   └── validate_bedlam_on_nas.sh
 ├── src/lidar_bedlam/
@@ -78,6 +79,7 @@ lidar-bedlam/
 │   ├── geometry/                # camera, rotations, crop, boxes
 │   ├── body/                    # SMPL wrapper, legacy pkl conversion
 │   ├── data/                    # schema, base pipeline, loaders, torch dataset
+│   ├── lidar/                   # LiDAR simulation from depth + occlusion augmentation
 │   ├── losses/                  # FusionLoss
 │   └── metrics/                 # pose + detection metrics
 ├── tests/                       # pytest (uv run pytest)

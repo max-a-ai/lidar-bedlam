@@ -77,3 +77,31 @@ the predicted and ground-truth box of every sample and reports AP at IoU
 confidence, AP equals the fraction of boxes above the threshold; pass model
 confidences to get a real precision-recall curve. `translation_error` and
 `error_by_distance` report the 3D placement error, also binned by distance.
+
+## LiDAR simulation (`lidar_bedlam/lidar/`)
+
+`simulate.simulate(depth_m, camera, spec, camera_from_sensor)` casts a
+spinning-LiDAR scan against a rendered depth map by ray marching: each beam
+is a ray from the sensor origin, sampled at 192 log-spaced ranges; the first
+sample behind the depth surface is refined by linear interpolation. Returns
+carry the beam index, azimuth, noisy range and hit pixel, so
+`select_mask(scan, person_mask)` yields the person's returns. A hit is only
+accepted when the previous sample was inside the image and in front of the
+surface, so a sensor offset from the camera never invents geometry the
+camera did not see.
+
+| Preset | Beams | Vertical FOV | Azimuth res | Person returns at 10 m (BEDLAM sample) |
+|---|---|---|---|---|
+| os32 | 32 | 45 deg | 0.35 deg | 31 |
+| os64 | 64 | 45 deg | 0.35 deg | 67 |
+| os128 | 128 | 45 deg | 0.35 deg | 131 |
+| os256 | 256 | 45 deg | 0.175 deg | 517 |
+| waymo64 | 64 | -17.6..2.4 deg | 0.14 deg | 363 |
+
+`sensor_pose(translation, pitch, yaw, roll)` gives the camera-from-sensor
+pose for the extrinsic-shift ablation (e.g. 0.5 m above the camera).
+Range noise (2 cm std) and dropout are part of `LidarSpec`.
+
+`augment.occlude(points, OcclusionConfig, rng)` returns a keep mask after a
+random half-space cut, box cut-out, height cut (legs or head occluded) and
+subsampling, never dropping below a minimum point count.
