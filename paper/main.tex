@@ -79,16 +79,37 @@
 % robotics/AV) and the lack of large real datasets with SMPL labels.
 % TODO: why synthetic: BEDLAM already provides depth, SMPL-X and camera
 % intrinsics, so a physically plausible LiDAR sweep can be derived per frame.
-% TODO: contributions list:
-% (i)   a synthetic LiDAR-camera SMPL dataset generated from BEDLAM depth,
-%       with Ouster-style beam presets, rolling shutter and randomised
-%       sensor placement in a ball around the camera;
-% (ii)  a selective-attention fusion model that routes 3D cues
-%       (translation, box, depth-dependent joints) to LiDAR tokens and
-%       semantic cues (pose, shape, identity) to image tokens;
-% (iii) evidence that synthetic data improves real-world SMPL estimation,
-%       including camera-frame 3D placement, on SLOPER4D, LiDARHuman26M
-%       and Waymo.
+% Contributions (the red thread: data -> model -> evidence, one addition
+% per ablation rung; see docs/story.md).
+Our contributions are:
+\begin{itemize}
+  \item \textbf{A synthetic LiDAR--camera dataset for SMPL pose and shape.}
+    We derive physically plausible LiDAR sweeps from the depth renders of
+    BEDLAM and pair them with the images and SMPL labels. The generator
+    randomises the sensor placement in a ball around the camera, mixes
+    twelve Ouster-style resolutions (32--256 channels, 512--2048 steps per
+    revolution), applies virtual distance, occlusion and sensor
+    augmentations, and yields camera-frame 3D boxes for every person,
+    so that the same data serves pose, shape and placement.
+  \item \textbf{A selective-attention fusion model.} Learnable per-query
+    gates route each joint group to the modality that carries its
+    evidence: the image tokens decide the semantic parts (head and head
+    orientation, arms, hands, legs and feet), while the LiDAR tokens
+    decide the metric quantities (body centre, absolute placement,
+    global orientation and shape). The image backbone stays frozen, so
+    the gains come from the data and the routing, not from backbone
+    capacity.
+  \item \textbf{Evidence that synthetic data improves in-the-wild
+    estimation, including 3D placement.} On Waymo and SLOPER4D, adding
+    our synthetic data to the available real data improves pose, shape
+    and camera-frame placement, measured as translation error by
+    distance and as 3D box AP/mAP in the style of a detector.
+    Ablations add one ingredient at a time along three axes: the fusion
+    (camera only, plain sum, fixed routing, learned gates), the data
+    (real only, plus synthetic, synthetic only, and the amount of
+    synthetic data), and the synthesis choices that make simulated LiDAR
+    transfer (sensor placement and resolution mixing).
+\end{itemize}
 \todo{Write introduction.}
 
 % ------------------------------------------------------------------------
