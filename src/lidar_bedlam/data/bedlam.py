@@ -62,6 +62,7 @@ class BedlamFramesSource(SampleSource):
         )
         self._hfov: dict[tuple[str, str], dict[str, float]] = {}
         self._index: list[tuple[str, str, str, str]] = []
+        self.incomplete = 0  # frames skipped because png/depth are missing
         for group in self.groups:
             for seq_dir in sorted((root / group / "masks").glob("seq_*")):
                 seq = seq_dir.name
@@ -72,8 +73,19 @@ class BedlamFramesSource(SampleSource):
                 for frame in sorted(persons):
                     if int(frame) % frame_stride:
                         continue
+                    if not self._frame_complete(group, seq, frame):
+                        self.incomplete += 1
+                        continue
                     for person in sorted(persons[frame]):
                         self._index.append((group, seq, frame, person))
+
+    def _frame_complete(self, group: str, seq: str, frame: str) -> bool:
+        """Whether png and depth of a frame are extracted (groups can be
+        indexed while their extraction is still running)."""
+        base = self.root / group
+        return (base / "png" / seq / f"{seq}_{frame}.png").exists() and (
+            base / "depth" / seq / f"{seq}_{frame}_depth.exr"
+        ).exists()
 
     def __len__(self) -> int:
         return len(self._index)
