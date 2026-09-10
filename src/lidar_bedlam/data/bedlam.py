@@ -121,8 +121,8 @@ class BedlamFramesSource(SampleSource):
         self, group: str, seq: str, frame: str
     ) -> dict[str, NDArray[np.bool_]]:
         masks: dict[str, NDArray[np.bool_]] = {}
-        for _g, s, f, pid in self._index:
-            if (s, f) != (seq, frame):
+        for g, s, f, pid in self._index:
+            if (g, s, f) != (group, seq, frame):
                 continue
             masks[pid] = self._read_mask(group, seq, frame, pid)
         return masks

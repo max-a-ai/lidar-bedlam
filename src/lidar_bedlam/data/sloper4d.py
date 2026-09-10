@@ -12,12 +12,24 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from numpy.typing import NDArray
 
 from lidar_bedlam.body.smpl import SmplModel, SmplParams, transform_smpl_params
 from lidar_bedlam.data.base import SampleSource
 from lidar_bedlam.data.schema import Sample, SampleMeta
 from lidar_bedlam.geometry.camera import PinholeCamera, transform_points
 from lidar_bedlam.io import read_image
+
+
+def _skel_2d(raw: object) -> NDArray[np.float64] | None:
+    """COCO-17 keypoints (17, 3): some sequences store 4 values per joint."""
+    arr = np.asarray(raw, dtype=np.float64)
+    if arr.size == 0 or arr.size % 17:
+        return None
+    arr = arr.reshape(17, -1)
+    if arr.shape[1] < 3:
+        return None
+    return np.ascontiguousarray(arr[:, :3])
 
 
 class Sloper4dSource(SampleSource):
@@ -93,9 +105,7 @@ class Sloper4dSource(SampleSource):
             / f"{seq}_imgs"
             / frames["file_basename"][i]
         )
-        kp2d = np.asarray(frames["skel_2d"][i], dtype=np.float64).reshape(
-            -1, 3
-        )
+        kp2d = _skel_2d(frames["skel_2d"][i])
         return Sample(
             meta=self.meta(index),
             image=read_image(image_path),
