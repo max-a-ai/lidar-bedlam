@@ -21,9 +21,11 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Contributions
 
-- **C1** — A synthetic LiDAR-camera SMPL pose-and-shape dataset generated from BEDLAM.
-- **C2** — A selective-attention fusion model: image cues drive hands, ankles and head orientation; LiDAR cues drive body pose, shape and 3D placement.
-- **C3** — Experiments and ablations showing synthetic data improves real-world SMPL estimation, with 3D placement as the headline metric.
+Claim: synthetic data, used correctly and enriched with LiDAR rendered from BEDLAM depth, improves in-the-wild SMPL pose, shape and 3D placement; selective attention fusion is the model that turns the data into the gain. Full red thread with the run ladder in `docs/story.md`.
+
+- **C1** — A synthetic LiDAR-camera SMPL dataset from BEDLAM depth: placement ball, 12 resolutions, occlusion and sensor augmentations (the "used correctly" part).
+- **C2** — Selective-attention fusion: camera cues route to head, arms, hands, legs and feet; LiDAR cues to body centre, placement, global orientation and shape.
+- **C3** — Evidence on Waymo and SLOPER4D: main table (real / +synthetic / synthetic only) and one-addition-per-rung ablations (model axis, synthesis axis, data curve), with 3D placement (translation error, box AP/mAP) as the headline.
 
 ## Todos
 

@@ -4,6 +4,8 @@ Deadlines: abstract 25 Sep 2026, paper 1 Oct 2026 (full paper, 10 pages).
 Headline: synthetic LiDAR-camera data from BEDLAM improves 3D placement and
 pose of pedestrians on Waymo; SLOPER4D gives the additional full-SMPL proof.
 
+The narrative and the run ladder live in `docs/story.md`.
+
 ## 1. Decisions
 
 | Topic | Decision |
