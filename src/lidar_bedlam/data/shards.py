@@ -150,6 +150,6 @@ class ShardDataset(Dataset[Item]):
         tokens = self._token_array(s)
         if tokens is not None:
             item["tokens"] = torch.from_numpy(
-                np.asarray(tokens[i, 1 if use_aug else 0])
+                np.array(tokens[i, 1 if use_aug else 0])
             )
         return item

@@ -99,6 +99,23 @@ def box3d_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
     return _masked_mean(centre + size + yaw, batch["has_box3d"])
 
 
+def box_conf_loss(
+    pred_conf: Tensor, pred_box: Tensor, batch: dict[str, Tensor]
+) -> Tensor:
+    """L1 between the predicted confidence and the true 3D IoU (no grad)."""
+    from lidar_bedlam.geometry.boxes import iou3d
+    from lidar_bedlam.geometry.camera import CAMERA_UP_AXIS
+
+    pb = pred_box.detach().cpu().double().numpy()
+    gb = batch["box3d"].detach().cpu().double().numpy()
+    target = torch.tensor(
+        [iou3d(a, b, CAMERA_UP_AXIS) for a, b in zip(pb, gb, strict=True)],
+        dtype=pred_conf.dtype,
+        device=pred_conf.device,
+    )
+    return _masked_mean((pred_conf - target).abs(), batch["has_box3d"])
+
+
 @dataclass
 class LossWeights:
     """Relative weights of the loss terms."""
@@ -110,6 +127,7 @@ class LossWeights:
     kp2d: float = 1.0
     transl: float = 5.0
     box3d: float = 1.0
+    box_conf: float = 1.0
     crop_size: int = 256
     extra: dict[str, float] = field(default_factory=dict)
 
@@ -129,6 +147,10 @@ class FusionLoss:
         parts["box3d"] = box3d_loss(pred["box3d"], batch)
         if "kp2d" in pred:
             parts["kp2d"] = kp2d_loss(pred["kp2d"], batch, self.w.crop_size)
+        if "box_conf" in pred and "box3d" in pred:
+            parts["box_conf"] = box_conf_loss(
+                pred["box_conf"], pred["box3d"], batch
+            )
         total = torch.zeros(
             (), dtype=pred["betas"].dtype, device=pred["betas"].device
         )

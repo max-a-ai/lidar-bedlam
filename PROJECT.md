@@ -7,7 +7,8 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
-- 2026-09-10 (latest) — Grilled the full plan: Waymo is the headline (5,559 usable samples), SLOPER4D secondary, LiDARHuman26M and PedX dropped, SAM 3 masks for Waymo points, precomputed ViT-H tokens, Slurm/H100 training with auto-resume; written to `docs/plan.md`.
+- 2026-09-10 (training) — WP2 training stack: `main.py` (torchrun, mixture sampler, AMP, checkpoint/resume, offline wandb, gate modes), `evaluate.py`, 16 configs, self-resubmitting Helma job script; smoke run on the 4090 passed; token precompute and the full synthetic generation running; repo and data syncing to the Helma workspace.
+- 2026-09-10 (plan) — Grilled the full plan: Waymo is the headline (5,559 usable samples), SLOPER4D secondary, LiDARHuman26M and PedX dropped, SAM 3 masks for Waymo points, precomputed ViT-H tokens, Slurm/H100 training with auto-resume; written to `docs/plan.md`.
 - 2026-09-10 (late) — Decided the ablation plan (`docs/ablations.md`): merged the extrinsics studies into a ball-radius sweep, added the resolution ablation, dropped rolling shutter as an ablation; routed legs and arms to the camera prior; EG 2027 LaTeX skeleton started.
 - 2026-09-10 (night) — Ego speed settings (10 km/h steps, Waymo-measured preset 20 ± 20 km/h) and LiDAR rolling-shutter distortion, exposed in the notebook.
 - 2026-09-10 (night) — Added the own AVA car and FUSE-Bike rigs (nuScenes exports) and exported all five rigs to the Obsidian vault as PNG, interactive HTML, GLB and tree text with a `rigs.md` note.
@@ -28,31 +29,25 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ### C1 — Dataset from BEDLAM
 
-- [ ] Download the BEDLAM training labels with `bash scripts/fetch_bedlam_labels.sh` (needs the BEDLAM login; `bedlam-labels-smpl.zip` = SMPL, `all_npz_12_training.zip` = SMPL-X; per-image params already in the camera frame, so no body placement is needed).
-- [ ] Write `data/bedlam.py` label attachment: join the npz records (`imgname`, `center`, `scale`, `pose_cam`, `shape`, `trans_cam`, `cam_int`, `gtkps`) to the extracted frames and person masks; verify by projecting SMPL joints onto the png.
 - [ ] Run the official xxh128 validation on the NAS itself for `png`, `depth`, `masks`, `gt` (`scripts/validate_bedlam_on_nas.sh`).
 - [ ] Extraction of the 11 remaining paper groups running in the background (`scripts/extract_bedlam_groups.sh`, logs in `logs/`).
-- [ ] Match label records to mask person ids (labels are per body, masks are per person index) via projected-joint-in-mask tests.
-- [ ] Apply `SpeedSetting` + `apply_rolling_shutter` in the generation pipeline (per-sample speed, sweep over the camera window).
-- [ ] Generate v1: first group running in the background; the other 11 groups after extraction; shard dataset class for training.
+- [ ] Apply `SpeedSetting` + `apply_rolling_shutter` in the generation pipeline (per-sample speed, sweep over the camera window); default speed 0 for v1.
+- [ ] Generate v1: groups 02-11 running in the background (117,657 frames); group 12 after its extraction finishes; then precompute tokens for the new shards and rsync them to Helma.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels).
 
 ### C2 — Selective-attention fusion model
 
+- [ ] Launch the main run on Helma once the data sync is complete (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml scripts/slurm/train.sbatch`), verify the resume chain on the first wall-time hit, sync wandb from the login node.
+- [ ] Waymo LiDAR-only samples (5,006) as `has_image=False` records (after the main run).
 - [ ] Add the SMPL mesh overlays to the BEDLAM cells of `debug/capabilities.ipynb` once the labels are attached.
-- [ ] Training script `main.py` with `--wandb-project lidar-bedlam --wandb-name <run>` (entity `erik_hm`), config in `configs/`.
-- [ ] Weighted multi-source sampler over `HumanPoseDataset` (synthetic vs real weights).
-- [ ] Evaluation script (`lidar_bedlam/evaluation/`) that runs a model over a source and reports MPJPE / PA-MPJPE / PVE / translation error / box mAP.
-- [ ] Smoke train on 1 k samples, then full run on the synthetic set.
 
 ### C3 — Experiments and ablations (plan: `docs/ablations.md`)
 
-- [ ] Freeze the evaluation protocol (COCO-17 joints for cross-dataset comparison, distance bins, IoU thresholds) in `docs/data_pipeline.md`.
-- [ ] Baseline runners for CameraHMR, TokenHMR, LiDAR-HMR, SAM 3D Body (MHR to joints), LIF-Net on the real validation sets.
-- [ ] Main table: synthetic-only, real-only, synthetic + real (weighted), on SLOPER4D, LiDARHuman26M and Waymo (keypoints).
-- [ ] Ablation 6.1/6.2 selective attention: learned gates, no gate, hard routing, image only, LiDAR only (4 extra runs, 1/3 schedule).
-- [ ] Ablation 6.3 extrinsics: LiDAR fixed to the target rig vs ball r = 0.25 m vs r = 1.0 m, evaluated on Waymo and SLOPER4D (2 extra runs).
-- [ ] Ablation 6.4 resolution: all 12 channel x step settings vs the target's setting only (1 extra run).
+- [ ] Baseline runners for CameraHMR, TokenHMR, LiDAR-HMR, SAM 3D Body (MHR to joints) on the real validation sets (LiDAR-HMR checkpoint arrives on the NAS).
+- [ ] Main table: `configs/synth_only.yaml`, `real_only.yaml`, `main_mixed.yaml` on Waymo val and SLOPER4D test.
+- [ ] Ablation 6.1/6.2 selective attention: `configs/ablation_gate_{none,hard}.yaml`, `ablation_{image,lidar}_only.yaml` vs `ablation_mixed_short.yaml` (1/3 schedule).
+- [ ] Ablation 6.3 extrinsics: `configs/ablation_rig_waymo.yaml`, `ablation_ball025.yaml` vs the 1 m ball; 6.6 data scaling: `ablation_scale_{2,4,8,16,32}x.yaml`.
+- [ ] Ablation 6.4 resolution: `configs/ablation_target_waymo.yaml` (target setting only) vs the random resolutions of the main run.
 - [ ] After hand-in, ablation 6.5 realism: no augmentation, no occlusion (2 extra runs).
 - [ ] Paper: fill `paper/main.tex` (Eurographics 2027 skeleton) with the tables above.
 
@@ -70,6 +65,9 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Done
 
+- [x] 2026-09-10 — WP2: `train/` (config, mixture sampler, trainer with DDP/AMP/resume/SIGUSR1/offline wandb), `metrics/protocol.py` (Waymo-15 vs COCO-17 mapping, AP/mAP summary), gate modes in the decoder, IoU-confidence head, `main.py`, `evaluate.py`, 16 configs, `scripts/slurm/train.sbatch` + `wandb_sync.sh`; 5 tests; 40-step smoke run on the 4090.
+- [x] 2026-09-10 — Helma probed: `$WORK`/`/anvme` invisible on compute nodes, `/hnvme/workspace` and `/tmp` visible, wandb offline only (`docs/cluster.md`).
+- [x] 2026-09-10 — BEDLAM SMPL labels fetched and attached; label-to-mask matching 98 %.
 - [x] 2026-09-08 — BEDLAM v1 archive audit (names, sizes, EOF blocks, gz integrity).
 - [x] 2026-09-08 — BEDLAM 2.0 size research and decision to skip.
 - [x] 2026-09-08 — Real dataset survey (`docs/datasets.md`).

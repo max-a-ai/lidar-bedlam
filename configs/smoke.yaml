@@ -1,0 +1,23 @@
+# Local smoke test on the 4090: a few steps on SLOPER4D shards with tokens.
+experiment: smoke
+seed: 0
+body_models: ${DATA_ROOT}/body_models
+checkpoint_root: checkpoints
+data:
+  train:
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 1.0, max_shards: 4}
+  val:
+    - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz", max_shards: 1}
+  n_points: 1024
+  num_workers: 4
+  val_max_samples: 256
+model:
+  dim: 512
+  num_layers: 4
+  use_backbone: false
+optim:
+  batch_size: 32
+  warmup_steps: 5
+  max_steps: 40
+  eval_every_steps: 20
+  checkpoint_every_steps: 20

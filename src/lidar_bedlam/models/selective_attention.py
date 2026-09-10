@@ -46,6 +46,11 @@ JOINT_GROUPS: tuple[JointGroup, ...] = (
 
 LIDAR_GROUPS = ("root", "torso", "shape")
 
+# learned: sigmoid(prior + MLP(query)); none: 0.5 everywhere (plain sum of
+# both streams); hard: the priors, frozen; image_only / lidar_only: one
+# stream only (the unimodal ablations)
+GATE_MODES = ("learned", "none", "hard", "image_only", "lidar_only")
+
 
 class SelectiveLayer(nn.Module):
     """One decoder layer: gated dual cross-attention + self-attention + FFN."""
@@ -56,6 +61,7 @@ class SelectiveLayer(nn.Module):
         self.attn_img = nn.MultiheadAttention(dim, num_heads, batch_first=True)
         self.attn_pts = nn.MultiheadAttention(dim, num_heads, batch_first=True)
         self.gate_bias = nn.Parameter(priors.clone())
+        self.gate_mode = "learned"
         self.gate_hidden = nn.Sequential(nn.Linear(dim, dim // 4), nn.GELU())
         self.gate_out = nn.Linear(dim // 4, 1)
         nn.init.zeros_(self.gate_out.weight)
@@ -76,14 +82,23 @@ class SelectiveLayer(nn.Module):
         qn = self.norm_q(q)
         from_img, _ = self.attn_img(qn, img, img, need_weights=False)
         from_pts, _ = self.attn_pts(qn, pts, pts, need_weights=False)
-        gate = torch.sigmoid(
-            self.gate_bias + self.gate_out(self.gate_hidden(qn)).squeeze(-1)
-        )
+        gate = self._gate(qn)
         q = q + gate[..., None] * from_img + (1 - gate[..., None]) * from_pts
         qs = self.norm_s(q)
         q = q + self.self_attn(qs, qs, qs, need_weights=False)[0]
         q = q + self.ffn(self.norm_f(q))
         return q, gate
+
+    def _gate(self, qn: Tensor) -> Tensor:
+        mode = self.gate_mode
+        shape = qn.shape[:2]
+        if mode == "learned":
+            logits = self.gate_out(self.gate_hidden(qn)).squeeze(-1)
+            return torch.sigmoid(self.gate_bias + logits)
+        if mode == "hard":
+            return torch.sigmoid(self.gate_bias.detach()).expand(shape)
+        value = {"none": 0.5, "image_only": 1.0, "lidar_only": 0.0}[mode]
+        return qn.new_full(shape, value)
 
 
 class SelectiveDecoder(nn.Module):
@@ -104,6 +119,15 @@ class SelectiveDecoder(nn.Module):
             [SelectiveLayer(dim, num_heads, priors) for _ in range(num_layers)]
         )
         self.norm = nn.LayerNorm(dim)
+
+    def set_gate_mode(self, mode: str) -> None:
+        """Select how the image/LiDAR gate is computed (see GATE_MODES)."""
+        if mode not in GATE_MODES:
+            msg = f"unknown gate mode {mode!r}; choose from {GATE_MODES}"
+            raise ValueError(msg)
+        for layer in self.layers:
+            assert isinstance(layer, SelectiveLayer)
+            layer.gate_mode = mode
 
     def forward(self, img: Tensor, pts: Tensor) -> tuple[Tensor, Tensor]:
         """Group features (B, G, dim) and gates per layer (L, B, G)."""

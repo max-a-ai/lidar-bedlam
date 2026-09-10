@@ -1,0 +1,38 @@
+# Ablation: camera stream only.
+experiment: abl-image-only
+seed: 0
+body_models: ${DATA_ROOT}/body_models
+checkpoint_root: checkpoints
+data:
+  train:
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11"], pattern: "*.npz", weight: 0.5, variant: random_main}
+  val:
+    - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
+    - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
+  n_points: 1024
+  use_augmented_image: 0.5
+  point_augment: true
+  require_tokens: true
+  num_workers: 8
+  val_max_samples: 4000
+model:
+  dim: 512
+  num_heads: 8
+  num_layers: 4
+  point_tokens: 128
+  point_knn: 16
+  init_depth_m: 8.0
+  use_backbone: false
+  gate_mode: image_only
+optim:
+  batch_size: 256
+  lr: 1.0e-4
+  weight_decay: 0.05
+  warmup_steps: 500
+  max_steps: 6000
+  grad_clip: 1.0
+  amp: true
+  eval_every_steps: 1000
+  checkpoint_every_steps: 500

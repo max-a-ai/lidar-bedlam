@@ -46,6 +46,8 @@ class ModelConfig:
     smpl_model_dir: Path | None = None
     init_depth_m: float = 8.0
     freeze_backbone: bool = True
+    use_backbone: bool = True  # False: train from precomputed tokens only
+    crop_size: int = 256
 
 
 class SmplHeads(nn.Module):
@@ -77,16 +79,20 @@ class SmplHeads(nn.Module):
     def forward(self, feats: Tensor) -> tuple[Tensor, Tensor, Tensor]:
         """Rotations (B, 24, 3, 3), betas (B, 10), raw transl (B, 3)."""
         b = feats.shape[0]
-        rot6d = feats.new_zeros(b, NUM_JOINTS, 6)
+        # float32 heads regardless of autocast: rotations and the SMPL
+        # forward that follows are numerically sensitive
+        rot6d = feats.new_zeros(b, NUM_JOINTS, 6, dtype=torch.float32)
         for idx, g in enumerate(JOINT_GROUPS):
             if not g.joints:
                 continue
-            rot6d[:, list(g.joints)] = self.rot_heads[g.name](
-                feats[:, idx]
-            ).reshape(b, len(g.joints), 6)
+            rot6d[:, list(g.joints)] = (
+                self.rot_heads[g.name](feats[:, idx])
+                .float()
+                .reshape(b, len(g.joints), 6)
+            )
         rots = rot6d_to_matrix(rot6d)
-        betas = self.shape_head(feats[:, self.shape_index])
-        raw_t = self.transl_head(feats[:, self.root_index])
+        betas = self.shape_head(feats[:, self.shape_index]).float()
+        raw_t = self.transl_head(feats[:, self.root_index]).float()
         return rots, betas, raw_t
 
 
@@ -147,11 +153,14 @@ class SelectiveFusionModel(nn.Module):
     def __init__(self, cfg: ModelConfig) -> None:
         super().__init__()
         self.cfg = cfg
-        self.backbone = ViT(cfg.vit)
-        if cfg.freeze_backbone:
+        self.backbone: ViT | None = ViT(cfg.vit) if cfg.use_backbone else None
+        if self.backbone is not None and cfg.freeze_backbone:
             for p in self.backbone.parameters():
                 p.requires_grad_(False)
         self.img_proj = nn.Linear(cfg.vit.embed_dim, cfg.dim)
+        # stands in for the image tokens of LiDAR-only samples
+        self.no_image = nn.Parameter(torch.zeros(1, 1, cfg.dim))
+        self.iou_head = nn.Linear(cfg.dim, 1)
         self.points = PointTokenizer(
             cfg.dim, cfg.point_tokens, cfg.point_knn, num_heads=cfg.num_heads
         )
@@ -170,21 +179,40 @@ class SelectiveFusionModel(nn.Module):
             for p in self.smpl.parameters():
                 p.requires_grad_(False)
 
+    def image_tokens(self, batch: dict[str, Tensor]) -> Tensor:
+        """Projected image tokens from ``tokens`` or from the backbone."""
+        if "tokens" in batch:
+            tokens = batch["tokens"].float()
+        elif self.backbone is not None:
+            tokens, _ = self.backbone(batch["image"])
+        else:
+            msg = "model without backbone needs precomputed 'tokens'"
+            raise KeyError(msg)
+        img: Tensor = self.img_proj(tokens)
+        if "has_image" in batch:
+            keep = batch["has_image"].to(img.dtype)[:, None, None]
+            img = keep * img + (1 - keep) * self.no_image.expand_as(img)
+        return img
+
     def forward(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
-        """Predict from ``image``, ``points`` and crop ``intrinsics``."""
-        tokens, _ = self.backbone(batch["image"])
-        img = self.img_proj(tokens)
+        """Predict from ``image`` / ``tokens``, ``points``, ``intrinsics``."""
+        img = self.image_tokens(batch)
         pts, _ = self.points(batch["points"])
         feats, gates = self.decoder(img, pts)
         rots, betas, raw_t = self.heads(feats)
-        size = batch["image"].shape[-1]
-        transl = translation_from_raw(raw_t, batch["intrinsics"], size)
+        transl = translation_from_raw(
+            raw_t, batch["intrinsics"], self.cfg.crop_size
+        )
+        conf: Tensor = torch.sigmoid(
+            self.iou_head(feats[:, self.heads.root_index]).squeeze(-1)
+        )
         out: dict[str, Tensor] = {
             "global_orient": rots[:, :1],
             "body_pose": rots[:, 1:],
             "betas": betas,
             "transl": transl,
             "gates": gates,
+            "box_conf": conf,
         }
         if self.smpl is not None:
             self._add_smpl_outputs(out, batch["intrinsics"])

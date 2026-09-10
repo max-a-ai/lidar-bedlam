@@ -120,6 +120,7 @@ def test_forward_without_smpl() -> None:
     assert out["body_pose"].shape == (2, 23, 3, 3)
     assert out["betas"].shape == (2, 10) and out["transl"].shape == (2, 3)
     assert out["gates"].shape == (2, 2, len(JOINT_GROUPS))
+    assert out["box_conf"].shape == (2,) and (out["box_conf"] <= 1).all()
     assert ((out["gates"] >= 0) & (out["gates"] <= 1)).all()
     # routing prior: 3D groups start LiDAR-heavy, semantic groups image-heavy
     from lidar_bedlam.models.selective_attention import LIDAR_GROUPS
@@ -171,3 +172,25 @@ def test_forward_backward_with_smpl_and_loss() -> None:
     ]
     assert grads and all(torch.isfinite(g).all() for g in grads)
     assert torch.isfinite(total)
+
+
+def test_forward_from_precomputed_tokens_without_backbone() -> None:
+    cfg = ModelConfig(
+        vit=VIT_TINY, dim=64, num_heads=4, num_layers=2, point_tokens=8,
+        point_knn=4, use_backbone=False, crop_size=64,
+    )  # fmt: skip
+    model = SelectiveFusionModel(cfg)
+    assert model.backbone is None
+    batch = {
+        "tokens": torch.randn(2, 16, VIT_TINY.embed_dim).half(),
+        "has_image": torch.tensor([True, False]),
+        "points": torch.randn(2, 40, 3) + torch.tensor([0.0, 0.0, 8.0]),
+        "intrinsics": torch.tensor(
+            [[[500.0, 0, 32], [0, 500, 32], [0, 0, 1]]]
+        ).expand(2, 3, 3),
+    }
+    out = model(batch)
+    assert out["transl"].shape == (2, 3)
+    # the LiDAR-only sample used the learned no-image token
+    img = model.image_tokens(batch)
+    assert torch.allclose(img[1], model.no_image.expand_as(img)[1])
