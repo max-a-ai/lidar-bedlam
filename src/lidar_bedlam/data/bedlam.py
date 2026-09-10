@@ -8,9 +8,10 @@ Expected layout under ``root`` (one directory per sequence group)::
     <group>/ground_truth/camera/seq_XXXXXX_camera.csv
 
 Depth is planar z-depth in centimetres (sky = 1e8), rendered from clothed
-characters. The camera CSV gives the horizontal FOV per frame. SMPL
-parameters need the separate BEDLAM body-data download and are not yet
-attached (``Sample.smpl`` is None); the person point cloud is the dense
+characters. The camera CSV gives the horizontal FOV per frame. When a
+``labels_dir`` (BEDLAM SMPL training labels) is given, SMPL parameters in
+the camera frame are attached per person by matching label rows to mask
+person ids (see :mod:`bedlam_labels`); the person point cloud is the dense
 back-projection of the body+clothing mask.
 """
 
@@ -20,8 +21,15 @@ import csv
 from pathlib import Path
 
 import numpy as np
+from numpy.typing import NDArray
 
+from lidar_bedlam.body.smpl import SmplModel
 from lidar_bedlam.data.base import SampleSource
+from lidar_bedlam.data.bedlam_labels import (
+    BedlamLabels,
+    PersonLabel,
+    match_labels_to_masks,
+)
 from lidar_bedlam.data.schema import Sample, SampleMeta
 from lidar_bedlam.geometry.camera import PinholeCamera
 from lidar_bedlam.io import read_exr_depth, read_image, read_mask
@@ -41,8 +49,14 @@ class BedlamFramesSource(SampleSource):
         root: Path,
         groups: list[str] | None = None,
         frame_stride: int = 1,
+        labels_dir: Path | None = None,
+        smpl_model: SmplModel | None = None,
     ) -> None:
         self.root = root
+        self.labels_dir = labels_dir
+        self.smpl_model = smpl_model
+        self._labels: dict[str, BedlamLabels] = {}
+        self._matches: dict[tuple[str, str, str], dict[str, PersonLabel]] = {}
         self.groups = groups or sorted(
             p.name for p in root.iterdir() if p.is_dir()
         )
@@ -76,6 +90,59 @@ class BedlamFramesSource(SampleSource):
             for i, (g, s, f, _p) in enumerate(self._index)
             if (g, s, f) == (group, seq, frame)
         ]
+
+    def labels_for(self, group: str) -> BedlamLabels | None:
+        """Label table of a group (cached), or None without labels."""
+        if self.labels_dir is None:
+            return None
+        if group not in self._labels:
+            self._labels[group] = BedlamLabels(
+                BedlamLabels.find(self.labels_dir, group)
+            )
+        return self._labels[group]
+
+    def _person_masks(
+        self, group: str, seq: str, frame: str
+    ) -> dict[str, NDArray[np.bool_]]:
+        masks: dict[str, NDArray[np.bool_]] = {}
+        for _g, s, f, pid in self._index:
+            if (s, f) != (seq, frame):
+                continue
+            masks[pid] = self._read_mask(group, seq, frame, pid)
+        return masks
+
+    def _read_mask(
+        self, group: str, seq: str, frame: str, person: str
+    ) -> NDArray[np.bool_]:
+        base = self.root / group / "masks" / seq
+        mask: NDArray[np.bool_] | None = None
+        for part in PERSON_MASK_PARTS:
+            path = base / f"{seq}_{frame}_{person}_{part}.png"
+            if path.exists():
+                m = read_mask(path)
+                mask = m if mask is None else (mask | m)
+        if mask is None:
+            msg = f"no mask for {group}/{seq}/{frame}/{person}"
+            raise FileNotFoundError(msg)
+        return mask
+
+    def matched_labels(
+        self, group: str, seq: str, frame: str
+    ) -> dict[str, PersonLabel]:
+        """Label per mask person id of a frame (cached per frame)."""
+        key = (group, seq, frame)
+        if key in self._matches:
+            return self._matches[key]
+        labels = self.labels_for(group)
+        result: dict[str, PersonLabel] = {}
+        if labels is not None and self.smpl_model is not None:
+            persons = labels.persons(seq, frame)
+            verts = [self.smpl_model.forward(p.smpl)[0] for p in persons]
+            result = match_labels_to_masks(
+                persons, self._person_masks(group, seq, frame), verts
+            )
+        self._matches[key] = result
+        return result
 
     def depth_path(self, index: int) -> Path:
         """Path of the depth EXR of the sample's frame."""
@@ -126,11 +193,15 @@ class BedlamFramesSource(SampleSource):
             [xs.min(), ys.min(), xs.max(), ys.max()], dtype=np.float64
         )
         points = camera.unproject_depth(depth_cm * CM_TO_M, mask)
+        label = self.matched_labels(group, seq, frame).get(person)
+        if label is not None:
+            camera = label.camera  # the labels' own intrinsics (cx = W/2)
         return Sample(
             meta=self.meta(index),
             image=image,
             camera=camera,
             bbox_xyxy=bbox,
             points=np.ascontiguousarray(points, dtype=np.float32),
+            smpl=label.smpl if label is not None else None,
             mask=mask,
         )

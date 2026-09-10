@@ -53,7 +53,7 @@ to `lidar_bedlam/evaluation/`.
 | SLOPER4D | world (z up) | `RGB_frames.smpl_pose` = optimised `opt_pose` | `human_points` (world) | labelled bbox | `RGB_info.intrinsics`, `dist`, per-frame `cam_pose` (world->cam) |
 | LiDARHuman26M | LiDAR (x fwd, y left, z up) | json `pose`/`beta`/`trans` | segment PLY | whole crop; principal point shifted by `top_left` | fixed LiDARCap rig (in code) |
 | Waymo (pose_complete_4) | vehicle | none (15 keypoints) | `lidar` per object | `bb_2d` | record `intrinsic`, `extrinsic` (cam->vehicle, Waymo axes) |
-| BEDLAM | camera (Unreal) | pending body-data download | depth back-projection of body+clothing mask | mask extent | `hfov` from camera CSV |
+| BEDLAM | camera | SMPL labels (`bedlam-labels-smpl`): `pose_cam`, `shape[:10]`, `trans_cam + cam_ext[:3,3]`, matched to mask persons by silhouette overlap | depth back-projection of body+clothing mask | mask extent | `cam_int` of the label row (cx = W/2) |
 
 Smoke-test results on real samples (2026-09-08): person points reproject
 inside the 2D box for 100 % (SLOPER4D), 100 % (LiDARHuman26M), 97 % (Waymo),

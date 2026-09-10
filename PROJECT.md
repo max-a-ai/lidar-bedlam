@@ -31,7 +31,7 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Download the BEDLAM training labels with `bash scripts/fetch_bedlam_labels.sh` (needs the BEDLAM login; `bedlam-labels-smpl.zip` = SMPL, `all_npz_12_training.zip` = SMPL-X; per-image params already in the camera frame, so no body placement is needed).
 - [ ] Write `data/bedlam.py` label attachment: join the npz records (`imgname`, `center`, `scale`, `pose_cam`, `shape`, `trans_cam`, `cam_int`, `gtkps`) to the extracted frames and person masks; verify by projecting SMPL joints onto the png.
 - [ ] Run the official xxh128 validation on the NAS itself for `png`, `depth`, `masks`, `gt` (`scripts/validate_bedlam_on_nas.sh`).
-- [ ] Extract the remaining groups at 6 fps with `scripts/extract_bedlam.py` (first group done: 100 sequences, 17,778 person-frames, 9.8 GB).
+- [ ] Extraction of the 11 remaining paper groups running in the background (`scripts/extract_bedlam_groups.sh`, logs in `logs/`).
 - [ ] Match label records to mask person ids (labels are per body, masks are per person index) via projected-joint-in-mask tests.
 - [ ] Apply `SpeedSetting` + `apply_rolling_shutter` in the generation pipeline (per-sample speed, sweep over the camera window).
 - [ ] Write the generated sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, box3d, beam count) and a `SampleSource` for it.
@@ -85,6 +85,7 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-09 — `models/`: ViT (loads TokenHMR ViT-H), point tokenizer, selective gated decoder, SMPL heads with differentiable SMPL, 10 tests; losses already covered.
 - [x] 2026-09-09 — `debug/capabilities.ipynb` generated and executed without errors (22 cells).
 - [x] 2026-09-10 — `lidar/motion.py`: `SpeedSetting`, `EgoMotion`, `apply_rolling_shutter`; Waymo ego-speed statistics measured; 4 tests.
+- [x] 2026-09-10 — BEDLAM SMPL labels attached and verified (`data/bedlam_labels.py`).
 - [x] 2026-09-10 — `rigs/`: AVA and FUSE-Bike loaders via the nuScenes format; `export.py` + `scripts/export_rigs.py` (PNG/HTML/GLB into the vault); 2 tests.
 - [x] 2026-09-10 — `rigs/`: Waymo, nuScenes, SLOPER4D calibration loaders, tree print, plotly rig figures, 5 tests; notebook section 9.
 - [x] 2026-09-10 — Point and image augmentation configs (`PointAugmentConfig`, `ImageAugmentConfig`) wired into `HumanPoseDataset`; 6 tests; interactive notebook section 5b.
