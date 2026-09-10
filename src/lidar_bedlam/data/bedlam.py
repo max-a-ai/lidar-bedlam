@@ -101,6 +101,22 @@ class BedlamFramesSource(SampleSource):
             )
         return self._labels[group]
 
+    def frame_of(self, index: int) -> tuple[str, str, str]:
+        """(group, seq, frame) of a sample."""
+        group, seq, frame, _ = self._index[index]
+        return group, seq, frame
+
+    def frame_image_path(self, index: int) -> Path:
+        """Path of the png of the sample's frame."""
+        group, seq, frame, _ = self._index[index]
+        return self.root / group / "png" / seq / f"{seq}_{frame}.png"
+
+    def person_masks(
+        self, group: str, seq: str, frame: str
+    ) -> dict[str, NDArray[np.bool_]]:
+        """Body+clothing mask per person id of a frame."""
+        return self._person_masks(group, seq, frame)
+
     def _person_masks(
         self, group: str, seq: str, frame: str
     ) -> dict[str, NDArray[np.bool_]]:

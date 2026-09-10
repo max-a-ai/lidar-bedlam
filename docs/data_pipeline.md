@@ -219,3 +219,23 @@ Recommendation for the Waymo transfer: train with `WAYMO_URBAN`; the clipped
 normal reproduces the stop fraction and the 0-60 km/h spread. At 20 km/h the
 shift across a 52 deg window is 8 cm, at 60 km/h 24 cm, on the order of the
 body width, so it matters for placement.
+
+## Generated shards (`generate/`)
+
+`Record` holds one person: clean and augmented 256 px crops, mask crop,
+crop intrinsics and origin, SMPL (camera frame), 24 joints, 2D joints, 3D
+box, `distance_scale`, and named LiDAR scans padded to 2048 points with
+channel and column ids: `main_0`, `main_1` (random Ouster setting, ball
+r <= 1 m), `ball025` (ball r <= 0.25 m), `target_waymo` (Waymo 64 ch /
+2650 steps, ball), `check` (OS1-64 @ 1024 co-located; used for the 30-point
+visibility rule), `rig_waymo`, `rig_sloper4d`, `rig_fusebike` (fixed
+calibrated offsets). Shards are `np.savez` files of 512 records
+(`w<worker>_<n>.npz`) with a `stats.json` (frames, rejects, per group).
+
+Virtual distance (`lidar/distance.py`): on 30 % of frames the camera is
+moved back by `d = (k - 1) z_median`, `k ~ U(1.5, 3)`; depth and masks are
+re-rendered by forward splatting with a z-buffer, labels shift by
+`(0, 0, d)`, the crop is taken from the original window and its detail
+reduced by the shrink factor `z / (z + d)`. Rolling shutter is off in the
+main data (Waymo points are motion-compensated); `--speed-mean/--speed-std`
+enable it.

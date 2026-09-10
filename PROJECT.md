@@ -34,8 +34,7 @@ weeks of 2026-09-08; ablations after hand-in.
 - [ ] Extraction of the 11 remaining paper groups running in the background (`scripts/extract_bedlam_groups.sh`, logs in `logs/`).
 - [ ] Match label records to mask person ids (labels are per body, masks are per person index) via projected-joint-in-mask tests.
 - [ ] Apply `SpeedSetting` + `apply_rolling_shutter` in the generation pipeline (per-sample speed, sweep over the camera window).
-- [ ] Write the generated sample format (`.npz` per person per frame: image crop, K, points (N,4: xyz + beam id), SMPL params, box3d, beam count) and a `SampleSource` for it.
-- [ ] Generate the v0 dataset (one group), inspect 20 samples visually, then generate the full subset.
+- [ ] Generate v1: first group running in the background; the other 11 groups after extraction; shard dataset class for training.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels).
 
 ### C2 — Selective-attention fusion model
@@ -85,6 +84,7 @@ weeks of 2026-09-08; ablations after hand-in.
 - [x] 2026-09-09 — `models/`: ViT (loads TokenHMR ViT-H), point tokenizer, selective gated decoder, SMPL heads with differentiable SMPL, 10 tests; losses already covered.
 - [x] 2026-09-09 — `debug/capabilities.ipynb` generated and executed without errors (22 cells).
 - [x] 2026-09-10 — `lidar/motion.py`: `SpeedSetting`, `EgoMotion`, `apply_rolling_shutter`; Waymo ego-speed statistics measured; 4 tests.
+- [x] 2026-09-10 — Generator: shard records, sensor placement, virtual distance, `scripts/generate_synthetic.py`; trial verified visually.
 - [x] 2026-09-10 — BEDLAM SMPL labels attached and verified (`data/bedlam_labels.py`).
 - [x] 2026-09-10 — `rigs/`: AVA and FUSE-Bike loaders via the nuScenes format; `export.py` + `scripts/export_rigs.py` (PNG/HTML/GLB into the vault); 2 tests.
 - [x] 2026-09-10 — `rigs/`: Waymo, nuScenes, SLOPER4D calibration loaders, tree print, plotly rig figures, 5 tests; notebook section 9.
