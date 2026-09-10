@@ -7,6 +7,7 @@ weeks of 2026-09-08; ablations after hand-in.
 
 ## Log
 
+- 2026-09-10 (latest) — Grilled the full plan: Waymo is the headline (5,559 usable samples), SLOPER4D secondary, LiDARHuman26M and PedX dropped, SAM 3 masks for Waymo points, precomputed ViT-H tokens, Slurm/H100 training with auto-resume; written to `docs/plan.md`.
 - 2026-09-10 (late) — Decided the ablation plan (`docs/ablations.md`): merged the extrinsics studies into a ball-radius sweep, added the resolution ablation, dropped rolling shutter as an ablation; routed legs and arms to the camera prior; EG 2027 LaTeX skeleton started.
 - 2026-09-10 (night) — Ego speed settings (10 km/h steps, Waymo-measured preset 20 ± 20 km/h) and LiDAR rolling-shutter distortion, exposed in the notebook.
 - 2026-09-10 (night) — Added the own AVA car and FUSE-Bike rigs (nuScenes exports) and exported all five rigs to the Obsidian vault as PNG, interactive HTML, GLB and tree text with a `rigs.md` note.
