@@ -93,10 +93,13 @@ Our contributions are threefold:
     semantic joint groups (head, arms, hands, legs, feet) to the image and
     metric quantities (body centre, placement, orientation, shape) to the
     LiDAR, on a frozen image backbone.
-  \item \textbf{Evidence that synthetic data improves in-the-wild
-    estimation, including 3D placement.} On Waymo and SLOPER4D we report
-    pose, shape and detector-style placement metrics, and ablate one
-    ingredient at a time: fusion, data mixture, and synthesis choices.
+  \item \textbf{Extensive experiments and evaluation on two challenging
+    in-the-wild datasets.} On Waymo and SLOPER4D we show that our approach
+    improves pose, shape and camera-frame 3D placement over image-only and
+    LiDAR-only estimation, and ablate one ingredient at a time: fusion,
+    data mixture, and synthesis choices. As on any calibrated sensor rig,
+    the camera intrinsics are given, so unlike most SMPL estimators we do
+    not have to infer them.
 \end{itemize}
 \todo{Write introduction.}
 
