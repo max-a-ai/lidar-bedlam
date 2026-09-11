@@ -85,10 +85,9 @@ Our contributions are threefold:
 \begin{itemize}
   \item \textbf{A LiDAR-enhanced synthetic dataset for SMPL pose and
     shape.} We derive physically plausible LiDAR sweeps from the depth of
-    a large-scale synthetic image dataset and keep its SMPL labels; virtual
-    distance, occlusion and sensor augmentations, together with a
-    camera-frame 3D box per person, make every sample an image--LiDAR
-    training pair.
+    a large-scale synthetic image dataset, making this the first synthetic 
+    dataset extension to hold multi-modal SMPL samples for training of fused 
+    camera-LiDAR SMPL estimation.
   \item \textbf{A selective-attention fusion model.} Per-query gates route
     semantic joint groups (head, arms, hands, legs, feet) to the image and
     metric quantities (body centre, placement, orientation, shape) to the
