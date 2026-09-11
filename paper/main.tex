@@ -136,8 +136,12 @@ Our contributions are threefold:
   \item LiDAR and camera datasets with SMPL labels: LiDARHuman26M,
     SLOPER4D, Human-M3, HuCenLife, CIMI4D; small, few rigs, mostly
     single subject or single scene.
-  \item AV datasets with humans: Waymo (3D keypoints, no mesh), nuScenes
-    and KITTI (boxes only); large but without SMPL labels.
+  \item AV and VRU datasets with humans: Waymo~\cite{sun2020waymo,zheng2022waymokeypoints}
+    (3D keypoints, no mesh), nuScenes~\cite{caesar2020nuscenes} and
+    KITTI~\cite{geiger2012kitti} (boxes only),
+    BikeActions~\cite{buettner_icpr2026_bikeactions} (camera and LiDAR recorded
+    from a bicycle in urban scenes, 3D skeletons and actions); large or
+    close-range but without SMPL labels.
   \item No real dataset provides dense depth; only synthetic BEDLAM does,
     with SMPL-X, intrinsics and clothing.
   \item No synthetic toolbox exists to create camera--LiDAR SMPL samples
@@ -241,7 +245,7 @@ Our contributions are threefold:
 \subsection{Baselines}
 % TODO: CameraHMR~\cite{patel2025camerahmr}, TokenHMR~\cite{dwivedi2024tokenhmr},
 % LiDAR-HMR~\cite{fan2025lidarhmr}, SAM 3D Body~\cite{sam3dbody2025},
-% LIF-Net~\cite{lifnet}; how each is evaluated for translation / boxes.
+% LIF-Net~\cite{buettner_iv2026_lifnet}; how each is evaluated for translation / boxes.
 \todo{Describe baselines.}
 
 \subsection{Main results}
@@ -261,7 +265,7 @@ Our contributions are threefold:
     TokenHMR~\cite{dwivedi2024tokenhmr} & RGB   & real      & -- & -- & -- & -- & -- & -- \\
     SAM 3D Body~\cite{sam3dbody2025}    & RGB   & real      & -- & -- & -- & -- & -- & -- \\
     LiDAR-HMR~\cite{fan2025lidarhmr}    & LiDAR & real      & -- & -- & -- & -- & -- & -- \\
-    LIF-Net~\cite{lifnet}               & RGB+LiDAR & real  & -- & -- & -- & -- & -- & -- \\
+    LIF-Net~\cite{buettner_iv2026_lifnet}               & RGB+LiDAR & real  & -- & -- & -- & -- & -- & -- \\
     \midrule
     Ours & RGB+LiDAR & synthetic only      & -- & -- & -- & -- & -- & -- \\
     Ours & RGB+LiDAR & real only           & -- & -- & -- & -- & -- & -- \\
