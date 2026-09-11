@@ -6,6 +6,8 @@
 %       its mode switch if it differs from \JournalSubmission.
 % ---------------------------------------------------------------------------
 \documentclass{egpubl}
+% Venue names for refs.bib: switch to bib/bib-long.def for full names.
+\input{bib/bib-short.def}
 
 % --- for  CGF Journal
 \JournalSubmission    % submission (anonymous) mode
@@ -126,7 +128,7 @@ Our contributions are threefold:
 
 \subsection{Human Motion Datasets}
 % TODO: LiDARCap / LiDARHuman26M~\cite{li2022lidarcap},
-% LiDAR-HMR~\cite{fan2023lidarhmr}, SLOPER4D baselines~\cite{dai2023sloper4d};
+% LiDAR-HMR~\cite{fan2025lidarhmr}, SLOPER4D baselines~\cite{dai2023sloper4d};
 % sparse points give metric position but weak pose/shape detail.
 \begin{itemize}
   \item Image datasets with SMPL labels (Human3.6M, 3DPW, AGORA, BEDLAM);
@@ -238,7 +240,7 @@ Our contributions are threefold:
 
 \subsection{Baselines}
 % TODO: CameraHMR~\cite{patel2025camerahmr}, TokenHMR~\cite{dwivedi2024tokenhmr},
-% LiDAR-HMR~\cite{fan2023lidarhmr}, SAM 3D Body~\cite{sam3dbody2025},
+% LiDAR-HMR~\cite{fan2025lidarhmr}, SAM 3D Body~\cite{sam3dbody2025},
 % LIF-Net~\cite{lifnet}; how each is evaluated for translation / boxes.
 \todo{Describe baselines.}
 
@@ -258,7 +260,7 @@ Our contributions are threefold:
     CameraHMR~\cite{patel2025camerahmr} & RGB   & real      & -- & -- & -- & -- & -- & -- \\
     TokenHMR~\cite{dwivedi2024tokenhmr} & RGB   & real      & -- & -- & -- & -- & -- & -- \\
     SAM 3D Body~\cite{sam3dbody2025}    & RGB   & real      & -- & -- & -- & -- & -- & -- \\
-    LiDAR-HMR~\cite{fan2023lidarhmr}    & LiDAR & real      & -- & -- & -- & -- & -- & -- \\
+    LiDAR-HMR~\cite{fan2025lidarhmr}    & LiDAR & real      & -- & -- & -- & -- & -- & -- \\
     LIF-Net~\cite{lifnet}               & RGB+LiDAR & real  & -- & -- & -- & -- & -- & -- \\
     \midrule
     Ours & RGB+LiDAR & synthetic only      & -- & -- & -- & -- & -- & -- \\
