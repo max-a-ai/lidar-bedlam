@@ -70,8 +70,16 @@
 % pre-training improves SMPL and 3D placement on SLOPER4D, LiDARHuman26M
 % and Waymo).
 \todo{Write abstract.}
-\end{abstract}
+\begin{itemize}
+  \item The problem (general wording)
+  \item Proposed Solution
+  \item Main Contribution(s)
+  \item Experimental Set-up
+  \item "Headline Result"
+  \item Open-source link
+\end{itemize}
 
+\end{abstract}
 % ------------------------------------------------------------------------
 \section{Introduction}
 \label{sec:intro}
@@ -86,19 +94,16 @@ Our contributions are threefold:
   \item \textbf{A LiDAR-enhanced synthetic dataset for SMPL pose and
     shape.} We derive physically plausible LiDAR sweeps from the depth of
     a large-scale synthetic image dataset, making this the first synthetic 
-    dataset extension to hold multi-modal SMPL samples for training of fused 
-    camera-LiDAR SMPL estimation.
+    camera-LiDAR dataset with SMPL annotation.
   \item \textbf{A selective-attention fusion model.} Per-query gates route
     semantic joint groups (head, arms, hands, legs, feet) to the image and
     metric quantities (body centre, placement, orientation, shape) to the
-    LiDAR, on a frozen image backbone.
+    LiDAR, emphasizing strengths of the two modalities.
   \item \textbf{Extensive experiments and evaluation on two challenging
-    in-the-wild datasets.} On Waymo and SLOPER4D we show that our approach
+    in-the-wild datasets.} On Waymo and SLOPER4D we show (hopefully) taht our approach
     improves pose, shape and camera-frame 3D placement over image-only and
     LiDAR-only estimation, and ablate one ingredient at a time: fusion,
-    data mixture, and synthesis choices. As on any calibrated sensor rig,
-    the camera intrinsics are given, so unlike most SMPL estimators we do
-    not have to infer them.
+    data mixture, and synthesis choices.
 \end{itemize}
 \todo{Write introduction.}
 
@@ -106,28 +111,43 @@ Our contributions are threefold:
 \section{Related Work}
 \label{sec:related}
 
-\subsection{Image-based human mesh recovery}
+\subsection{HMR in general}
 % TODO: HMR lineage to ViT-based models; TokenHMR~\cite{dwivedi2024tokenhmr}
 % and CameraHMR~\cite{patel2025camerahmr}; SAM 3D Body~\cite{sam3dbody2025}.
 % Note: none recover metric camera-frame translation reliably without depth.
-\todo{Image HMR paragraph.}
+\begin{itemize}
+  \item Add pioneerrs
+  \item Add image-approaches
+  \item LiDAR and multi-modal approaches
+  \item limitations, funnel to the main standing problem - no real depth from image only but no large scale dataset
+  \item Examples citations: 4d humans, tokenhmr, camerahmr, sam3dbody, smplify. mention vitpose and dino as image encoder.
+  \item Mention depth ambiguity, and problems like thinking that children are basically people very far away 
+\end{itemize}
 
-\subsection{LiDAR-based human mesh recovery}
+\subsection{Human Motion Datasets}
 % TODO: LiDARCap / LiDARHuman26M~\cite{li2022lidarcap},
 % LiDAR-HMR~\cite{fan2023lidarhmr}, SLOPER4D baselines~\cite{dai2023sloper4d};
 % sparse points give metric position but weak pose/shape detail.
-\todo{LiDAR HMR paragraph.}
-
-\subsection{LiDAR-camera fusion}
-% TODO: fusion for 3D detection (Waymo-style pipelines) and for humans
-% (LIF-Net~\cite{lifnet}); contrast early/late fusion with our per-query
-% modality gating.
-\todo{Fusion paragraph.}
-
-\subsection{Synthetic data for human pose}
-% TODO: BEDLAM~\cite{black2023bedlam} and its use for image HMR; no prior
-% work derives LiDAR from it; domain gap discussion.
-\todo{Synthetic data paragraph.}
+\begin{itemize}
+  \item Image datasets with SMPL labels (Human3.6M, 3DPW, AGORA, BEDLAM);
+    what trained the current image estimators.
+  \item LiDAR and camera datasets with SMPL labels: LiDARHuman26M,
+    SLOPER4D, Human-M3, HuCenLife, CIMI4D; small, few rigs, mostly
+    single subject or single scene.
+  \item AV datasets with humans: Waymo (3D keypoints, no mesh), nuScenes
+    and KITTI (boxes only); large but without SMPL labels.
+  \item No real dataset provides dense depth; only synthetic BEDLAM does,
+    with SMPL-X, intrinsics and clothing.
+  \item No synthetic toolbox exists to create camera--LiDAR SMPL samples
+    for a given sensor rig.
+  \item Multi-modal training needs more data than single-modality training
+    (to be proven: data-scaling ablation, Sec.~\ref{sec:ablations});
+    the available multi-modal data is not sufficient, a large data
+    backbone is needed.
+  \item Domain gap: for LiDAR the gap is geometric (placement, resolution,
+    occlusion, noise) and can be closed by simulation choices, unlike the
+    appearance gap of images.
+\end{itemize}
 
 % ------------------------------------------------------------------------
 \section{Synthetic Dataset Generation}
