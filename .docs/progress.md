@@ -198,6 +198,15 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-12 — comparison batch submitted (7 jobs)
+Schedules made comparable: main-table rows count steps because their
+pools differ (`real_only`, `main_mixed` = 10,200 steps at batch 2048, the
+compute of `mix80-001`'s 50 epochs); ablations share the 80/10/10 pool and
+count epochs (`max_epochs: 17`, one third). Submitted on Helma:
+`real-only`, `main-mixed` (50/40/10), `ablation-mixed-short` (reference),
+`ablation-image-only`, `ablation-lidar-only`, `ablation-gate-none`,
+`ablation-gate-hard` (jobs 843794-843800), alongside `mix80-001`.
+
 ### 2026-09-12 — first full runs (12k steps, batch 2048)
 `synth-only-000` (100 % BEDLAM, zero-shot on real data), last step:
 Waymo MPJPE 99.3 / PA 72.7 mm, translation 1.39 m, box mAP 0.19;
@@ -263,7 +272,7 @@ dataset survey.
 
 ## Model
 
-- [ ] `mix80-001` running on Helma (fixed losses, corrected shards); then `real_only`, `main_mixed` and the ablation ladder (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Running on Helma: `mix80-001`, `real-only`, `main-mixed`, model-axis ablations (5). Open: synthesis-axis (`ablation_ball025`, `ablation_rig_waymo`, `ablation_target_waymo`), scaling curve, baselines. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
