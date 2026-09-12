@@ -198,6 +198,16 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-12 — mix80-001 (fixed Waymo supervision, corrected shards) finished
+10,200 steps (50 epochs), last: Waymo MPJPE 102.4 / PA 84.9 mm, translation
+0.52 m, box mAP 0.48; SLOPER4D MPJPE 56.4 / PA 45.0 mm, 6.8 cm, mAP 0.79.
+Against `synth-only-000` (99.3 / 72.7 mm, 1.39 m, 0.19 on Waymo): adding
+10 % real data cuts the Waymo placement error to 37 % and more than doubles
+mAP at equal pose accuracy. Four gate ablations crashed on DDP's unused-
+parameter check (gate MLP / one stream has no gradient in those modes);
+fixed with `find_unused_parameters` for non-learned gates and resubmitted
+(jobs 843895-843898).
+
 ### 2026-09-12 — comparison batch submitted (7 jobs)
 Schedules made comparable: main-table rows count steps because their
 pools differ (`real_only`, `main_mixed` = 10,200 steps at batch 2048, the
