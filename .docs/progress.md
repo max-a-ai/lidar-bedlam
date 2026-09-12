@@ -214,7 +214,7 @@ translation in m, box mAP.
 | abl-image-only | 153.0 | 117.0 | 2.135 | 0.007 | 103.7 | 66.3 | 0.692 | 0.035 |
 | abl-lidar-only | 222.6 | 156.1 | 0.677 | 0.227 | 137.7 | 105.8 | 0.064 | 0.635 |
 | abl-gate-none (plain sum) | 123.0 | 96.4 | 0.602 | 0.333 | 83.1 | 63.6 | 0.085 | 0.694 |
-| abl-gate-hard (step 3000, running) | 136.3 | 110.4 | 0.685 | 0.409 | 85.7 | 64.2 | 0.082 | 0.632 |
+| abl-gate-hard (fixed priors) | 132.2 | 107.2 | 0.640 | 0.406 | 80.5 | 60.0 | 0.077 | 0.672 |
 
 Reading: synthetic data buys placement (Waymo translation 0.69 -> 0.52 m,
 mAP 0.30 -> 0.44-0.48) and SLOPER4D across the board (66 -> 56 mm, 10 ->
