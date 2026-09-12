@@ -198,6 +198,32 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-12 — comparison batch, last validation of every run
+Batch 2048, lr 3e-4; main table 10,200 steps (synth-only 12,000);
+model-axis ablations 17 epochs = 3,468 steps on the 80/10/10 pool.
+W = Waymo val (894), S = SLOPER4D test (4,000); MPJPE / PA in mm,
+translation in m, box mAP.
+
+| run | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|
+| synth-only-000 | 99.3 | 72.7 | 1.389 | 0.186 | 72.4 | 51.0 | 0.250 | 0.357 |
+| real-only-000 (80/20 W/S) | 90.8 | 71.5 | 0.692 | 0.301 | 66.4 | 53.0 | 0.104 | 0.693 |
+| mix80-001 (80/10/10) | 102.4 | 84.9 | 0.520 | 0.476 | 56.4 | 45.0 | 0.068 | 0.785 |
+| main-mixed-000 (50/40/10) | 92.6 | 75.6 | 0.518 | 0.436 | 55.7 | 45.5 | 0.057 | 0.828 |
+| abl-mixed-short (learned gates) | 126.9 | 103.9 | 0.617 | 0.408 | 74.5 | 52.4 | 0.078 | 0.720 |
+| abl-image-only | 153.0 | 117.0 | 2.135 | 0.007 | 103.7 | 66.3 | 0.692 | 0.035 |
+| abl-lidar-only | 222.6 | 156.1 | 0.677 | 0.227 | 137.7 | 105.8 | 0.064 | 0.635 |
+| abl-gate-none (plain sum) | 123.0 | 96.4 | 0.602 | 0.333 | 83.1 | 63.6 | 0.085 | 0.694 |
+| abl-gate-hard (step 3000, running) | 136.3 | 110.4 | 0.685 | 0.409 | 85.7 | 64.2 | 0.082 | 0.632 |
+
+Reading: synthetic data buys placement (Waymo translation 0.69 -> 0.52 m,
+mAP 0.30 -> 0.44-0.48) and SLOPER4D across the board (66 -> 56 mm, 10 ->
+6 cm), but not Waymo pose, where real-only is best (90.8 mm) and the
+50/40/10 mixture (92.6) beats 80/10/10 (102.4). Fusion: image-only cannot
+place (2.1 m), LiDAR-only cannot pose (223 mm); both gated variants sit
+between; plain sum vs learned gates is within noise on pose at 1/3
+schedule, learned gates lead on mAP (0.41 vs 0.33).
+
 ### 2026-09-12 — mix80-001 (fixed Waymo supervision, corrected shards) finished
 10,200 steps (50 epochs), last: Waymo MPJPE 102.4 / PA 84.9 mm, translation
 0.52 m, box mAP 0.48; SLOPER4D MPJPE 56.4 / PA 45.0 mm, 6.8 cm, mAP 0.79.
