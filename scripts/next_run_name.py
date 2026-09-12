@@ -19,8 +19,13 @@ def main() -> int:
     cfg = load_config(args.config)
     root = args.checkpoint_root or Path(cfg.checkpoint_root)
     root.mkdir(parents=True, exist_ok=True)
-    name = new_run_name(root, cfg.experiment)
-    (root / name).mkdir(exist_ok=True)  # claim it
+    while True:  # claim atomically: two jobs may start at the same time
+        name = new_run_name(root, cfg.experiment)
+        try:
+            (root / name).mkdir()
+        except FileExistsError:
+            continue
+        break
     sys.stdout.write(name + "\n")
     return 0
 
