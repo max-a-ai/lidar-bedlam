@@ -198,6 +198,24 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-13 — synthesis axis done; scaling curve rerun at fixed steps
+50/40/10 mixture, 17 epochs = 3,468 steps, reference `abl-mixed-short-001`:
+
+| run | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|
+| reference (ball 1 m, 12 resolutions) | 111.8 | 95.4 | 0.507 | 0.465 | 81.3 | 59.2 | 0.079 | 0.723 |
+| ball 0.25 m | 105.0 | 85.8 | 0.514 | 0.458 | 72.5 | 52.6 | 0.062 | 0.736 |
+| LiDAR at the Waymo rig pose | 103.0 | 84.8 | 0.515 | 0.458 | 79.7 | 59.5 | 0.078 | 0.671 |
+| Waymo resolution only | 108.0 | 88.3 | 0.517 | 0.448 | 92.9 | 68.2 | 0.083 | 0.600 |
+
+Reading: the rig-matched pose gives the best Waymo pose but loses on
+SLOPER4D mAP (0.67 vs 0.72), the target-only resolution costs SLOPER4D
+pose (93 vs 81 mm) without helping Waymo, and the small 0.25 m ball beats
+the 1 m ball on both sets. Placement metrics are flat across the axis.
+The first scaling runs were invalid: `max_epochs` over a capped pool gave
+289-799 steps; the five configs now fix `max_steps: 3468` and were
+resubmitted (jobs 845904-845908).
+
 ### 2026-09-13 — synthesis axis and scaling curve submitted (9 jobs)
 Ablations rebased on the 50/40/10 mixture that won the main table
 (`abl-mixed-short-001` as the new reference; the `-000` model-axis runs

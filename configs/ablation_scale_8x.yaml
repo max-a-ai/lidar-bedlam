@@ -31,8 +31,9 @@ optim:
   lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 3400  # ignored: max_epochs below
-  max_epochs: 17  # same pool as main-mixed (10,200 steps = 50 epochs), one third of it
+  max_steps: 3468  # fixed compute for the data-size axis: the capped pool
+  # would shrink an epoch, so the curve compares equal steps (= 17 epochs of the full pool)
+  max_epochs: 0
   grad_clip: 1.0
   amp: true
   eval_every_steps: 500
