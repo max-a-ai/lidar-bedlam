@@ -1,22 +1,23 @@
 # lidar-bedlam — Handoff
 
-Generated: 2026-09-08
+Generated: 2026-09-08, restructured 2026-09-12
 
 ---
 
 ## Status Snapshot
 
-Data pipeline done and verified on real samples (see
-`docs/data_pipeline.md`): loaders for SLOPER4D, LiDARHuman26M, Waymo and
-BEDLAM raw frames, a torch dataset, losses, metrics and 21 tests. All
-quality gates pass:
+Data pipeline, synthetic generator, real shards, training stack and the
+Slurm chain job are done; the synthetic pool (12 BEDLAM groups, about
+340k records) is finishing its ViT-token precompute and syncing to Helma.
+All quality gates pass:
 
 - `uv run ruff check src/`
 - `uv run ruff format --check src/`
 - `uv run mypy src/` (strict)
+- `uv run pytest` (69 tests)
 
-Next up: BEDLAM body-data download (user), then SMPL-X body placement and
-the LiDAR simulator (see `PROJECT.md`).
+Next up: batch-size scaling tests on Helma, then the 80/10/10 mixed run and
+the 100 % BEDLAM run (see `.docs/progress.md`).
 
 ---
 
@@ -24,10 +25,11 @@ the LiDAR simulator (see `PROJECT.md`).
 
 Generate a LiDAR + camera SMPL pose-and-shape dataset from BEDLAM v1 depth
 renders, train a selective-attention fusion model on it (image cues for
-hands, ankles, head orientation; LiDAR cues for body pose, shape and 3D
-placement), and show on real data (SLOPER4D, LiDARHuman26M, Waymo) that
-synthetic data improves real SMPL estimation. Paper for a small conference;
-trainings must run within two weeks of 2026-09-08.
+head, arms, hands, legs, feet; LiDAR cues for body centre, placement,
+orientation, shape), and show on Waymo and SLOPER4D that synthetic data
+improves in-the-wild SMPL estimation including 3D placement. Eurographics
+2027 full paper: abstract 25 Sep 2026, paper 1 Oct 2026, double-blind.
+Story and run ladder: `.docs/story.md`.
 
 ---
 
@@ -35,22 +37,27 @@ trainings must run within two weeks of 2026-09-08.
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Python version | **3.12** | torch / smplx / pytorch3d wheels; baselines pin <=3.10 in their own envs |
+| Python version | **3.12** | torch cu126 / smplx wheels; cluster |
 | Package manager | **UV** | Reproducibility. `uv sync`, `uv run`. |
 | Build backend | **hatchling** | Stable, well-documented. |
 | Project layout | **src layout** | `src/lidar_bedlam/` |
 | Linter / formatter | **Ruff** (79 cols) | |
 | Type checker | **mypy** (strict) | |
-| Synthetic source | **BEDLAM v1 only** | full 32-bit depth on every frame; BEDLAM 2.0 (29 TB) skipped |
-| Body model | **SMPL** | matches real GT (SLOPER4D, LiDARHuman26M) and LIF-Net/TokenHMR/CameraHMR |
-| LiDAR simulation | **32 / 64 / 128 / 256 beams** + occlusion augmentation | resolution and occlusion robustness are the key ablations |
-| Data location | `/mnt/md0/lidar-bedlam` | 8.2 TB free local RAID; NAS is sshfs and slow |
+| Repo layout | **general-codebase-structure** | one tree, audited; `.docs/` is the record |
+| Synthetic source | **BEDLAM v1 only**, 12 groups | full 32-bit depth on every frame; BEDLAM 2.0 (29 TB) skipped |
+| Body model | **SMPL** | matches real GT and the baselines |
+| LiDAR simulation | Ouster families, 32-256 channels x 512-2048 steps, placement ball 1 m, occlusion + sensor augmentation | resolution and placement transfer are the key ablations |
+| Real targets | **Waymo** (headline), **SLOPER4D** (secondary) | LiDARHuman26M and PedX dropped |
+| Backbone | ViT-H (TokenHMR weights) **frozen**, tokens precomputed | 29 M trainable params; training reads tokens, not images |
+| Training | torchrun DDP, AdamW 1e-4 cosine, batch 256, 17k steps, bf16 | `main.py`; ablations at 1/3 schedule |
+| Cluster | Helma h100 (4x H100, 24 h), self-resubmitting chain, wandb offline + sync | `slurm/train.sbatch`, `.docs/cluster.md` |
+| Data location (local) | `/mnt/md0/lidar-bedlam` -> `data/generated` | 8 TB local RAID; NAS is sshfs and slow |
+| Data location (Helma) | `/hnvme/workspace/v103fe17-lidar-bedlam/data/generated` | only `/hnvme`, `$HOME`, `/tmp` are visible on compute nodes |
 | Experiment tracking | wandb entity `erik_hm`, project `lidar-bedlam` | standing rule, auth via `~/.netrc` |
-| Baselines | git submodules in `third_party/` | CameraHMR, TokenHMR, LiDAR-HMR, sam-3d-body, lif (own LIF-Net) |
-| Progress log / todos | `PROJECT.md` | user-requested format; vault files point to it |
-| Runtime deps | numpy, torch (cu126 index), smplx, scipy, pyarrow, pillow, openexr, pyyaml | torch for models; smplx for SMPL; scipy rotations; pyarrow for Waymo parquet; openexr for BEDLAM depth |
-| src layout | `src/lidar_bedlam/` | tests import the installed package, not the checkout; the hyphenated repo name cannot be a Python package anyway |
-| Sample convention | OpenCV camera frame, metres, up = -y | see `docs/data_pipeline.md` |
+| Baselines | git submodules in `third_party/` | CameraHMR, TokenHMR, LiDAR-HMR, sam-3d-body, lif |
+| Runtime deps | numpy, torch (cu126 index), smplx, scipy, pyarrow, pillow, openexr, pyyaml, wandb | torch for models; smplx for SMPL; scipy rotations; pyarrow for Waymo parquet; openexr for BEDLAM depth; wandb logging |
+| Sample convention | OpenCV camera frame, metres, up = -y | `.docs/data_pipeline.md` |
+| Paper build | `latexmk` in `.docs/latex-draft/` | style files vendored beside `main.tex`, venue macros in `bib/bib-short.def` |
 
 ---
 
@@ -58,54 +65,39 @@ trainings must run within two weeks of 2026-09-08.
 
 ```
 lidar-bedlam/
-├── .vault-lidar-bedlam/
-│   ├── lidar-bedlam.canvas      # Obsidian canvas — dashboard
-│   ├── progress.md              # Gantt; log lives in PROJECT.md
-│   ├── rigs.md + rigs/          # sensor calibration trees (png, html, glb), generated
-│   └── todo.md                  # pointer; todos live in PROJECT.md
-├── configs/                     # training / simulation configs (yaml)
-├── debug/capabilities.ipynb     # generated by scripts/build_debug_notebook.py
-├── paper/                       # Eurographics 2027 LaTeX skeleton (egpubl), `make` builds main.pdf
-├── data/                        # git-ignored symlinks, made by scripts/link_data.sh
-├── docs/
-│   ├── bedlam_audit.md          # what is on the NAS, depth semantics
-│   ├── data_pipeline.md         # schema, conventions, losses, metrics
-│   ├── datasets.md              # real + synthetic dataset survey
-│   └── research_notes.md        # sourced web research (BEDLAM2, baselines)
-├── scripts/
-│   ├── link_data.sh             # creates data/ symlinks
-│   ├── fetch_bedlam_labels.sh   # SMPL/SMPL-X labels from the BEDLAM server
-│   ├── export_rigs.py           # rig figures + GLB into the vault
-│   ├── build_debug_notebook.py  # generates debug/capabilities.ipynb
-│   ├── extract_bedlam.py        # streams frames out of the NAS tars
-│   └── validate_bedlam_on_nas.sh
+├── config-global.json           # hosts, datasets, checkpoints, methods, smoke
+├── main.py, evaluate.py         # training / evaluation entry points
 ├── src/lidar_bedlam/
-│   ├── io.py                    # PCD / PLY / EXR / image readers
-│   ├── geometry/                # camera, rotations, crop, boxes
-│   ├── body/                    # SMPL wrapper, legacy pkl conversion
-│   ├── data/                    # schema, base pipeline, loaders, torch dataset
-│   ├── lidar/                   # LiDAR simulation from depth + occlusion augmentation
-│   ├── models/                  # ViT, point tokenizer, selective decoder, fusion model
-│   ├── rigs/                    # sensor calibration trees (Waymo, nuScenes, SLOPER4D) + plots
-│   ├── viz.py                   # notebook plotting helpers (matplotlib + plotly)
-│   ├── losses/                  # FusionLoss
-│   └── metrics/                 # pose + detection metrics
-├── tests/                       # pytest (uv run pytest)
+│   ├── io.py, viz.py
+│   ├── geometry/  body/  data/  lidar/  models/  rigs/
+│   ├── generate/                # shard records, synthetic + real generators
+│   ├── losses/  metrics/        # FusionLoss; pose, detection, protocol
+│   └── train/                   # config, mixture sampler, trainer
 ├── third_party/                 # submodules: CameraHMR TokenHMR LiDAR-HMR sam-3d-body lif
-├── PROJECT.md                   # daily log + structured todos (source of truth)
+├── configs/                     # experiment yaml (main, real/synth only, ablations, smoke)
+├── scripts/                     # dm_link.py, generators, extraction, tokens, notebook
+├── slurm/                       # train.sbatch (chain job), wandb_sync.sh
+├── tests/
+├── debug/capabilities.ipynb     # generated by scripts/build_debug_notebook.py
+├── data/          ┐
+├── checkpoints/   ├─ gitignored, machine-dependent, built by scripts/dm_link.py
+├── outputs/       ┘ one directory per run: outputs/<run-name>/
+├── .docs/
+│   ├── progress.md              # timetable + log + todos — committed
+│   ├── story.md, plan.md, ablations.md, cluster.md, data_pipeline.md,
+│   │   datasets.md, bedlam_audit.md, research_notes.md
+│   ├── figures/rigs/            # sensor calibration trees (png, html, glb, txt)
+│   ├── latex-draft/             # Eurographics 2027 paper (latexmk)
+│   └── runs/<run-name>/         # promoted keepers — committed
 ├── instructions.md              # agent coding standards
-├── pyproject.toml
-├── .python-version
-├── README.md
-├── .gitignore
+├── pyproject.toml, .python-version, uv.lock
+├── README.md, .gitignore
 └── HANDOFF.md                   # this file
 ```
 
-### Vault
-
-Open `.vault-lidar-bedlam/lidar-bedlam.canvas` in Obsidian for a live
-dashboard. If Obsidian hides the dot-prefixed directory, enable "Show hidden
-files" or open the canvas by path.
+`.docs/` is dot-prefixed and hidden by default in Obsidian and most file
+browsers; enable "Show hidden files" to see it. `logs/` (gitignored) holds
+the local background-job logs.
 
 ---
 
@@ -113,39 +105,39 @@ files" or open the canvas by path.
 
 - BEDLAM depth EXR: one `Depth` float channel, **planar z-depth in cm**,
   sky = 1e8, rendered from clothed characters. `fx = W/2 / tan(hfov/2)`.
-- BEDLAM camera CSV is in Unreal coordinates (cm, yaw/pitch/roll in deg,
-  left-handed, Z up); conversion notes in
-  `third_party/CameraHMR` and the bedlam_render repo
-  (`unreal/render/unreal_coordinate_system.md`).
-- SMPL-X params are NOT in the image gt tars; the body-data download is
-  required and must be done by the user (MPI login).
-- Body models: `~/nas_drive/methods/max/data/body_models` (never commit).
-- Baseline weights: TokenHMR in `~/nas_drive/methods/max/data/checkpoints/tokenhmr`,
-  SAM 3D Body in the HF cache, LiDAR-HMR only via Baidu pan (local checkout
-  `~/Documents/LiDAR-HMR` has `models/graphormer/data`).
-- The NAS is sshfs: read archives with streaming `tar`, never `du` or copy.
-- `data/` is created by `scripts/link_data.sh`; `data/generated` is the
-  local RAID (`/mnt/md0/lidar-bedlam`) holding the converted SMPL model,
-  extracted BEDLAM frames and later the generated dataset.
-- Experiment plan and run budget: `docs/ablations.md`; paper deadline
-  Eurographics 2027 full papers: abstract 25 Sep 2026, paper 1 Oct 2026
-  (`paper/SUBMISSION_NOTES.md`).
-- The debug notebook is generated code: edit `scripts/build_debug_notebook.py`,
-  rebuild, and verify with `scripts/verify_notebook.py` (executes every cell,
-  fails on cell or widget errors; widget cells wait out the short timeout).
-- BEDLAM labels are downloaded to `data/generated/bedlam_labels/` (SMPL
-  extracted under `smpl/`, SMPL-X zip present).
-- Waymo comes from the `waymo_pose_complete_4` crops made for LIF-Net
-  (3D and 3D_2D subsets, split files at its root), not from the parquet.
+- SMPL labels: `data/generated/bedlam_labels/smpl/`; translation =
+  `trans_cam + cam_ext[:3,3]`; matched to mask persons by silhouette overlap.
+- Shards: npz of 512 records with named LiDAR scan variants (`main_0`,
+  `main_1`, `ball025`, `target_waymo`, `rig_*`, `check`; real: `real`);
+  tokens next to each shard as `<shard>.tokens.npy` (N, 2, 256, 1280) fp16.
+  The trainer requires the token file. Layout: `.docs/data_pipeline.md`.
+- Body models: `~/nas_drive/methods/max/data/body_models` (never commit);
+  the chumpy-free SMPL pkl is `data/generated/body_models/smpl/`.
+- Baseline weights: TokenHMR ckpt linked as `checkpoints/tokenhmr_vith`
+  (`config-global.json`); SAM 3D Body in the HF cache; LiDAR-HMR only via
+  Baidu pan (local checkout `~/Documents/LiDAR-HMR`).
+- The NAS is sshfs: stream archives with `tar`, never `du` or copy.
+- Helma: `$WORK` and `/anvme` are not mounted on compute nodes; wandb has
+  no internet there, so runs are offline and `slurm/wandb_sync.sh` syncs
+  from the login node. Repo lives at `/hnvme/workspace/v103fe17-lidar-bedlam`.
+- The debug notebook is generated code: edit
+  `scripts/build_debug_notebook.py`, rebuild, verify with
+  `scripts/verify_notebook.py`.
+- Waymo comes from the `waymo_pose_complete_4` crops made for LIF-Net,
+  with SAM 3 masks in `data/generated/waymo_masks/`.
+- The paper must stay anonymous: no rig names (FUSE-Bike, AVA), no group
+  or first-person naming of own datasets.
 
 ---
 
 ## For the Next Handoff
 
-1. Read this file top-to-bottom, then `PROJECT.md`.
-2. Open the canvas for the visual index.
+1. Read this file top-to-bottom.
+2. Read `.docs/progress.md` — timetable, log, and the open todos.
 3. Read `instructions.md` for coding standards (enforced by ruff + mypy).
-4. Run `uv sync` and `git submodule update --init` to reproduce the env.
-5. When you finish a session, add one sentence to the `PROJECT.md` log,
-   move finished todos to Done, and update this file if you learned
-   something future-you would need to pick up cold.
+4. Run `uv sync` to reproduce the env.
+5. Run `python3 scripts/dm_link.py --check` to confirm this machine's
+   `data/` and `checkpoints/` are wired up.
+6. When you finish a session, append a dated entry under the right `# Log`
+   section of `.docs/progress.md`, prune its `# Todos`, and update this
+   file if you learned something future-you would need to pick up cold.

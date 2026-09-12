@@ -322,16 +322,27 @@ class Trainer:
             self.scaler.update()
             self.step += 1
             if self.step % 50 == 0:
+                dt = (time.time() - t0) / 50
+                mem = (
+                    torch.cuda.max_memory_allocated(self.device) / 2**30
+                    if self.device.type == "cuda"
+                    else 0.0
+                )
                 self._log(
                     f"step {self.step}/{cfg.optim.max_steps} "
                     f"loss {float(total):.4f} lr {lr:.2e} "
-                    f"{(time.time() - t0) / 50:.2f} s/step"
+                    f"{dt:.2f} s/step "
+                    f"{cfg.optim.batch_size / dt:.0f} samples/s "
+                    f"peak {mem:.1f} GiB/gpu"
                 )
                 t0 = time.time()
                 self._wandb_log(
                     {
                         "train/loss": float(total),
                         "train/lr": lr,
+                        "perf/step_s": dt,
+                        "perf/samples_per_s": cfg.optim.batch_size / dt,
+                        "perf/peak_mem_gib": mem,
                         **{f"train/{k}": float(v) for k, v in parts.items()},
                     }
                 )

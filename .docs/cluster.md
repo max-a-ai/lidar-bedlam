@@ -22,7 +22,10 @@ rsync -az --exclude .venv --exclude /data --exclude /checkpoints --exclude /outp
 rsync -a data/generated/{body_models,synth,real} helma:/hnvme/workspace/v103fe17-lidar-bedlam/data/generated/
 
 # helma login node
-cd /hnvme/workspace/v103fe17-lidar-bedlam && uv sync
+cd /hnvme/workspace/v103fe17-lidar-bedlam
+export UV_PROJECT_ENVIRONMENT=$HOME/venvs/lidar-bedlam   # venv outside the inode-limited workspace
+uv sync
+setsid nohup slurm/wandb_sync_loop.sh > outputs/wandb_sync_loop.log 2>&1 &   # once per login session
 sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch
 sbatch --export=ALL,CONFIG=configs/ablation_gate_none.yaml slurm/train.sbatch
 squeue -u $USER

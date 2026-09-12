@@ -1,13 +1,14 @@
-# Ablation: synthetic LiDAR from the Waymo rig pose instead of the placement ball.
-experiment: abl-rig-waymo
+# Mixed run requested 2026-09-12: 80 % BEDLAM synthetic, 10 % SLOPER4D, 10 % Waymo.
+# DATA_ROOT defaults to the repo's data/generated (see train.loop).
+experiment: mix80
 seed: 0
 body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
 data:
   train:
-    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.1}
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: rig_waymo}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.8, variant: random_main}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
@@ -31,7 +32,7 @@ optim:
   lr: 1.0e-4
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 6000
+  max_steps: 17000
   grad_clip: 1.0
   amp: true
   eval_every_steps: 1000

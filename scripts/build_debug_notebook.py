@@ -39,7 +39,7 @@ What the repository can do right now, on real files:
 4. Real datasets (SLOPER4D, LiDARHuman26M, Waymo) with LiDAR-to-mesh distances
 5. A training batch, the losses, and the selective-attention model forward pass
 
-Run from the repo (`uv run jupyter lab`) after `bash scripts/link_data.sh`.
+Run from the repo (`uv run jupyter lab`) after `python3 scripts/dm_link.py`.
 Cells that need the BEDLAM SMPL labels say so and stay empty until
 `bash scripts/fetch_bedlam_labels.sh` has been run and the label loader exists.
 """)

@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=lidar-bedlam
 #SBATCH --partition=h100
-#SBATCH --gres=gpu:h100:4
+#SBATCH --gres=gpu:4
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=32
 #SBATCH --time=24:00:00
 #SBATCH --signal=B:USR1@900
-#SBATCH --output=%x-%j.out
+#SBATCH --output=outputs/slurm-%x-%j.out
 #
 # Self-resubmitting training job for the Helma cluster.
 #
 #   sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch
 #
-# Environment (all optional):
+# Submit from the repo root (the Slurm log goes to outputs/). Environment
+# (all optional):
 #   CONFIG        config file (default configs/main_mixed.yaml)
 #   RUN_NAME      run name; empty = enumerate <experiment>-NNN once and keep
 #                 it for every resubmission (passed on via --export)
@@ -38,6 +39,8 @@ EXTRA_SET=${EXTRA_SET:-}
 WANDB_PROJECT=${WANDB_PROJECT:-lidar-bedlam}
 
 cd "$REPO"
+# the venv lives in $HOME: workspace filesystems are inode-limited
+export UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT:-$HOME/venvs/lidar-bedlam}
 export WANDB_MODE=offline
 export OMP_NUM_THREADS=8
 

@@ -1,13 +1,14 @@
-# Ablation: synthetic LiDAR from the Waymo rig pose instead of the placement ball.
-experiment: abl-rig-waymo
+# Batch-size scaling test (1 h): same 80/10/10 mixture on the shards already on the cluster.
+# DATA_ROOT defaults to the repo's data/generated (see train.loop).
+experiment: batchtest
 seed: 0
 body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
 data:
   train:
-    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.1}
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: rig_waymo}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1"], pattern: "*.npz", weight: 0.8, variant: random_main}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
@@ -16,7 +17,7 @@ data:
   point_augment: true
   require_tokens: true
   num_workers: 8
-  val_max_samples: 4000
+  val_max_samples: 1024
 model:
   dim: 512
   num_heads: 8
@@ -30,9 +31,9 @@ optim:
   batch_size: 256
   lr: 1.0e-4
   weight_decay: 0.05
-  warmup_steps: 500
-  max_steps: 6000
+  warmup_steps: 50
+  max_steps: 600
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 1000
-  checkpoint_every_steps: 500
+  eval_every_steps: 600
+  checkpoint_every_steps: 600

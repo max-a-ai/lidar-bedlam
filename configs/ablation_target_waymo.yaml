@@ -7,7 +7,7 @@ data:
   train:
     - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11"], pattern: "*.npz", weight: 0.5, variant: target_waymo}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: target_waymo}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}

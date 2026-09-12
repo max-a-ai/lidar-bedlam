@@ -5,7 +5,7 @@ body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
 data:
   train:
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11"], pattern: "*.npz", weight: 1.0, variant: random_main}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 1.0, variant: random_main}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
