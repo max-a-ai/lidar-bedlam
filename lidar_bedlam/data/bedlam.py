@@ -4,7 +4,7 @@ Expected layout under ``root`` (one directory per sequence group)::
 
     <group>/png/seq_XXXXXX/seq_XXXXXX_FFFF.png
     <group>/depth/seq_XXXXXX/seq_XXXXXX_FFFF_depth.exr
-    <group>/masks/seq_XXXXXX/seq_XXXXXX_FFFF_PP_{body,clothing,...}.png
+    <group>/masks/seq_XXXXXX/seq_XXXXXX_FFFF_PP_{body,clothing,hair}.png
     <group>/ground_truth/camera/seq_XXXXXX_camera.csv
 
 Depth is planar z-depth in centimetres (sky = 1e8), rendered from clothed
@@ -36,7 +36,9 @@ from lidar_bedlam.utils.io import read_exr_depth, read_image, read_mask
 
 CM_TO_M = 0.01
 SKY_DEPTH_CM = 1e7  # anything beyond this is background
-PERSON_MASK_PARTS = ("body", "clothing")
+# BEDLAM renders one mask per part; hair exists only in the *hair groups
+# (e.g. batch01handhair). A person is the union of all parts that exist.
+PERSON_MASK_PARTS = ("body", "clothing", "hair")
 
 
 class BedlamFramesSource(SampleSource):

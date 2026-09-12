@@ -54,15 +54,15 @@ import torch
 from lidar_bedlam.body.smpl import SmplModel
 from lidar_bedlam.data.base import add_smpl_derived, crop_sample
 from lidar_bedlam.data.bedlam import CM_TO_M, BedlamFramesSource
-from lidar_bedlam.utils.io import read_exr_depth
+from lidar_bedlam.utils.io import read_exr_depth, read_mask
 from lidar_bedlam.lidar.simulate import PRESETS, azimuth_window, camera_hfov_deg, select_mask, sensor_pose, simulate
 from lidar_bedlam.utils.viz import (
     box_trace, draw_mask_outline, draw_points, figure_3d, mesh_trace,
     point_to_surface_distance, points_trace,
 )
 
-ROOT = Path.cwd() if (Path.cwd() / "data").exists() else Path.cwd().parent
-DATA = ROOT / "data"
+ROOT = Path.cwd() if (Path.cwd() / "resources").exists() else Path.cwd().parent
+DATA = ROOT / "resources" / "data"
 BEDLAM_RAW = DATA / "generated" / "bedlam_raw"
 LABELS = DATA / "generated" / "bedlam_labels"
 HAVE_LABELS = LABELS.exists() and any(LABELS.rglob("*.npz"))
@@ -110,10 +110,51 @@ for row, (s, depth, ppl) in enumerate(zip(samples, depths, persons)):
 plt.tight_layout(); plt.show()
 """)
 
+md("""## 1b. Person masks include the hair
+
+BEDLAM renders one mask per part (`body`, `clothing`, and `hair` in the
+`*handhair*` groups). The person mask is the union of every part that
+exists; without `hair` the head of a long-haired character lost its top
+and the simulated LiDAR returns on the hair were dropped. The sample
+below is the one where this was noticed.""")
+
+code("""
+HAIR_KEY = ("20221024_3-10_100_batch01handhair_static_highSchoolGym", "seq_000099", "0075", "00")
+hair_idx = next(i for i, m in enumerate(metas)
+                if m.sequence == f"{HAIR_KEY[0]}/{HAIR_KEY[1]}" and m.frame == HAIR_KEY[2] and m.person == HAIR_KEY[3])
+hs = src.load(hair_idx)
+hdepth = read_exr_depth(src.depth_path(hair_idx)).astype(np.float64) * CM_TO_M
+mask_dir = BEDLAM_RAW / HAIR_KEY[0] / "masks" / HAIR_KEY[1]
+parts = {}
+for part in ("body", "clothing", "hair"):
+    path = mask_dir / f"{HAIR_KEY[1]}_{HAIR_KEY[2]}_{HAIR_KEY[3]}_{part}.png"
+    if path.exists():
+        parts[part] = read_mask(path)
+without_hair = parts["body"] | parts["clothing"]
+with_hair = without_hair | parts.get("hair", np.zeros_like(without_hair))
+hscan = simulate(hdepth, hs.camera, PRESETS["OS1-128"], rng=np.random.default_rng(0))
+n_before, n_after = len(select_mask(hscan, without_hair).points), len(select_mask(hscan, with_hair).points)
+x0, y0, x1, y1 = hs.bbox_xyxy.astype(int); pad = 40
+crop = (slice(max(0, y0 - pad), y1 + pad), slice(max(0, x0 - pad), x1 + pad))
+fig, axes = plt.subplots(1, 4, figsize=(20, 6))
+axes[0].imshow(hs.image[crop]); axes[0].set_title("RGB crop")
+for ax, (title, m) in zip(axes[1:3], (("body | clothing (old)", without_hair), ("body | clothing | hair (now)", with_hair))):
+    ax.imshow(hs.image[crop]); ax.imshow(np.ma.masked_where(~m[crop], m[crop]), alpha=0.5, cmap="autumn"); ax.set_title(title)
+axes[3].imshow(hs.image[crop])
+pc = select_mask(hscan, with_hair); ph = select_mask(hscan, parts.get("hair", np.zeros_like(with_hair)))
+axes[3].scatter(pc.pixel[:, 0] - crop[1].start, pc.pixel[:, 1] - crop[0].start, s=6, c="cyan", label=f"person returns: {n_after} (was {n_before})")
+axes[3].scatter(ph.pixel[:, 0] - crop[1].start, ph.pixel[:, 1] - crop[0].start, s=10, c="red", label=f"on hair: {len(ph.points)}")
+axes[3].legend(loc="lower right"); axes[3].set_title("OS1-128 returns on the person")
+for ax in axes:
+    ax.set_xticks([]); ax.set_yticks([])
+plt.tight_layout(); plt.show()
+print(f"hair adds {int(parts['hair'].sum())} mask pixels and {n_after - n_before} LiDAR returns for {'/'.join(HAIR_KEY)}")
+""")
+
 md("""
 ## 2. Every person in 3D (rotatable)
 
-Dense surface points come from the depth map inside each person's body+clothing mask,
+Dense surface points come from the depth map inside each person's body+clothing+hair mask,
 i.e. exactly the clothed surface a LiDAR would see. The SMPL body mesh is added once
 the labels are attached (the gap between these points and the mesh is the clothing offset).
 """)

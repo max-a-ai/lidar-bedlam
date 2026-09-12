@@ -41,6 +41,16 @@ gantt
 
 ## Data
 
+### 2026-09-12 — person masks now include the hair
+BEDLAM ships a `hair` mask part in the `*handhair*` groups; the loader
+unioned only `body` and `clothing`, so long-haired heads were cut and
+their LiDAR returns dropped (found on
+`20221024…handhair…/seq_000099/0075/00`). `PERSON_MASK_PARTS` gained
+`hair` (1 test); notebook cell 1b shows old vs new mask and the returns on
+the hair for that sample (+395 mask pixels, +5 returns at OS1-128).
+Group 01 (the only hair group, 10,101 records) regenerated as `synth/v1`
+(old copy `synth/v1_nohair`), tokens recomputed, to be copied to Helma.
+
 ### 2026-09-12 — repo mapped onto the fixed project structure
 `.docs/` (progress, figures, latex-draft, runs), `lidar_bedlam/slurm/`, `outputs/` for
 runs, `config-global.json` + `lidar_bedlam/scripts/dm_link.py` replacing
