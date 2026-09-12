@@ -81,7 +81,11 @@ lidar-bedlam/
 ├── resources/               # gitignored, built per machine by lidar_bedlam/scripts/dm_link.py
 │   ├── data/                #   dataset links + generated/ (shards, tokens, extracted frames)
 │   └── pretrained-checkpoints/  # links to pretrained weights (TokenHMR ViT-H)
-├── outputs/                 # gitignored: outputs/<run-name>/ (last.pt, best.pt, metrics.jsonl, DONE), outputs/logs/
+├── outputs/                 # gitignored: one directory per run + background-job logs
+│   ├── mix80-000/           #   a training run, name = <experiment>-<NNN>: config.json, metrics.jsonl,
+│   │                        #   val_<step>.json per evaluation, last.pt, best.pt, DONE, wandb/
+│   ├── batchtest2-b1024/    #   a short test run, same layout, name = <experiment>-<tag>
+│   └── logs/                #   stdout of background jobs (generation, tokens, rsync), slurm-*.out
 ├── config-global.json       # hosts, datasets, checkpoints, methods, smoke
 ├── pyproject.toml  uv.lock  .python-version
 ├── README.md  HANDOFF.md  instructions.md
