@@ -16,16 +16,13 @@ import torch
 from numpy.typing import NDArray
 
 from lidar_bedlam.body.smpl import SmplModel
+from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
 from lidar_bedlam.geometry.boxes import iou3d
 from lidar_bedlam.geometry.camera import CAMERA_UP_AXIS
 from lidar_bedlam.metrics.pose import mpjpe, pa_mpjpe, pve
 
 FloatArray = NDArray[np.float64]
 
-# waymo15 index -> coco17 index (-1: no counterpart)
-WAYMO15_TO_COCO17 = np.array(
-    [0, 5, 7, 9, 11, 13, 15, 6, 8, 10, 12, 14, 16, -1, -1]
-)
 PELVIS = 0
 
 

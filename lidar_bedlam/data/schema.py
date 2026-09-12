@@ -77,3 +77,13 @@ WAYMO15_JOINT_NAMES = (
     "right_wrist", "right_hip", "right_knee", "right_ankle", "forehead",
     "head_center",
 )  # fmt: skip
+
+
+# Joint conventions of ``joints3d`` / ``kp2d`` rows. ``smpl24`` rows hold the
+# 24 SMPL joints; ``waymo15`` rows hold Waymo's 15 keypoints, which are
+# compared to COCO-17 joints regressed from the mesh (13 shared joints).
+JOINT_CONVENTIONS = ("smpl24", "waymo15")
+# waymo15 index -> coco17 index (-1: no counterpart)
+WAYMO15_TO_COCO17 = np.array(
+    [0, 5, 7, 9, 11, 13, 15, 6, 8, 10, 12, 14, 16, -1, -1]
+)

@@ -19,6 +19,7 @@ import torch
 from torch.utils.data import Dataset
 
 from lidar_bedlam.data.base import sample_points
+from lidar_bedlam.data.schema import JOINT_CONVENTIONS
 from lidar_bedlam.data.torch_dataset import IMAGENET_MEAN, IMAGENET_STD, Item
 from lidar_bedlam.generate.records import Shard
 from lidar_bedlam.lidar.augment import PointAugmentConfig, augment_points
@@ -34,6 +35,11 @@ class ShardDatasetConfig:
     point_augment: PointAugmentConfig | None = None
     require_tokens: bool = False
     seed: int = 0
+
+
+def _convention_id(name: str) -> int:
+    """Index into ``JOINT_CONVENTIONS`` (unknown names count as smpl24)."""
+    return JOINT_CONVENTIONS.index(name) if name in JOINT_CONVENTIONS else 0
 
 
 class ShardDataset(Dataset[Item]):
@@ -133,6 +139,9 @@ class ShardDataset(Dataset[Item]):
             "joints3d": torch.from_numpy(shard.row("joints3d", i)),
             "joints3d_valid": torch.from_numpy(shard.row("joints3d_valid", i)),
             "joint_convention": str(shard.array("joint_convention")[i]),
+            "joint_convention_id": torch.tensor(
+                _convention_id(str(shard.array("joint_convention")[i]))
+            ),
             "kp2d": torch.from_numpy(shard.row("kp2d", i)),
             "has_kp2d": torch.tensor(True),
             "box3d": torch.from_numpy(shard.row("box3d", i)),

@@ -111,3 +111,38 @@ def test_fusion_loss_respects_flags() -> None:
     assert np.isclose(parts["betas"].item(), 1.0)
     assert np.isclose(parts["transl"].item(), 3.0)
     assert "kp2d" not in parts
+
+
+def test_joint_losses_use_coco_joints_for_waymo_rows() -> None:
+    from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
+
+    batch = _batch()
+    coco = torch.randn(2, 17, 3)
+    sel = WAYMO15_TO_COCO17 >= 0
+    # sample 1 carries Waymo keypoints: rows in waymo15 order
+    batch["joints3d"] = batch["joints3d"].clone()
+    batch["joints3d"][1, :15] = 0.0
+    batch["joints3d"][1, : int(sel.sum())] = coco[1, WAYMO15_TO_COCO17[sel]]
+    batch["joints3d_valid"] = batch["joints3d_valid"].clone()
+    batch["joints3d_valid"][1] = False
+    batch["joints3d_valid"][1, : int(sel.sum())] = True
+    batch["joint_convention_id"] = torch.tensor([0, 1])
+    pred = {
+        "global_orient": batch["global_orient"],
+        "body_pose": batch["body_pose"],
+        "betas": batch["betas"],
+        "transl": batch["transl"],
+        "joints3d": batch["joints3d"] + 5.0,  # SMPL joints wrong on purpose
+        "joints_coco": coco,
+        "box3d": batch["box3d"],
+    }
+    _, parts = FusionLoss()(pred, batch)
+    # sample 0 (smpl24): error 15 on each valid joint; sample 1 (waymo15):
+    # 0 on its 13 shared COCO joints; the loss is the mean over all of them
+    n0 = int(batch["joints3d_valid"][0].sum())
+    n1 = int(sel.sum())
+    expected = 15.0 * n0 / (n0 + n1)
+    assert np.isclose(parts["joints3d"].item(), expected, atol=1e-4)
+    pred["joints_coco"] = coco + 1.0
+    _, parts = FusionLoss()(pred, batch)
+    assert parts["joints3d"].item() > expected + 1e-3

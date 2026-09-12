@@ -120,6 +120,17 @@ in cm); BEDLAM 2.0 skipped.
 
 ## Model
 
+### 2026-09-12 — Waymo keypoints were supervising the wrong joints
+`mix80-000` reached 57 mm MPJPE on SLOPER4D but 370 mm on Waymo while
+`synth-only-000`, which never saw Waymo, got 103 mm there: the joint and
+2D-keypoint losses compared Waymo's 15 keypoints index-by-index with the
+24 SMPL joints. Fix: the batch carries `joint_convention_id`, the model
+regresses COCO-17 joints from the mesh (`joints_coco`, `kp2d_coco` via
+`J_regressor_coco.npy`), and the losses compare waymo15 rows to the 13
+shared COCO joints (`WAYMO15_TO_COCO17` now in `data/schema.py`), as the
+evaluation protocol already did. 1 test; 30-step smoke on the Waymo
+mixture. `mix80` must be rerun; `synth-only-000` is unaffected.
+
 ### 2026-09-12 — epochs and live wandb mirror
 `optim.max_epochs` (epoch = one pass over all training records, ~416k;
 main runs 50, ablations 17; `max_steps` derived), `train/epoch` logged and
@@ -242,7 +253,7 @@ dataset survey.
 
 ## Model
 
-- [ ] After `mix80-000` / `synth-only-000` finish: on Helma `mv data resources/data`, rsync the repo, restart `lidar_bedlam/slurm/wandb_mirror.sh`; then `main_mixed` (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] After `mix80-000` / `synth-only-000` finish: on Helma `mv data resources/data`, rsync the repo, restart `lidar_bedlam/slurm/wandb_mirror.sh`; rerun `mix80` with the convention fix and the corrected group-01 shards; then `main_mixed` (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 

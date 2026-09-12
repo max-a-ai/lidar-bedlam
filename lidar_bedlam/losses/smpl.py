@@ -14,8 +14,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import numpy as np
 import torch
 from torch import Tensor
+
+from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
 
 
 def rodrigues(aa: Tensor) -> Tensor:
@@ -66,22 +69,62 @@ def smpl_param_loss(
     }
 
 
-def joints3d_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
-    """L1 on 3D joints in the camera frame, masked by joint validity."""
-    gt = batch["joints3d"][:, : pred.shape[1]]
-    valid = batch["joints3d_valid"][:, : pred.shape[1]]
-    err = (pred - gt).abs().sum(-1)
-    return _masked_mean(err, valid)
+_WAYMO_SEL = torch.from_numpy(np.nonzero(WAYMO15_TO_COCO17 >= 0)[0])
+_COCO_SEL = torch.from_numpy(WAYMO15_TO_COCO17[WAYMO15_TO_COCO17 >= 0])
+
+
+def _by_convention(
+    pred_smpl: Tensor,
+    pred_coco: Tensor | None,
+    gt: Tensor,
+    valid: Tensor,
+    conv: Tensor | None,
+) -> tuple[Tensor, Tensor]:
+    """Per-sample error rows and masks, comparing SMPL-24 rows to the SMPL
+    joints and waymo15 rows to the COCO joints regressed from the mesh."""
+    n = pred_smpl.shape[1]
+    err = (pred_smpl - gt[:, :n]).abs().sum(-1)
+    mask = valid[:, :n].clone()
+    if conv is None or pred_coco is None:
+        return err, mask
+    waymo = conv == 1
+    if not bool(waymo.any()):
+        return err, mask
+    wsel = _WAYMO_SEL.to(gt.device)
+    csel = _COCO_SEL.to(gt.device)
+    err_w = (pred_coco[:, csel] - gt[:, wsel]).abs().sum(-1)
+    mask_w = valid[:, wsel] & waymo[:, None]
+    mask = mask & ~waymo[:, None]
+    return torch.cat([err, err_w], 1), torch.cat([mask, mask_w], 1)
+
+
+def joints3d_loss(pred: dict[str, Tensor], batch: dict[str, Tensor]) -> Tensor:
+    """L1 on 3D joints in the camera frame, convention aware."""
+    err, mask = _by_convention(
+        pred["joints3d"],
+        pred.get("joints_coco"),
+        batch["joints3d"],
+        batch["joints3d_valid"],
+        batch.get("joint_convention_id"),
+    )
+    return _masked_mean(err, mask)
 
 
 def kp2d_loss(
-    pred_px: Tensor, batch: dict[str, Tensor], crop_size: int
+    pred: dict[str, Tensor], batch: dict[str, Tensor], crop_size: int
 ) -> Tensor:
     """L1 on 2D keypoints in crop units, over confident keypoints."""
-    gt = batch["kp2d"][:, : pred_px.shape[1]]
-    conf = gt[..., 2] * batch["has_kp2d"][:, None].to(gt.dtype)
-    err = (pred_px - gt[..., :2]).abs().sum(-1) / crop_size
-    return _masked_mean(err, conf > 0) if conf.sum() > 0 else err.sum() * 0
+    gt = batch["kp2d"]
+    conf = (gt[..., 2] > 0) & batch["has_kp2d"][:, None]
+    err, mask = _by_convention(
+        pred["kp2d"],
+        pred.get("kp2d_coco"),
+        gt[..., :2],
+        conf,
+        batch.get("joint_convention_id"),
+    )
+    err = err / crop_size
+    return _masked_mean(err, mask) if mask.any() else err.sum() * 0
 
 
 def translation_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
@@ -142,11 +185,11 @@ class FusionLoss:
         self, pred: dict[str, Tensor], batch: dict[str, Tensor]
     ) -> tuple[Tensor, dict[str, Tensor]]:
         parts = smpl_param_loss(pred, batch)
-        parts["joints3d"] = joints3d_loss(pred["joints3d"], batch)
+        parts["joints3d"] = joints3d_loss(pred, batch)
         parts["transl"] = translation_loss(pred["transl"], batch)
         parts["box3d"] = box3d_loss(pred["box3d"], batch)
         if "kp2d" in pred:
-            parts["kp2d"] = kp2d_loss(pred["kp2d"], batch, self.w.crop_size)
+            parts["kp2d"] = kp2d_loss(pred, batch, self.w.crop_size)
         if "box_conf" in pred and "box3d" in pred:
             parts["box_conf"] = box_conf_loss(
                 pred["box_conf"], pred["box3d"], batch

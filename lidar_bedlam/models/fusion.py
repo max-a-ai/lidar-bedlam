@@ -150,6 +150,8 @@ def box_from_vertices(verts: Tensor, global_orient: Tensor) -> Tensor:
 class SelectiveFusionModel(nn.Module):
     """Image + LiDAR -> SMPL pose, shape and 3D placement."""
 
+    coco_regressor: Tensor | None  # (17, 6890) COCO joint regressor buffer
+
     def __init__(self, cfg: ModelConfig) -> None:
         super().__init__()
         self.cfg = cfg
@@ -178,6 +180,20 @@ class SelectiveFusionModel(nn.Module):
             )  # fmt: skip
             for p in self.smpl.parameters():
                 p.requires_grad_(False)
+        # COCO-17 joints regressed from the mesh: supervision and evaluation
+        # for datasets with keypoint labels (Waymo)
+        reg = (
+            cfg.smpl_model_dir / "J_regressor_coco.npy"
+            if cfg.smpl_model_dir is not None
+            else None
+        )
+        self.register_buffer(
+            "coco_regressor",
+            torch.from_numpy(np.load(reg)).float()
+            if reg is not None and reg.exists()
+            else None,
+            persistent=False,
+        )
 
     def image_tokens(self, batch: dict[str, Tensor]) -> Tensor:
         """Projected image tokens from ``tokens`` or from the backbone."""
@@ -233,6 +249,12 @@ class SelectiveFusionModel(nn.Module):
         out["vertices"] = smpl_out.vertices
         out["joints3d"] = joints
         out["kp2d"] = project(joints, k)
+        if self.coco_regressor is not None:
+            coco = torch.einsum(
+                "jv,bvc->bjc", self.coco_regressor, smpl_out.vertices
+            )
+            out["joints_coco"] = coco
+            out["kp2d_coco"] = project(coco, k)
         out["box3d"] = box_from_vertices(
             smpl_out.vertices, out["global_orient"][:, 0]
         )
