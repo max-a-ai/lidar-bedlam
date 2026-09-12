@@ -110,6 +110,18 @@ in cm); BEDLAM 2.0 skipped.
 
 ## Model
 
+### 2026-09-12 — loader was the bottleneck: memory-mapped shards (f83d95d)
+First batch tests on Helma: 360-390 samples/s at batch 256 and 512 with
+only 2.3 / 4.0 GiB peak per GPU, i.e. the GPUs waited for data. Cause:
+`np.load` on an npz re-reads a whole member (96 MB image stack) on every
+row access. `Shard` now maps the uncompressed members in place (zip local
+headers parsed, `np.ndarray` views on one memmap), rows are copied only
+where they become tensors; 28 ms/sample warm, 1 test. Jobs now use 64
+CPUs, 16 workers per rank and stage only the needed shard directories to
+node-local `/tmp` (`STAGE_DIRS`). Round 2 of the tests: `batchtest2-b<N>`.
+First test also validated the whole chain: eval, `best.pt`, `DONE`, wandb
+sync from the login node (run visible in wandb).
+
 ### 2026-09-12 — batch-size scaling tests submitted on Helma (1bba8d2, 7fdeb54)
 `configs/batchtest.yaml` (80/10/10 mixture on group 01 + real shards,
 600 steps) at batch 256 / 512 / 1024 / 2048, 1 h each, h100 partition,
