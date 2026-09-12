@@ -2,9 +2,10 @@
 
 Runs in the ``sam3`` conda environment, not in this repo's venv::
 
-    ~/miniconda3/envs/sam3/bin/python scripts/sam3_waymo_masks.py \
+    ~/miniconda3/envs/sam3/bin/python \
+        lidar_bedlam/scripts/sam3_waymo_masks.py \
         --root data/waymo_perception/waymo_pose_complete_4 \
-        --out data/generated/waymo_masks --subsets 3D_2D
+        --out resources/data/generated/waymo_masks --subsets 3D_2D
 
 For every record with an image, one compressed npz
 ``<out>/<subset>/<image_id>.npz`` with ``mask`` (H, W) bool and ``score``.

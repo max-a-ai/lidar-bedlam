@@ -1,15 +1,16 @@
-"""Materialise ``data/``, ``checkpoints/`` and ``outputs/`` on this machine.
+"""Materialise ``resources/`` and ``outputs/`` on this machine.
 
 Reads ``config-global.json``: the ``hosts`` block maps a hostname to the
 root paths of that machine, and every dataset / checkpoint entry names its
 source with ``{root}`` placeholders. The script creates symlinks
-``data/<name>`` and ``checkpoints/<name>`` (replacing existing links) and
+``resources/data/<name>`` and ``resources/pretrained-checkpoints/<name>``
+(replacing existing links) and
 the ``outputs/`` directory. Keys starting with ``_`` are documentation.
 
-    python3 scripts/dm_link.py            # link everything for this host
-    python3 scripts/dm_link.py --check    # only report what is missing
-    python3 scripts/dm_link.py --smoke    # link, then verify the smoke inputs
-    python3 scripts/dm_link.py --host helma
+    python3 lidar_bedlam/scripts/dm_link.py          # link for this host
+    python3 lidar_bedlam/scripts/dm_link.py --check  # report what is missing
+    python3 lidar_bedlam/scripts/dm_link.py --smoke  # also check smoke inputs
+    python3 lidar_bedlam/scripts/dm_link.py --host helma
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config-global.json"
 
 
@@ -70,8 +71,8 @@ def main() -> int:
         return 2
     problems = 0
     for section, folder in (
-        ("datasets", "data"),
-        ("checkpoints", "checkpoints"),
+        ("datasets", "resources/data"),
+        ("checkpoints", "resources/pretrained-checkpoints"),
     ):
         for name, entry in entries(cfg[section]).items():
             target = resolve(entry["source"], roots)

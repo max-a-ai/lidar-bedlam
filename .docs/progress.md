@@ -42,8 +42,8 @@ gantt
 ## Data
 
 ### 2026-09-12 — repo mapped onto the fixed project structure
-`.docs/` (progress, figures, latex-draft, runs), `slurm/`, `outputs/` for
-runs, `config-global.json` + `scripts/dm_link.py` replacing
+`.docs/` (progress, figures, latex-draft, runs), `lidar_bedlam/slurm/`, `outputs/` for
+runs, `config-global.json` + `lidar_bedlam/scripts/dm_link.py` replacing
 `link_data.sh`; `PROJECT.md` and `CHANGELOG.md` merged into this file.
 
 ### 2026-09-12 — synthetic pool complete
@@ -63,10 +63,10 @@ per 2D joint; bash `GROUPS` is reserved. Waymo shards: 4,591 train / 894
 val records; SLOPER4D train 21,062 records.
 
 ### 2026-09-10 03:28 — real shards, shard dataset, SAM 3 masks, tokens (b3bf5eb)
-`scripts/sam3_waymo_masks.py` (5,560 Waymo crops, verified visually),
+`lidar_bedlam/scripts/sam3_waymo_masks.py` (5,560 Waymo crops, verified visually),
 `generate/real.py`, `data/shards.py` (`ShardDataset`: scan-variant
 selection, precomputed tokens, point augmentation),
-`scripts/precompute_tokens.py` (frozen ViT-H tokens, fp16).
+`lidar_bedlam/scripts/precompute_tokens.py` (frozen ViT-H tokens, fp16).
 
 ### 2026-09-10 03:19 — synthetic shard generator (926e3a5)
 `generate/records.py` (fixed-shape records, npz shards with named scan
@@ -115,7 +115,7 @@ in cm); BEDLAM 2.0 skipped.
 main runs 50, ablations 17; `max_steps` derived), `train/epoch` logged and
 used as the x axis. Compute nodes have no proxy, and `wandb sync` cannot
 read a live offline run, so the trainer now writes `metrics.jsonl` +
-`config.json` per run and `scripts/wandb_mirror.py` (login node, every 2
+`config.json` per run and `lidar_bedlam/scripts/wandb_mirror.py` (login node, every 2
 min) pushes new rows to wandb under the run's name; verified end to end
 with `smoke-mirror-000`. The two runs started before this change
 (`mix80-000`, `synth-only-000`, 12k steps = 59 epochs) sync at their end.
@@ -152,7 +152,7 @@ sync from the login node (run visible in wandb).
 `configs/batchtest.yaml` (80/10/10 mixture on group 01 + real shards,
 600 steps) at batch 256 / 512 / 1024 / 2048, 1 h each, h100 partition,
 run names `batchtest-b<N>`; trainer logs samples/s and peak GPU memory;
-wandb login on the Helma login node with `slurm/wandb_sync_loop.sh`
+wandb login on the Helma login node with `lidar_bedlam/slurm/wandb_sync_loop.sh`
 detached there. Requested runs afterwards: `configs/mix80.yaml` (80 %
 BEDLAM, 10 % SLOPER4D, 10 % Waymo) and `configs/synth_only.yaml` (100 %
 BEDLAM) at the largest batch that fits.
@@ -163,8 +163,8 @@ BEDLAM) at the largest batch that fits.
 AdamW + warm-up/cosine, bf16, eval every N steps, `last.pt`/`best.pt`,
 auto-resume, SIGUSR1 checkpoint-and-exit, `DONE`, offline wandb),
 `metrics/protocol.py`, gate modes `learned|none|hard|image_only|lidar_only`,
-IoU-confidence head, `main.py`, `evaluate.py` (now `scripts/lidar-bedlam-{main,eval}.py`), 16 configs,
-`slurm/train.sbatch` (self-resubmitting), `slurm/wandb_sync.sh`. SMPL heads
+IoU-confidence head, `main.py`, `evaluate.py` (now `lidar_bedlam/scripts/lidar-bedlam-{main,eval}.py`), 16 configs,
+`lidar_bedlam/slurm/train.sbatch` (self-resubmitting), `lidar_bedlam/slurm/wandb_sync.sh`. SMPL heads
 forced to float32 under autocast. Smoke run: 40 steps on the 4090. 5 tests
 (68 total). Helma: `/anvme` and `$WORK` not on compute nodes,
 `/hnvme/workspace` is (`cluster.md`).
@@ -196,9 +196,19 @@ contribution bullets; 6.3 extrinsics questions.
 
 ## Housekeeping
 
+### 2026-09-12 — final layout, round 2 (top level minimal)
+`scripts/` and `slurm/` moved inside the package; `data/` and
+`checkpoints/` became `resources/data/` and `resources/pretrained-checkpoints/`
+(gitignored, built by `lidar_bedlam/scripts/dm_link.py`); top level is now
+`lidar_bedlam/ configs/ notebooks/ tests/ third_party/ .docs/ resources/
+outputs/` plus the config files. The `python-project-init` skill was
+rewritten to this contract (tree, folder table with tracked/gitignored and
+use, steps). On Helma the data folder must be moved to `resources/data`
+and the mirror loop restarted after the two running jobs finish.
+
 ### 2026-09-12 — preparation finished: final layout before moving to Helma
 Flat package `lidar_bedlam/` (no `src/`), `utils/` for io and viz, entry
-points `scripts/lidar-bedlam-{main,eval}.py`, `notebooks/` at the top
+points `lidar_bedlam/scripts/lidar-bedlam-{main,eval}.py`, `notebooks/` at the top
 level, job logs under `outputs/logs/`; ruff excludes `third_party/`,
 uv default groups `dev` + `debug`. `HANDOFF.md` carries the `tree -L 2`
 and the fixed package structure as the template for new projects. From
@@ -215,14 +225,14 @@ dataset survey.
 
 - [ ] Tokens for group 12, then rsync groups 02-12 to Helma (`/hnvme/workspace/v103fe17-lidar-bedlam/data/generated`), running.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels) and the comparison table.
-- [ ] Run the official xxh128 validation on the NAS (`scripts/validate_bedlam_on_nas.sh`).
+- [ ] Run the official xxh128 validation on the NAS (`lidar_bedlam/scripts/validate_bedlam_on_nas.sh`).
 - [ ] Rolling shutter: apply `SpeedSetting` + `apply_rolling_shutter` in the generator (default speed 0 for v1).
 - [ ] Decide on additional rigs (heads-up list in `datasets.md`).
 - [ ] Waymo LiDAR-only samples (5,006) as `has_image=False` records (after the main run).
 
 ## Model
 
-- [ ] Batch tests running; then launch `mix80` and `synth_only` at the largest batch, then `main_mixed`, on Helma once the sync is complete (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] After `mix80-000` / `synth-only-000` finish: on Helma `mv data resources/data`, rsync the repo, restart `lidar_bedlam/slurm/wandb_mirror.sh`; then `main_mixed` (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 

@@ -6,7 +6,7 @@
 # Requires a BEDLAM website account (https://bedlam.is.tue.mpg.de/).
 # Credentials are asked for interactively and never stored.
 #
-# Usage: bash scripts/fetch_bedlam_labels.sh [smpl|smplx|all]   (default all)
+# Usage: bash lidar_bedlam/scripts/fetch_bedlam_labels.sh [smpl|smplx|all]   (default all)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=data/generated/bedlam_labels

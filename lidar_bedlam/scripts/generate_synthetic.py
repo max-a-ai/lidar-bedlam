@@ -2,7 +2,8 @@
 
 Usage::
 
-    uv run python scripts/generate_synthetic.py --out data/generated/synth/v1 \
+    uv run python lidar_bedlam/scripts/generate_synthetic.py \
+        --out resources/data/generated/synth/v1 \
         --groups 20221024_3-10_100_batch01handhair_static_highSchoolGym \
         --workers 8 [--max-frames 20] [--speed-mean 20 --speed-std 20]
 
@@ -29,7 +30,7 @@ from lidar_bedlam.generate.synth import (
     generate,
 )
 
-DATA = Path("data")
+DATA = Path("resources/data")
 RAW = DATA / "generated" / "bedlam_raw"
 LABELS = DATA / "generated" / "bedlam_labels" / "smpl" / "bedlam-labels"
 BODY = DATA / "generated" / "body_models"

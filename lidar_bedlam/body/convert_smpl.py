@@ -8,8 +8,8 @@ directly (it only reads ``.pkl`` for SMPL).
 Usage::
 
     uv run python -m lidar_bedlam.body.convert_smpl \
-        data/body_models/smpl/SMPL_NEUTRAL.pkl \
-        data/generated/body_models/smpl/SMPL_NEUTRAL.pkl
+        resources/data/body_models/smpl/SMPL_NEUTRAL.pkl \
+        resources/data/generated/body_models/smpl/SMPL_NEUTRAL.pkl
 """
 
 from __future__ import annotations

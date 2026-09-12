@@ -5,7 +5,7 @@ sequentially, and only the wanted members are written to the local RAID.
 
 Example (6 fps subset of one group, all sequences)::
 
-    uv run python scripts/extract_bedlam.py \
+    uv run python lidar_bedlam/scripts/extract_bedlam.py \
         --group 20221024_3-10_100_batch01handhair_static_highSchoolGym \
         --frame-stride 5 --modalities png depth masks gt
 
@@ -22,8 +22,8 @@ import tarfile
 from pathlib import Path
 from typing import Literal
 
-DEFAULT_SRC = Path("data/bedlam")
-DEFAULT_OUT = Path("data/generated/bedlam_raw")
+DEFAULT_SRC = Path("resources/data/bedlam")
+DEFAULT_OUT = Path("resources/data/generated/bedlam_raw")
 FRAME_RE = re.compile(r"seq_(\d{6})_(\d{4})")
 
 

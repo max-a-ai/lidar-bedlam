@@ -63,7 +63,7 @@ explicit = true
 line-length = 79
 target-version = "py312"
 src = ["."]
-extend-exclude = ["third_party", "notebooks", "data", "outputs", "checkpoints"]
+extend-exclude = ["third_party", "notebooks", "resources", "outputs"]
 
 [tool.ruff.lint]
 select = [
@@ -80,7 +80,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 # notebook cell sources embedded as strings are not subject to the 79-col rule
-"scripts/build_debug_notebook.py" = ["E501"]
+"lidar_bedlam/scripts/build_debug_notebook.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -88,7 +88,7 @@ quote-style = "double"
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["lidar_bedlam", "tests", "scripts"]
+files = ["lidar_bedlam", "tests"]
 warn_unused_ignores = true
 warn_redundant_casts = true
 
@@ -100,5 +100,5 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["build_debug_notebook", "verify_notebook"]
+module = ["build_debug_notebook", "verify_notebook", "lidar_bedlam.scripts.build_debug_notebook", "lidar_bedlam.scripts.verify_notebook"]
 disallow_untyped_calls = false

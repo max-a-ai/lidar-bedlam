@@ -1,7 +1,8 @@
 """Real-data records (Waymo, SLOPER4D) in the same shard format.
 
 Waymo: person points are the LiDAR returns whose projection falls inside
-the SAM 3 mask of the crop (``data/generated/waymo_masks``), falling back
+the SAM 3 mask of the crop (``resources/data/generated/waymo_masks``),
+falling back
 to all points of the labelled 3D box when no mask exists. SLOPER4D ships
 segmented person points. Channel and column ids are unknown for real
 scans (-1). One clean and one augmented crop per record, like synthetic

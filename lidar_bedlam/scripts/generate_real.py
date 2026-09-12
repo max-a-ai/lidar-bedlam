@@ -2,10 +2,12 @@
 
 Usage::
 
-    uv run python scripts/generate_real.py --out data/generated/real/v1 \
+    uv run python lidar_bedlam/scripts/generate_real.py \
+        --out resources/data/generated/real/v1 \
         --datasets sloper4d waymo
 
-Waymo uses the SAM 3 masks from ``data/generated/waymo_masks`` when present.
+Waymo uses the SAM 3 masks from ``resources/data/generated/waymo_masks``
+when present.
 SLOPER4D split: train = seq002, seq003, seq005, seq007; test = seq008, seq009.
 """
 
@@ -21,7 +23,7 @@ from lidar_bedlam.data.sloper4d import Sloper4dSource
 from lidar_bedlam.data.waymo import WaymoSource
 from lidar_bedlam.generate.real import RealRecordBuilder, build_real_shards
 
-DATA = Path("data")
+DATA = Path("resources/data")
 BODY = DATA / "generated" / "body_models"
 MASKS = DATA / "generated" / "waymo_masks"
 SLOPER_TRAIN = [

@@ -20,9 +20,7 @@ build/
 
 # Experiment tracking / data / checkpoints
 wandb/
-/data/
-/outputs/
-/checkpoints/
+/resources/
 /outputs/
 *.ckpt
 *.pth

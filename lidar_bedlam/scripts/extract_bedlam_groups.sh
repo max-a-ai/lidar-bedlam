@@ -19,11 +19,11 @@ GROUPS_12=(
 )
 mkdir -p logs
 for g in "${GROUPS_12[@]}"; do
-  if [ -d "data/generated/bedlam_raw/$g/depth" ] && [ -f "outputs/logs/extract_$g.done" ]; then
+  if [ -d "resources/data/generated/bedlam_raw/$g/depth" ] && [ -f "outputs/logs/extract_$g.done" ]; then
     echo "skip $g (done)"; continue
   fi
   echo "$(date +%F_%T) start $g"
-  uv run python scripts/extract_bedlam.py --group "$g" --frame-stride 5 \
+  uv run python lidar_bedlam/scripts/extract_bedlam.py --group "$g" --frame-stride 5 \
       --modalities gt masks png depth > "outputs/logs/extract_$g.log" 2>&1 \
     && touch "outputs/logs/extract_$g.done" && echo "$(date +%F_%T) done $g" \
     || echo "$(date +%F_%T) FAILED $g (see outputs/logs/extract_$g.log)"

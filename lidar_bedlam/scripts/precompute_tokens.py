@@ -4,7 +4,8 @@ Writes ``<shard>.tokens.npy`` (fp16, (N, 2, 256, 1280)) next to each shard.
 
 Usage::
 
-    uv run python scripts/precompute_tokens.py data/generated/synth/v1 \
+    uv run python lidar_bedlam/scripts/precompute_tokens.py \
+        resources/data/generated/synth/v1 \
         --checkpoint /path/to/tokenhmr_model_latest.ckpt --batch 64
 """
 

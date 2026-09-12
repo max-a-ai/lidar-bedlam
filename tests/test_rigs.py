@@ -10,9 +10,9 @@ import pytest
 from lidar_bedlam.rigs.plot import rig_traces, rigs_figure
 from lidar_bedlam.rigs.schema import Sensor, SensorRig, check_rigid
 
-WAYMO = Path("data/waymo_perception")
-NUSC = Path("data/nuscenes")
-S4D = Path("data/sloper4d/seq008_running_001")
+WAYMO = Path("resources/data/waymo_perception")
+NUSC = Path("resources/data/nuscenes")
+S4D = Path("resources/data/sloper4d/seq008_running_001")
 
 
 def test_check_rigid_rejects_reflection() -> None:

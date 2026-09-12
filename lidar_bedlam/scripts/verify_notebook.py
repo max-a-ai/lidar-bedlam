@@ -6,7 +6,7 @@ real work finishes in well under a minute.
 
 Usage::
 
-    uv run python scripts/verify_notebook.py [--timeout 120]
+    uv run python lidar_bedlam/scripts/verify_notebook.py [--timeout 120]
 """
 
 from __future__ import annotations

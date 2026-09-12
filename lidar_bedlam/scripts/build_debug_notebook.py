@@ -3,8 +3,8 @@
 The notebook is generated from code so it stays in sync with the package;
 edit this script, not the notebook. Execute it to verify::
 
-    uv run python scripts/build_debug_notebook.py
-    uv run python scripts/verify_notebook.py
+    uv run python lidar_bedlam/scripts/build_debug_notebook.py
+    uv run python lidar_bedlam/scripts/verify_notebook.py
 """
 
 from __future__ import annotations
@@ -39,9 +39,9 @@ What the repository can do right now, on real files:
 4. Real datasets (SLOPER4D, LiDARHuman26M, Waymo) with LiDAR-to-mesh distances
 5. A training batch, the losses, and the selective-attention model forward pass
 
-Run from the repo (`uv run jupyter lab`) after `python3 scripts/dm_link.py`.
+Run from the repo (`uv run jupyter lab`) after `python3 lidar_bedlam/scripts/dm_link.py`.
 Cells that need the BEDLAM SMPL labels say so and stay empty until
-`bash scripts/fetch_bedlam_labels.sh` has been run and the label loader exists.
+`bash lidar_bedlam/scripts/fetch_bedlam_labels.sh` has been run and the label loader exists.
 """)
 
 code("""
@@ -103,7 +103,7 @@ for row, (s, depth, ppl) in enumerate(zip(samples, depths, persons)):
     if HAVE_LABELS:
         ax.imshow(s.image); ax.set_title("SMPL overlay: labels downloaded, loader pending")
     else:
-        ax.set_title("SMPL overlay (empty: run scripts/fetch_bedlam_labels.sh)")
+        ax.set_title("SMPL overlay (empty: run lidar_bedlam/scripts/fetch_bedlam_labels.sh)")
         ax.text(0.5, 0.5, "no SMPL labels yet", ha="center", va="center", transform=ax.transAxes)
     for ax in axes[row]:
         ax.set_xticks([]); ax.set_yticks([])
@@ -469,7 +469,7 @@ Every dataset's calibration as a star graph around its base link: each sensor is
 its own x (red), y (green), z (blue) axes at its calibrated pose, cameras with an orange
 frustum computed from their intrinsics (through the dataset's camera axis convention).
 Tick up to three rigs in the table; each figure is titled with the dataset and its mount.
-The same rigs are exported to `.docs/figures` by `scripts/export_rigs.py` (PNG, HTML, GLB).
+The same rigs are exported to `.docs/figures` by `lidar_bedlam/scripts/export_rigs.py` (PNG, HTML, GLB).
 """)
 
 code("""

@@ -6,8 +6,8 @@ rows to wandb (online) under the run's own name. Runs are resumed by id,
 so restarts of this script or of the job continue the same wandb run.
 Offsets are kept in ``outputs/<run>/.mirror_offset``.
 
-    uv run python scripts/wandb_mirror.py [--root outputs] [--interval 120]
-    uv run python scripts/wandb_mirror.py --once      # one pass, then exit
+    uv run python lidar_bedlam/scripts/wandb_mirror.py [--root outputs]
+    uv run python lidar_bedlam/scripts/wandb_mirror.py --once   # one pass
 """
 
 from __future__ import annotations

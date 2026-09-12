@@ -10,7 +10,7 @@ Location: `/home/max/nas_drive/publicdatasets/bedlam` (Synology, mounted via ssh
   EOF block and has a 512-byte aligned size, so none is truncated.
 - Every `*_gt.tar.gz` (30) decompresses without error.
 - Full xxh128 hashing was not done from this machine (6.5 TB over sshfs).
-  Run `scripts/validate_bedlam_on_nas.sh` on the NAS itself.
+  Run `lidar_bedlam/scripts/validate_bedlam_on_nas.sh` on the NAS itself.
 
 ## Sizes (decimal)
 

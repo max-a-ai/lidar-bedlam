@@ -1,5 +1,5 @@
 {
-  "_comment": "Machine-independent inventory of what the project needs. scripts/dm_link.py materialises data/, checkpoints/ and outputs/ on each machine from the 'hosts' block; keys starting with '_' are documentation and are skipped.",
+  "_comment": "Machine-independent inventory of what the project needs. lidar_bedlam/scripts/dm_link.py materialises data/, checkpoints/ and outputs/ on each machine from the 'hosts' block; keys starting with '_' are documentation and are skipped.",
   "project": "lidar-bedlam",
   "hosts": {
     "_example_": {
@@ -14,7 +14,7 @@
       "generated": "/mnt/md0/lidar-bedlam"
     },
     "helma": {
-      "generated": "/hnvme/workspace/v103fe17-lidar-bedlam/data/generated"
+      "generated": "/hnvme/workspace/v103fe17-lidar-bedlam/resources/data/generated"
     }
   },
   "datasets": {
@@ -46,7 +46,7 @@
   },
   "smoke": {
     "config": "configs/smoke.yaml",
-    "needs": ["data/generated/real/v1", "data/generated/body_models/smpl/SMPL_NEUTRAL.pkl"],
-    "command": "uv run torchrun --standalone --nproc_per_node 1 scripts/lidar-bedlam-main.py --config configs/smoke.yaml --wandb-project lidar-bedlam --wandb-name smoke-local --wandb-mode offline"
+    "needs": ["resources/data/generated/real/v1", "resources/data/generated/body_models/smpl/SMPL_NEUTRAL.pkl"],
+    "command": "uv run torchrun --standalone --nproc_per_node 1 lidar_bedlam/scripts/lidar-bedlam-main.py --config configs/smoke.yaml --wandb-project lidar-bedlam --wandb-name smoke-local --wandb-mode offline"
   }
 }

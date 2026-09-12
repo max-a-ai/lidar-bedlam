@@ -437,7 +437,8 @@ class Trainer:
 
     def _wandb_log(self, values: dict[str, float]) -> None:
         """Append to ``metrics.jsonl`` (mirrored to wandb from a node with
-        internet, see ``scripts/wandb_mirror.py``) and to wandb if live."""
+        internet, see ``lidar_bedlam/scripts/wandb_mirror.py``) and to
+        wandb if live."""
         if not self.is_main:
             return
         row = {"step": self.step, "train/epoch": self.epoch, **values}

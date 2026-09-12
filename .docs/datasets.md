@@ -31,7 +31,7 @@ login required):
 | `bedlam-labels-smpl.zip` | per-image **SMPL** params in the camera frame (`pose_cam`, `shape`, `trans_cam`, `cam_int`, `cam_ext`, `gtkps`, `center`, `scale`, `imgname`), one npz per sequence group | CameraHMR |
 | `bedlam_labels/all_npz_12_training.zip` | the same in **SMPL-X** | official BEDLAM training code |
 
-`scripts/fetch_bedlam_labels.sh` downloads both into `data/generated/bedlam_labels`.
+`lidar_bedlam/scripts/fetch_bedlam_labels.sh` downloads both into `resources/data/generated/bedlam_labels`.
 The raw SMPL-X animation files (body data) are a separate download on the same
 page and are not needed when the labels are used.
 

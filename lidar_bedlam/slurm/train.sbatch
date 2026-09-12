@@ -11,7 +11,7 @@
 #
 # Self-resubmitting training job for the Helma cluster.
 #
-#   sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch
+#   sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch
 #
 # Submit from the repo root (the Slurm log goes to outputs/). Environment
 # (all optional):
@@ -27,7 +27,7 @@
 # Notes for Helma (see docs/cluster.md): only $HOME, /hnvme/workspace and
 # node-local /tmp are visible on compute nodes ($WORK on /home/atuin and
 # /anvme are not); wandb has no internet there, so the trainer writes
-# outputs/<run>/metrics.jsonl and slurm/wandb_mirror.sh (login node) pushes
+# outputs/<run>/metrics.jsonl and lidar_bedlam/slurm/wandb_mirror.sh (login node) pushes
 # it to wandb live.
 set -euo pipefail
 
@@ -47,7 +47,7 @@ export WANDB_MODE=disabled  # metrics.jsonl is mirrored to wandb from the login 
 export OMP_NUM_THREADS=8
 
 if [ -z "${RUN_NAME:-}" ]; then
-  RUN_NAME=$(uv run python scripts/next_run_name.py --config "$CONFIG")
+  RUN_NAME=$(uv run python lidar_bedlam/scripts/next_run_name.py --config "$CONFIG")
 fi
 export RUN_NAME
 echo "run $RUN_NAME config $CONFIG resubmit $RESUBMIT_COUNT job $SLURM_JOB_ID"
@@ -75,7 +75,7 @@ resubmit() {
     echo "run finished, no resubmit"; return
   fi
   sbatch --export=ALL,CONFIG="$CONFIG",RUN_NAME="$RUN_NAME",DATA_ROOT="${DATA_ROOT_ORIG}",RESUBMIT_COUNT=$((RESUBMIT_COUNT + 1)),EXTRA_SET="$EXTRA_SET" \
-    "$REPO/slurm/train.sbatch"
+    "$REPO/lidar_bedlam/slurm/train.sbatch"
 }
 DATA_ROOT_ORIG=${DATA_ROOT_ORIG:-${DATA_ROOT}}
 export DATA_ROOT_ORIG
@@ -87,7 +87,7 @@ forward_usr1() {
 trap forward_usr1 USR1
 
 # shellcheck disable=SC2086
-uv run torchrun --standalone --nproc_per_node 4 scripts/lidar-bedlam-main.py \
+uv run torchrun --standalone --nproc_per_node 4 lidar_bedlam/scripts/lidar-bedlam-main.py \
   --config "$CONFIG" \
   --wandb-project "$WANDB_PROJECT" --wandb-name "$RUN_NAME" \
   --wandb-mode disabled \

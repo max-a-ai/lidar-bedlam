@@ -23,7 +23,7 @@ from lidar_bedlam.models.rotation import matrix_to_rot6d, rot6d_to_matrix
 from lidar_bedlam.models.selective_attention import JOINT_GROUPS
 from lidar_bedlam.models.vit import VIT_TINY, ViT, ViTConfig
 
-SMPL_DIR = Path("data/generated/body_models")
+SMPL_DIR = Path("resources/data/generated/body_models")
 
 
 def test_rot6d_roundtrip_and_orthonormal() -> None:

@@ -90,7 +90,7 @@ class TrainConfig:
 
     experiment: str = "main-mixed"
     seed: int = 0
-    body_models: str = "data/generated/body_models"
+    body_models: str = "resources/data/generated/body_models"
     checkpoint_root: str = "outputs"  # one directory per run
     wandb_entity: str = "erik_hm"
     wandb_project: str = "lidar-bedlam"
@@ -129,7 +129,7 @@ _SECTIONS = {
 }
 
 
-DEFAULT_DATA_ROOT = "data/generated"
+DEFAULT_DATA_ROOT = "resources/data/generated"
 
 
 def _expand(value: Any) -> Any:

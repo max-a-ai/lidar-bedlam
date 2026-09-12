@@ -21,7 +21,7 @@ from lidar_bedlam.train.config import SourceConfig, load_config
 from lidar_bedlam.train.loop import Trainer, new_run_name
 from lidar_bedlam.train.sampler import MixtureBatchSampler
 
-SMPL_DIR = Path("data/generated/body_models")
+SMPL_DIR = Path("resources/data/generated/body_models")
 
 
 def test_mixture_sampler_fixed_counts_and_disjoint_ranks() -> None:

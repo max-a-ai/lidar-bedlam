@@ -39,27 +39,29 @@ Enforce on every change.
 
 ## Directories
 
-`data/`, `checkpoints/` and `outputs/` are gitignored and built per
-machine by `python3 scripts/dm_link.py`. Never commit them, never
+`resources/` and `outputs/` are gitignored and built per
+machine by `python3 lidar_bedlam/scripts/dm_link.py`. Never commit them, never
 hand-create a fourth name for the same idea, and never put a `.venv`
 inside an HPC workspace — those filesystems are limited by inodes.
 
 ## Layout (fixed)
 
 - Flat package `lidar_bedlam/` at the repo root (named after the repo).
-  Mandatory subpackages: `data/ models/ losses/ metrics/ train/ utils/`;
-  project domains beside them (`body/ geometry/ lidar/ rigs/ generate/`).
-- Entry points are `scripts/lidar-bedlam-main.py` (train) and
-  `scripts/lidar-bedlam-eval.py`; other CLIs live in `scripts/`, cluster
-  jobs in `slurm/`, experiment yaml in `configs/`, quick checks in
-  `notebooks/`. Full tree: `HANDOFF.md`.
+  Mandatory subpackages: `data/ models/ losses/ metrics/ train/ utils/
+  scripts/ slurm/`; project domains beside them (`body/ geometry/ lidar/
+  rigs/ generate/`).
+- Entry points are `lidar_bedlam/scripts/lidar-bedlam-main.py` (train)
+  and `lidar_bedlam/scripts/lidar-bedlam-eval.py`; experiment yaml in
+  `configs/`, quick checks in `notebooks/`, machine-dependent inputs in
+  `resources/` (gitignored), runs in `outputs/` (gitignored). Full tree:
+  `HANDOFF.md`.
 
 ## Project-specific
 
-- Training always goes through `scripts/lidar-bedlam-main.py` with `--wandb-project` and
+- Training always goes through `lidar_bedlam/scripts/lidar-bedlam-main.py` with `--wandb-project` and
   `--wandb-name` (hook-enforced); runs land in `outputs/<run-name>/`
   with `last.pt`, `best.pt`, `val_*.json`, `wandb/` and `DONE`.
-- Shards and precomputed ViT tokens live under `data/generated/`; the
+- Shards and precomputed ViT tokens live under `resources/data/generated/`; the
   layout is documented in `.docs/data_pipeline.md`.
 - The paper is `.docs/latex-draft/main.tex`; build it with `latexmk` in
   that folder. Keep it double-blind (no rig or group names).
