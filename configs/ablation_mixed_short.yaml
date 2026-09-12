@@ -31,7 +31,8 @@ optim:
   lr: 1.0e-4
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 6000
+  max_steps: 6000  # ignored when max_epochs > 0
+  max_epochs: 17  # one third of the main schedule
   grad_clip: 1.0
   amp: true
   eval_every_steps: 1000

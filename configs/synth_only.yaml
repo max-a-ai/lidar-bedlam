@@ -29,7 +29,8 @@ optim:
   lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 12000  # 24.6 M samples, ~63 passes over the synthetic pool
+  max_steps: 12000  # ignored when max_epochs > 0
+  max_epochs: 50  # epoch = one pass over all training records (~416k); ~10.2k steps at batch 2048
   grad_clip: 1.0
   amp: true
   eval_every_steps: 500

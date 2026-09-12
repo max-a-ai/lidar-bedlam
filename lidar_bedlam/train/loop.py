@@ -153,6 +153,7 @@ class Trainer:
         self.loss_fn = FusionLoss(LossWeights(**asdict(cfg.loss)))
         self.smpl_eval = SmplModel(Path(cfg.body_models))
         self.step = 0
+        self.steps_per_epoch = 1
         self.best = math.inf
         self.stop_requested = False
         self.wandb: Any = None
@@ -190,10 +191,11 @@ class Trainer:
 
     # -- data ------------------------------------------------------------
 
-    def train_loader(self, start_step: int) -> DataLoader[Item]:
-        """Mixture loader that resumes at ``start_step``."""
+    def train_loader(
+        self, start_step: int, sets: list[ShardDataset]
+    ) -> DataLoader[Item]:
+        """Mixture loader over ``sets`` that resumes at ``start_step``."""
         cfg = self.cfg
-        sets = [build_dataset(s, cfg, train=True) for s in cfg.data.train]
         sampler = MixtureBatchSampler(
             [len(d) for d in sets], [s.weight for s in cfg.data.train],
             cfg.optim.batch_size, cfg.optim.max_steps - start_step,
@@ -284,15 +286,32 @@ class Trainer:
     # -- training --------------------------------------------------------
 
     def fit(self) -> None:
-        """Run to ``max_steps`` (or until SIGUSR1)."""
+        """Run to ``max_steps`` / ``max_epochs`` (or until SIGUSR1)."""
         cfg = self.cfg
         self.resume()
+        sets = [build_dataset(s, cfg, train=True) for s in cfg.data.train]
+        self.steps_per_epoch = max(
+            1, math.ceil(sum(len(d) for d in sets) / cfg.optim.batch_size)
+        )
+        if cfg.optim.max_epochs > 0:
+            cfg.optim.max_steps = math.ceil(
+                cfg.optim.max_epochs * self.steps_per_epoch
+            )
+        self._log(
+            f"{self.steps_per_epoch} steps per epoch, "
+            f"{cfg.optim.max_steps / self.steps_per_epoch:.1f} epochs "
+            f"= {cfg.optim.max_steps} steps"
+        )
         if self.step >= cfg.optim.max_steps:
             self._log("already finished")
             return
-        if self.is_main and self.wandb is None:
-            self.wandb = self._init_wandb()
-        loader = self.train_loader(self.step)
+        if self.is_main:
+            (self.run_dir / "config.json").write_text(
+                json.dumps(to_dict(cfg), indent=1)
+            )
+            if self.wandb is None:
+                self.wandb = self._init_wandb()
+        loader = self.train_loader(self.step, sets)
         val = self.val_loaders() if self.is_main else {}
         self.model.train()
         t0 = time.time()
@@ -330,6 +349,7 @@ class Trainer:
                 )
                 self._log(
                     f"step {self.step}/{cfg.optim.max_steps} "
+                    f"ep {self.epoch:.2f} "
                     f"loss {float(total):.4f} lr {lr:.2e} "
                     f"{dt:.2f} s/step "
                     f"{cfg.optim.batch_size / dt:.0f} samples/s "
@@ -394,7 +414,14 @@ class Trainer:
             self.best = score
             self.save("best")
 
+    @property
+    def epoch(self) -> float:
+        """Passes over the training records so far."""
+        return self.step / self.steps_per_epoch
+
     def _init_wandb(self) -> Any:
+        if self.cfg.wandb_mode == "disabled":
+            return None
         import wandb
 
         return wandb.init(
@@ -409,8 +436,15 @@ class Trainer:
         )
 
     def _wandb_log(self, values: dict[str, float]) -> None:
+        """Append to ``metrics.jsonl`` (mirrored to wandb from a node with
+        internet, see ``scripts/wandb_mirror.py``) and to wandb if live."""
+        if not self.is_main:
+            return
+        row = {"step": self.step, "train/epoch": self.epoch, **values}
+        with open(self.run_dir / "metrics.jsonl", "a") as fh:
+            fh.write(json.dumps(row) + "\n")
         if self.wandb is not None:
-            self.wandb.log(values, step=self.step)
+            self.wandb.log(row, step=self.step)
 
 
 def _wandb_mode(mode: str) -> Literal["online", "offline", "disabled"]:

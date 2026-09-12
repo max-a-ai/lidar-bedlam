@@ -52,7 +52,9 @@ improves in-the-wild SMPL estimation including 3D placement. Eurographics
 | Backbone | ViT-H (TokenHMR weights) **frozen**, tokens precomputed per shard | 29 M trainable params |
 | Shard reader | memory-mapped npz members | `np.load` re-read 96 MB per row; now 5,600 samples/s on 4 GPUs |
 | Training | torchrun DDP, AdamW, warm-up + cosine, bf16; batch 2048, lr 3e-4, 12k steps for the full runs | batch tests 2026-09-12: throughput flat above 1024, 13.7 GiB/GPU |
-| Cluster | Helma h100, self-resubmitting chain, data staged to job `$TMPDIR`, wandb offline + login-node sync loop | `slurm/train.sbatch`, `.docs/cluster.md` |
+| Cluster | Helma h100, self-resubmitting chain, data staged to job `$TMPDIR` | `slurm/train.sbatch`, `.docs/cluster.md` |
+| Live metrics | trainer writes `outputs/<run>/metrics.jsonl`; `slurm/wandb_mirror.sh` on the login node mirrors it to wandb every 2 min, charts on `train/epoch` | compute nodes have no internet and no proxy; `wandb sync` cannot read a live offline run |
+| Schedule unit | `optim.max_epochs` (epoch = one pass over all training records, ~416k); main 50, ablations 17 | `max_steps` derived; both logged |
 | Data (local) | `/mnt/md0/lidar-bedlam` -> `data/generated` | 8 TB RAID; the NAS is sshfs |
 | Data (Helma) | `/hnvme/workspace/v103fe17-lidar-bedlam/data/generated` | `$WORK`, `/anvme` not on compute nodes |
 | Experiment tracking | wandb `erik_hm/lidar-bedlam` | auth via `~/.netrc` (also on Helma) |
@@ -71,7 +73,7 @@ lidar-bedlam/
 │   ├── __init__.py  __main__.py  app.py  py.typed
 ├── configs/                 # one yaml per experiment (main, real/synth only, ablations, smoke)
 ├── scripts/                 # CLIs: lidar-bedlam-main.py, lidar-bedlam-eval.py, data preparation, dm_link.py
-├── slurm/                   # train.sbatch (chain job), wandb_sync.sh, wandb_sync_loop.sh
+├── slurm/                   # train.sbatch (chain job), wandb_mirror.sh (login-node live wandb)
 ├── tests/                   # pytest, one file per module group
 ├── notebooks/               # capabilities.ipynb: quick visual checks of what the repo can do
 ├── third_party/             # baseline submodules
@@ -126,8 +128,8 @@ browsers; enable "Show hidden files" to see it.
 - Baseline weights: TokenHMR ckpt linked as `checkpoints/tokenhmr_vith`;
   SAM 3D Body in the HF cache; LiDAR-HMR via Baidu pan only.
 - Helma: venv in `$HOME/venvs/lidar-bedlam` (`UV_PROJECT_ENVIRONMENT`),
-  never inside the inode-limited workspace; wandb sync loop started once
-  per login session (`.docs/cluster.md`).
+  never inside the inode-limited workspace; `slurm/wandb_mirror.sh` started
+  once per login session (`.docs/cluster.md`).
 - Submit from the repo root on Helma:
   `sbatch --partition=h100 --job-name=<name> --export=ALL,CONFIG=configs/<x>.yaml slurm/train.sbatch`.
 - The notebook is generated code: edit `scripts/build_debug_notebook.py`,

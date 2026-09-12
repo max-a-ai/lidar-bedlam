@@ -26,8 +26,9 @@
 #
 # Notes for Helma (see docs/cluster.md): only $HOME, /hnvme/workspace and
 # node-local /tmp are visible on compute nodes ($WORK on /home/atuin and
-# /anvme are not); wandb has no internet there, so runs are offline and
-# synced from the login node (slurm/wandb_sync.sh).
+# /anvme are not); wandb has no internet there, so the trainer writes
+# outputs/<run>/metrics.jsonl and slurm/wandb_mirror.sh (login node) pushes
+# it to wandb live.
 set -euo pipefail
 
 REPO=${REPO:-/hnvme/workspace/v103fe17-lidar-bedlam}
@@ -42,7 +43,7 @@ WANDB_PROJECT=${WANDB_PROJECT:-lidar-bedlam}
 cd "$REPO"
 # the venv lives in $HOME: workspace filesystems are inode-limited
 export UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT:-$HOME/venvs/lidar-bedlam}
-export WANDB_MODE=offline
+export WANDB_MODE=disabled  # metrics.jsonl is mirrored to wandb from the login node
 export OMP_NUM_THREADS=8
 
 if [ -z "${RUN_NAME:-}" ]; then
@@ -89,7 +90,7 @@ trap forward_usr1 USR1
 uv run torchrun --standalone --nproc_per_node 4 scripts/lidar-bedlam-main.py \
   --config "$CONFIG" \
   --wandb-project "$WANDB_PROJECT" --wandb-name "$RUN_NAME" \
-  --wandb-mode offline \
+  --wandb-mode disabled \
   --set $EXTRA_SET &
 TRAIN_PID=$!
 wait $TRAIN_PID || true

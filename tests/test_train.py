@@ -127,3 +127,28 @@ class _NoWandb:
 
     def finish(self) -> None:
         pass
+
+
+@pytest.mark.skipif(not SMPL_DIR.exists(), reason="SMPL model files absent")
+def test_max_epochs_sets_steps_and_metrics_file(tmp_path: Path) -> None:
+    _write_shards(tmp_path / "shards")  # 2 shards x 4 records = 8 records
+    os.environ["DATA_ROOT"] = str(tmp_path)
+    cfg_path = tmp_path / "c.yaml"
+    cfg_path.write_text(f"experiment: toy\nbody_models: {SMPL_DIR}\n")
+    cfg = load_config(cfg_path)
+    src = SourceConfig("toy", [str(tmp_path / "shards")], "toy_*.npz")
+    cfg.data.train, cfg.data.val = [src], []
+    cfg.data.num_workers, cfg.data.n_points = 0, 64
+    cfg.model.dim, cfg.model.num_layers, cfg.model.point_tokens = 64, 1, 8
+    cfg.model.point_knn = 4
+    cfg.optim.batch_size, cfg.optim.warmup_steps = 4, 1
+    cfg.optim.max_epochs = 1.5  # 8 records / batch 4 = 2 steps per epoch
+    cfg.optim.eval_every_steps = cfg.optim.checkpoint_every_steps = 100
+    cfg.optim.amp, cfg.wandb_mode = False, "disabled"
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    trainer = Trainer(cfg, run_dir, "toy-001")
+    trainer.fit()
+    assert cfg.optim.max_steps == 3 and trainer.step == 3
+    assert trainer.steps_per_epoch == 2 and trainer.epoch == 1.5
+    assert (run_dir / "config.json").exists() and (run_dir / "DONE").exists()

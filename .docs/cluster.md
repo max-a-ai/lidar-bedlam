@@ -25,15 +25,15 @@ rsync -a data/generated/{body_models,synth,real} helma:/hnvme/workspace/v103fe17
 cd /hnvme/workspace/v103fe17-lidar-bedlam
 export UV_PROJECT_ENVIRONMENT=$HOME/venvs/lidar-bedlam   # venv outside the inode-limited workspace
 uv sync
-setsid nohup slurm/wandb_sync_loop.sh > outputs/wandb_sync_loop.log 2>&1 &   # once per login session
+setsid nohup slurm/wandb_mirror.sh > outputs/wandb_mirror.log 2>&1 < /dev/null &   # once per login session: live wandb
 sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch
 sbatch --export=ALL,CONFIG=configs/ablation_gate_none.yaml slurm/train.sbatch
 squeue -u $USER
-slurm/wandb_sync.sh outputs      # after / during runs
 ```
 
 The job script enumerates the run name (`<experiment>-NNN`) once, stages the
 shards to `/tmp`, runs `torchrun` on 4 GPUs, checkpoints on Slurm's `USR1`
 15 min before the wall time, and resubmits itself with the same run name
-until `outputs/<run>/DONE` exists or the resubmit cap is hit. wandb runs
-offline under `outputs/<run>/wandb/`; sync them from the login node.
+until `outputs/<run>/DONE` exists or the resubmit cap is hit. Metrics go
+to `outputs/<run>/metrics.jsonl`; `slurm/wandb_mirror.sh` on the login node
+mirrors them to wandb every 2 minutes (charts use `train/epoch` as x axis).

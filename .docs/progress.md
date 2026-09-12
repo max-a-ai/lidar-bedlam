@@ -110,6 +110,16 @@ in cm); BEDLAM 2.0 skipped.
 
 ## Model
 
+### 2026-09-12 — epochs and live wandb mirror
+`optim.max_epochs` (epoch = one pass over all training records, ~416k;
+main runs 50, ablations 17; `max_steps` derived), `train/epoch` logged and
+used as the x axis. Compute nodes have no proxy, and `wandb sync` cannot
+read a live offline run, so the trainer now writes `metrics.jsonl` +
+`config.json` per run and `scripts/wandb_mirror.py` (login node, every 2
+min) pushes new rows to wandb under the run's name; verified end to end
+with `smoke-mirror-000`. The two runs started before this change
+(`mix80-000`, `synth-only-000`, 12k steps = 59 epochs) sync at their end.
+
 ### 2026-09-12 — batch-size tests done, full runs at batch 2048
 Round 2 (memmap loader, node-local staging, 4x H100, 600 steps each):
 

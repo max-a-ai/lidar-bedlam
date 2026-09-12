@@ -61,6 +61,9 @@ class OptimConfig:
     weight_decay: float = 0.05
     warmup_steps: int = 500
     max_steps: int = 17000
+    # epoch = one pass over all training records (sum of the sources);
+    # > 0 overrides max_steps = ceil(max_epochs * records / batch_size)
+    max_epochs: float = 0.0
     grad_clip: float = 1.0
     amp: bool = True
     eval_every_steps: int = 1000
