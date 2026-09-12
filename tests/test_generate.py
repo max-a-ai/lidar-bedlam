@@ -88,3 +88,19 @@ def test_rig_lidar_pose_and_axes() -> None:
     sim = lidar_to_simulator_axes(pose)
     # simulator forward (+z column) must be the LiDAR's x (forward)
     assert np.allclose(sim[:3, 2], WAYMO_CAM_TO_OPENCV @ [1, 0, 0])
+
+
+def test_shard_views_match_npz_and_rows_are_copies(tmp_path: Path) -> None:
+    from test_shard_dataset import _record
+
+    path = tmp_path / "v_00000.npz"
+    write_shard([_record(i) for i in range(4)], path)
+    shard = Shard(path)
+    ref = np.load(path, allow_pickle=False)
+    for name in ref.files:
+        assert np.array_equal(shard.array(name), ref[name]), name
+    assert not shard.array("image").flags.writeable
+    row = shard.row("image", 2)
+    assert row.flags.writeable and row.base is None
+    scan = shard.scan(1, "main_0")
+    assert scan.points.dtype == np.float32 and len(scan.points) == 300

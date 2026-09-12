@@ -10,9 +10,11 @@ variants (``main_0``, ``main_1``, ``rig_waymo``, ...) padded to
 
 from __future__ import annotations
 
+import ast
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -145,34 +147,84 @@ def write_shard(records: list[Record], path: Path) -> None:
     np.savez(path, **arrays)
 
 
+Buffer = np.memmap[Any, np.dtype[np.uint8]]
+
+
+def _npy_view(buf: Buffer, start: int) -> NDArray[Any]:
+    """Array view of an uncompressed ``.npy`` member starting at ``start``."""
+    magic = bytes(buf[start : start + 8])
+    if magic[:6] != b"\x93NUMPY":
+        msg = "not an npy member"
+        raise ValueError(msg)
+    major = magic[6]
+    hlen_size = 2 if major == 1 else 4
+    hlen = int.from_bytes(
+        bytes(buf[start + 8 : start + 8 + hlen_size]), "little"
+    )
+    header_end = start + 8 + hlen_size + hlen
+    header = bytes(buf[start + 8 + hlen_size : header_end]).decode("latin1")
+    meta = ast.literal_eval(header)
+    dtype = np.dtype(meta["descr"])
+    shape = tuple(int(v) for v in meta["shape"])
+    order: Literal["C", "F"] = "F" if meta["fortran_order"] else "C"
+    return np.ndarray(shape, dtype, buffer=buf, offset=header_end, order=order)
+
+
+def _member_views(path: Path, buf: Buffer) -> dict[str, NDArray[Any]]:
+    """Zero-copy views of every stored member of an uncompressed npz."""
+    views: dict[str, NDArray[Any]] = {}
+    with zipfile.ZipFile(path) as z:
+        for info in z.infolist():
+            name = info.filename.removesuffix(".npy")
+            if info.compress_type != zipfile.ZIP_STORED:
+                views[name] = np.asarray(z.read(info))  # rare: load fully
+                continue
+            h = info.header_offset
+            local = bytes(buf[h : h + 30])
+            name_len = int.from_bytes(local[26:28], "little")
+            extra_len = int.from_bytes(local[28:30], "little")
+            views[name] = _npy_view(buf, h + 30 + name_len + extra_len)
+    return views
+
+
 class Shard:
-    """Read access to one shard (lazy npz)."""
+    """Read access to one shard: every array is a memory-mapped view.
+
+    ``np.load`` on an npz re-reads a whole member on every access (about
+    100 MB for the image stack), which made per-sample loading CPU bound.
+    The members are stored uncompressed, so they are mapped in place and a
+    row costs one page-in.
+    """
 
     def __init__(self, path: Path) -> None:
         self.path = path
-        self._z = np.load(path, allow_pickle=False)
-        self.n = int(len(self._z["key"]))
-        self.variants: list[str] = [str(v) for v in self._z["scan_variants"]]
+        self._buf: Buffer = np.memmap(path, dtype=np.uint8, mode="r")
+        self._m = _member_views(path, self._buf)
+        self.n = int(len(self._m["key"]))
+        self.variants: list[str] = [str(v) for v in self._m["scan_variants"]]
 
     def __len__(self) -> int:
         return self.n
 
     def array(self, name: str) -> NDArray[Any]:
-        """A whole stacked array (cached by numpy's NpzFile)."""
-        return np.asarray(self._z[name])
+        """The whole stacked array as a read-only view (index a row)."""
+        return self._m[name]
+
+    def row(self, name: str, index: int) -> NDArray[Any]:
+        """One row, copied (writable, safe for ``torch.from_numpy``)."""
+        return np.array(self._m[name][index])
 
     def scan(self, index: int, variant: str) -> Scan:
         """One person scan of one variant."""
-        n = int(self._z[f"scan/{variant}/count"][index])
+        m = self._m
+        n = int(m[f"scan/{variant}/count"][index])
         return Scan(
-            points=self._z[f"scan/{variant}/points"][index, :n].astype(
-                np.float32
-            ),
-            channel=self._z[f"scan/{variant}/channel"][index, :n],
-            column=self._z[f"scan/{variant}/column"][index, :n],
-            channels=int(self._z[f"scan/{variant}/channels"][index]),
-            steps=int(self._z[f"scan/{variant}/steps"][index]),
-            sensor_pose=self._z[f"scan/{variant}/sensor_pose"][index].astype(
+            points=m[f"scan/{variant}/points"][index, :n].astype(np.float32),
+            channel=np.array(m[f"scan/{variant}/channel"][index, :n]),
+            column=np.array(m[f"scan/{variant}/column"][index, :n]),
+            channels=int(m[f"scan/{variant}/channels"][index]),
+            steps=int(m[f"scan/{variant}/steps"][index]),
+            sensor_pose=m[f"scan/{variant}/sensor_pose"][index].astype(
                 np.float64
             ),
         )

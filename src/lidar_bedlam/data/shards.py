@@ -97,7 +97,7 @@ class ShardDataset(Dataset[Item]):
         s, i = self._locate(index)
         shard = self._shard(s)
         use_aug = self._rng.random() < self.cfg.use_augmented_image
-        image = shard.array("image_aug" if use_aug else "image")[i]
+        image = shard.row("image_aug" if use_aug else "image", i)
         img = (image.astype(np.float32) / 255.0 - IMAGENET_MEAN) / IMAGENET_STD
         scan = shard.scan(i, self._variant(shard))
         points = scan.points
@@ -120,28 +120,24 @@ class ShardDataset(Dataset[Item]):
             ),
             "points": torch.from_numpy(pts),
             "points_valid": torch.from_numpy(valid),
-            "intrinsics": torch.from_numpy(
-                shard.array("intrinsics")[i]
-            ).float(),
+            "intrinsics": torch.from_numpy(shard.row("intrinsics", i)).float(),
             "crop_origin": torch.from_numpy(
-                shard.array("crop_origin")[i]
+                shard.row("crop_origin", i)
             ).float(),
             "has_image": torch.tensor(bool(shard.array("has_image")[i])),
             "has_smpl": torch.tensor(bool(shard.array("has_smpl")[i])),
-            "global_orient": torch.from_numpy(shard.array("global_orient")[i]),
-            "body_pose": torch.from_numpy(shard.array("body_pose")[i]),
-            "betas": torch.from_numpy(shard.array("betas")[i]),
-            "transl": torch.from_numpy(shard.array("transl")[i]),
-            "joints3d": torch.from_numpy(shard.array("joints3d")[i]),
-            "joints3d_valid": torch.from_numpy(
-                shard.array("joints3d_valid")[i]
-            ),
+            "global_orient": torch.from_numpy(shard.row("global_orient", i)),
+            "body_pose": torch.from_numpy(shard.row("body_pose", i)),
+            "betas": torch.from_numpy(shard.row("betas", i)),
+            "transl": torch.from_numpy(shard.row("transl", i)),
+            "joints3d": torch.from_numpy(shard.row("joints3d", i)),
+            "joints3d_valid": torch.from_numpy(shard.row("joints3d_valid", i)),
             "joint_convention": str(shard.array("joint_convention")[i]),
-            "kp2d": torch.from_numpy(shard.array("kp2d")[i]),
+            "kp2d": torch.from_numpy(shard.row("kp2d", i)),
             "has_kp2d": torch.tensor(True),
-            "box3d": torch.from_numpy(shard.array("box3d")[i]),
+            "box3d": torch.from_numpy(shard.row("box3d", i)),
             "has_box3d": torch.tensor(True),
-            "mask": torch.from_numpy(shard.array("mask")[i]),
+            "mask": torch.from_numpy(shard.row("mask", i)),
             "has_mask": torch.tensor(True),
             "distance_scale": torch.tensor(
                 float(shard.array("distance_scale")[i])

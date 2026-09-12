@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --time=24:00:00
 #SBATCH --signal=B:USR1@900
 #SBATCH --output=outputs/slurm-%x-%j.out
@@ -20,6 +20,7 @@
 #                 it for every resubmission (passed on via --export)
 #   DATA_ROOT     shard root on the cluster (default <REPO>/data/generated)
 #   STAGE_TO_TMP  1 = copy the shards to node-local /tmp first (default 1)
+#   STAGE_DIRS    sub-directories of DATA_ROOT to stage (default: all shard dirs)
 #   MAX_RESUBMITS safety cap on chain length (default 20)
 #   EXTRA_SET     extra "section.key=value" overrides
 #
@@ -50,10 +51,14 @@ fi
 export RUN_NAME
 echo "run $RUN_NAME config $CONFIG resubmit $RESUBMIT_COUNT job $SLURM_JOB_ID"
 
+STAGE_DIRS=${STAGE_DIRS:-"body_models real/v1 synth/v1 synth/v1_groups02-11 synth/v1_group12"}
 if [ "$STAGE_TO_TMP" = "1" ]; then
   LOCAL=/tmp/$USER/lidar-bedlam-data
   mkdir -p "$LOCAL"
-  rsync -a --info=progress2 "$DATA_ROOT/" "$LOCAL/"
+  for d in $STAGE_DIRS; do
+    [ -d "$DATA_ROOT/$d" ] || continue
+    rsync -a --relative --info=progress2 "$DATA_ROOT/./$d" "$LOCAL/" | tail -1
+  done
   export DATA_ROOT=$LOCAL
 else
   export DATA_ROOT
