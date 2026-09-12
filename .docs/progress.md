@@ -198,6 +198,13 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-13 — synthesis axis and scaling curve submitted (9 jobs)
+Ablations rebased on the 50/40/10 mixture that won the main table
+(`abl-mixed-short-001` as the new reference; the `-000` model-axis runs
+were on 80/10/10). Submitted: `ablation-ball025`, `ablation-rig-waymo`,
+`ablation-target-waymo`, `ablation-scale-{2,4,8,16,32}x` (jobs
+844883-844891), 17 epochs each.
+
 ### 2026-09-12 — comparison batch, last validation of every run
 Batch 2048, lr 3e-4; main table 10,200 steps (synth-only 12,000);
 model-axis ablations 17 epochs = 3,468 steps on the 80/10/10 pool.
@@ -308,7 +315,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Running on Helma: `mix80-001`, `real-only`, `main-mixed`, model-axis ablations (5). Open: synthesis-axis (`ablation_ball025`, `ablation_rig_waymo`, `ablation_target_waymo`), scaling curve, baselines. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Running on Helma: synthesis axis + scaling curve (9 jobs). Open: baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body), model-axis ablations on 50/40/10 if the paper uses that mixture. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
