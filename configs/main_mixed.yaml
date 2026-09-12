@@ -28,12 +28,13 @@ model:
   use_backbone: false
   gate_mode: learned
 optim:
-  batch_size: 256
-  lr: 1.0e-4
+  batch_size: 2048  # batch tests 2026-09-12
+  lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 17000
+  max_steps: 10200  # counted in steps: this pool differs from mix80's, so the same
+  # compute (10,200 steps x 2048 = mix80-001's 50 epochs) is the fair schedule
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 1000
+  eval_every_steps: 500
   checkpoint_every_steps: 500

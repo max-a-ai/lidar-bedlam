@@ -1,13 +1,13 @@
-# Ablation: gates frozen at the priors.
+# Ablation (80/10/10 mixture, 1/3 schedule): gates frozen at the priors.
 experiment: abl-gate-hard
 seed: 0
 body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
 data:
   train:
-    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.1}
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: random_main}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.8, variant: random_main}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
@@ -27,13 +27,13 @@ model:
   use_backbone: false
   gate_mode: hard
 optim:
-  batch_size: 256
-  lr: 1.0e-4
+  batch_size: 2048  # batch tests 2026-09-12
+  lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 6000  # ignored when max_epochs > 0
-  max_epochs: 17  # one third of the main schedule
+  max_steps: 3400  # ignored: max_epochs below
+  max_epochs: 17  # same 80/10/10 pool as mix80 (50 epochs), one third of it
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 1000
+  eval_every_steps: 500
   checkpoint_every_steps: 500
