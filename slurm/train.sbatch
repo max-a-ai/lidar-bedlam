@@ -53,7 +53,7 @@ echo "run $RUN_NAME config $CONFIG resubmit $RESUBMIT_COUNT job $SLURM_JOB_ID"
 
 STAGE_DIRS=${STAGE_DIRS:-"body_models real/v1 synth/v1 synth/v1_groups02-11 synth/v1_group12"}
 if [ "$STAGE_TO_TMP" = "1" ]; then
-  LOCAL=/tmp/$USER/lidar-bedlam-data
+  LOCAL=${TMPDIR:-/tmp/$USER}/lidar-bedlam-data  # $TMPDIR is job-scoped and cleaned by Slurm
   mkdir -p "$LOCAL"
   for d in $STAGE_DIRS; do
     [ -d "$DATA_ROOT/$d" ] || continue

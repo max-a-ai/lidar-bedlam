@@ -25,12 +25,12 @@ model:
   use_backbone: false
   gate_mode: learned
 optim:
-  batch_size: 256
-  lr: 1.0e-4
+  batch_size: 2048  # batch tests 2026-09-12: throughput flat above 1024, 13.7 GiB/GPU
+  lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 17000
+  max_steps: 12000  # 24.6 M samples, ~63 passes over the synthetic pool
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 1000
+  eval_every_steps: 500
   checkpoint_every_steps: 500

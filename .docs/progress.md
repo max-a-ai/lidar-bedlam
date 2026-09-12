@@ -110,6 +110,22 @@ in cm); BEDLAM 2.0 skipped.
 
 ## Model
 
+### 2026-09-12 — batch-size tests done, full runs at batch 2048
+Round 2 (memmap loader, node-local staging, 4x H100, 600 steps each):
+
+| batch | samples/s | peak GiB/GPU |
+|---|---|---|
+| 256 | 3,200 | 2.3 |
+| 512 | 4,500 | 4.0 |
+| 1024 | 5,200 | 7.2 |
+| 2048 | 5,600 | 13.7 |
+
+Throughput is flat above 1024 (loader-bound with 64 workers), memory far
+from the 80 GiB. Chosen: batch 2048, lr 3e-4, 12k steps (24.6 M samples,
+about 1.5 h per run) for `mix80` (80/10/10) and `synth_only` (100 %
+BEDLAM); eval every 500 steps. Runs of the tests are on wandb
+(`batchtest2-b<N>`).
+
 ### 2026-09-12 — loader was the bottleneck: memory-mapped shards (f83d95d)
 First batch tests on Helma: 360-390 samples/s at batch 256 and 512 with
 only 2.3 / 4.0 GiB peak per GPU, i.e. the GPUs waited for data. Cause:
