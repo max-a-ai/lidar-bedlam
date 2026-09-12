@@ -139,6 +139,9 @@ class Trainer:
                 device_ids=[self.local_rank]
                 if self.device.type == "cuda"
                 else None,
+                # the gate ablations leave the gate MLP or one attention
+                # stream without gradient; DDP must tolerate that
+                find_unused_parameters=cfg.model.gate_mode != "learned",
             )
             if self.world > 1
             else self.model

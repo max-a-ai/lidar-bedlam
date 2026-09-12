@@ -100,8 +100,9 @@ uv run torchrun --standalone --nproc_per_node 4 lidar_bedlam/scripts/lidar-bedla
   --wandb-mode disabled \
   --set $EXTRA_SET &
 TRAIN_PID=$!
-wait $TRAIN_PID || true
-wait $TRAIN_PID 2>/dev/null || true
-STATUS=$?
+wait $TRAIN_PID; STATUS=$?
+if [ "$SIGNALLED" = "1" ]; then  # first wait returns on the trap; wait again
+  wait $TRAIN_PID; STATUS=$?
+fi
 echo "trainer exited with $STATUS"
 resubmit
