@@ -198,6 +198,16 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-12 — first full runs (12k steps, batch 2048)
+`synth-only-000` (100 % BEDLAM, zero-shot on real data), last step:
+Waymo MPJPE 99.3 / PA 72.7 mm, translation 1.39 m, box mAP 0.19;
+SLOPER4D MPJPE 72.4 / PA 51.0 mm, translation 0.25 m, mAP 0.36.
+`mix80-000` (80/10/10, trained with the Waymo keypoint bug): SLOPER4D
+MPJPE 52-56 / PA 44 mm, translation 5-7 cm, mAP 0.78-0.89; Waymo
+translation 0.73 m and mAP 0.47 but MPJPE 390-405 mm, the symptom that
+exposed the bug. Both runs are on wandb. `mix80-001` resubmitted with the
+fix and the corrected group-01 shards (job 843483).
+
 ### 2026-09-10 02:44 — plan and ablations decided (30c4b90, d46f545)
 Waymo headline, SLOPER4D secondary, LiDARHuman26M and PedX dropped;
 `plan.md`, `ablations.md` (ball-radius sweep, resolution ablation, rolling
@@ -244,7 +254,7 @@ dataset survey.
 
 ## Data
 
-- [ ] Tokens for group 12, then rsync groups 02-12 to Helma (`/hnvme/workspace/v103fe17-lidar-bedlam/data/generated`), running.
+- [ ] Data on Helma: `/hnvme/workspace/v103fe17-lidar-bedlam/resources/data/generated` (all 12 groups + real, complete).
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels) and the comparison table.
 - [ ] Run the official xxh128 validation on the NAS (`lidar_bedlam/scripts/validate_bedlam_on_nas.sh`).
 - [ ] Rolling shutter: apply `SpeedSetting` + `apply_rolling_shutter` in the generator (default speed 0 for v1).
@@ -253,7 +263,7 @@ dataset survey.
 
 ## Model
 
-- [ ] After `mix80-000` / `synth-only-000` finish: on Helma `mv data resources/data`, rsync the repo, restart `lidar_bedlam/slurm/wandb_mirror.sh`; rerun `mix80` with the convention fix and the corrected group-01 shards; then `main_mixed` (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] `mix80-001` running on Helma (fixed losses, corrected shards); then `real_only`, `main_mixed` and the ablation ladder (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 

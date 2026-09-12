@@ -33,7 +33,7 @@ set -euo pipefail
 
 REPO=${REPO:-/hnvme/workspace/v103fe17-lidar-bedlam}
 CONFIG=${CONFIG:-configs/main_mixed.yaml}
-DATA_ROOT=${DATA_ROOT:-/hnvme/workspace/v103fe17-lidar-bedlam/data/generated}
+DATA_ROOT=${DATA_ROOT:-/hnvme/workspace/v103fe17-lidar-bedlam/resources/data/generated}
 STAGE_TO_TMP=${STAGE_TO_TMP:-1}
 MAX_RESUBMITS=${MAX_RESUBMITS:-20}
 RESUBMIT_COUNT=${RESUBMIT_COUNT:-0}
@@ -68,20 +68,27 @@ fi
 # Re-queue on the wall-time signal: the trainer checkpoints on SIGUSR1 and
 # exits, then a fresh job with the same RUN_NAME resumes from last.pt.
 resubmit() {
+  # only continue a run that the wall-time signal interrupted; a crash or a
+  # finished run must not spawn another job
+  if [ "$SIGNALLED" != "1" ]; then
+    echo "trainer exited on its own (status $STATUS): no resubmit"; return
+  fi
   if [ "$RESUBMIT_COUNT" -ge "$MAX_RESUBMITS" ]; then
     echo "resubmit cap reached"; return
   fi
   if [ -f "outputs/$RUN_NAME/DONE" ]; then
     echo "run finished, no resubmit"; return
   fi
-  sbatch --export=ALL,CONFIG="$CONFIG",RUN_NAME="$RUN_NAME",DATA_ROOT="${DATA_ROOT_ORIG}",RESUBMIT_COUNT=$((RESUBMIT_COUNT + 1)),EXTRA_SET="$EXTRA_SET" \
+  sbatch --job-name="$SLURM_JOB_NAME" --export=ALL,CONFIG="$CONFIG",RUN_NAME="$RUN_NAME",DATA_ROOT="${DATA_ROOT_ORIG}",RESUBMIT_COUNT=$((RESUBMIT_COUNT + 1)),EXTRA_SET="$EXTRA_SET" \
     "$REPO/lidar_bedlam/slurm/train.sbatch"
 }
 DATA_ROOT_ORIG=${DATA_ROOT_ORIG:-${DATA_ROOT}}
 export DATA_ROOT_ORIG
 
+SIGNALLED=0
 forward_usr1() {
   echo "USR1 from Slurm: forwarding to the trainer"
+  SIGNALLED=1
   kill -USR1 "$TRAIN_PID" 2>/dev/null || true
 }
 trap forward_usr1 USR1
