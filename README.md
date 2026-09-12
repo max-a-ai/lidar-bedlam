@@ -13,30 +13,33 @@ uv run python -m lidar_bedlam.body.convert_smpl \
     data/body_models/smpl/SMPL_NEUTRAL.pkl \
     data/generated/body_models/smpl/SMPL_NEUTRAL.pkl
 uv run pytest
-uv run jupyter lab debug/capabilities.ipynb   # what the repo can do, on real data
+uv run jupyter lab notebooks/capabilities.ipynb   # quick visual checks on real data
 ```
 
 Training (local smoke; the cluster job is `slurm/train.sbatch`):
 
 ```bash
-uv run torchrun --standalone --nproc_per_node 1 main.py \
+uv run torchrun --standalone --nproc_per_node 1 scripts/lidar-bedlam-main.py \
     --config configs/smoke.yaml --wandb-project lidar-bedlam \
     --wandb-name smoke-local --wandb-mode offline
+uv run python scripts/lidar-bedlam-eval.py --config configs/smoke.yaml \
+    --checkpoint outputs/smoke-local/best.pt --out outputs/smoke-local/eval.json
 ```
 
 ## Verify
 
 ```bash
-uv run ruff check src/
-uv run ruff format --check src/
-uv run mypy src/
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
 ```
 
 ## Layout
 
-See [HANDOFF.md](HANDOFF.md) for the full picture and
+See [HANDOFF.md](HANDOFF.md) for the full tree and
 [.docs/progress.md](.docs/progress.md) for the timetable, log and todos.
-The paper lives in `.docs/latex-draft/` (build with `latexmk` there).
+The package is `lidar_bedlam/` (flat layout), the paper is
+`.docs/latex-draft/` (build with `latexmk` there).
 
 `data/`, `checkpoints/` and `outputs/` are gitignored and machine-dependent.
 Build them for this machine with `python3 scripts/dm_link.py` (hosts and

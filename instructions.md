@@ -31,9 +31,9 @@ Enforce on every change.
 
 ## Verification before saying "done"
 
-1. `uv run ruff check src/` → zero errors
-2. `uv run ruff format --check src/` → clean
-3. `uv run mypy src/` → zero errors
+1. `uv run ruff check .` → zero errors
+2. `uv run ruff format --check .` → clean
+3. `uv run mypy` → zero errors
 4. If there's an entry point: `uv run <script-name>` → it launches
    without crashing on the expected platform.
 
@@ -44,9 +44,19 @@ machine by `python3 scripts/dm_link.py`. Never commit them, never
 hand-create a fourth name for the same idea, and never put a `.venv`
 inside an HPC workspace — those filesystems are limited by inodes.
 
+## Layout (fixed)
+
+- Flat package `lidar_bedlam/` at the repo root (named after the repo).
+  Mandatory subpackages: `data/ models/ losses/ metrics/ train/ utils/`;
+  project domains beside them (`body/ geometry/ lidar/ rigs/ generate/`).
+- Entry points are `scripts/lidar-bedlam-main.py` (train) and
+  `scripts/lidar-bedlam-eval.py`; other CLIs live in `scripts/`, cluster
+  jobs in `slurm/`, experiment yaml in `configs/`, quick checks in
+  `notebooks/`. Full tree: `HANDOFF.md`.
+
 ## Project-specific
 
-- Training always goes through `main.py` with `--wandb-project` and
+- Training always goes through `scripts/lidar-bedlam-main.py` with `--wandb-project` and
   `--wandb-name` (hook-enforced); runs land in `outputs/<run-name>/`
   with `last.pt`, `best.pt`, `val_*.json`, `wandb/` and `DONE`.
 - Shards and precomputed ViT tokens live under `data/generated/`; the

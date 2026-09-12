@@ -42,9 +42,9 @@ The narrative and the run ladder live in `.docs/story.md`.
 
 ### WP2 Training and evaluation (Sep 13-15)
 
-1. `main.py` (torchrun): shard dataset, per-batch mixture sampler, AdamW, cosine schedule, AMP; wandb logging per epoch (`train/*`, `val/*`), checkpoint every epoch (`last.pt`, `best.pt`), resume from `last.pt`, unique run names `<experiment>-<NNN>`.
+1. `scripts/lidar-bedlam-main.py` (torchrun): shard dataset, per-batch mixture sampler, AdamW, cosine schedule, AMP; wandb logging per epoch (`train/*`, `val/*`), checkpoint every epoch (`last.pt`, `best.pt`), resume from `last.pt`, unique run names `<experiment>-<NNN>`.
 2. `slurm/train.sbatch`: 4x H100, `--signal=B:USR1@900` trap that checkpoints and resubmits the same job with `--dependency=afterany` until `max_epochs` is reached; job chain id in the run name.
-3. `evaluate.py`: metrics over Waymo val and SLOPER4D test from a checkpoint; writes json + LaTeX rows.
+3. `scripts/lidar-bedlam-eval.py`: metrics over Waymo val and SLOPER4D test from a checkpoint; writes json + LaTeX rows.
 4. Baseline runners under `lidar_bedlam/baselines/`: TokenHMR, CameraHMR (image-only), LiDAR-HMR (LiDAR-only), SAM 3D Body (MHR joints mapped to COCO-17); same protocol.
 5. Smoke: 1 k synthetic samples, 100 steps, on the 4090.
 

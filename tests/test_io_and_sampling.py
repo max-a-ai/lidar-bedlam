@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 from lidar_bedlam.data.base import sample_points
-from lidar_bedlam.io import read_pcd, read_ply_xyz
+from lidar_bedlam.utils.io import read_pcd, read_ply_xyz
 
 
 def test_read_binary_pcd_with_extra_field(tmp_path: Path) -> None:

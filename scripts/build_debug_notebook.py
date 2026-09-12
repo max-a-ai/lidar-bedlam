@@ -1,4 +1,4 @@
-"""Generate ``debug/capabilities.ipynb`` (what the repository can do).
+"""Generate ``notebooks/capabilities.ipynb`` (what the repository can do).
 
 The notebook is generated from code so it stays in sync with the package;
 edit this script, not the notebook. Execute it to verify::
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import nbformat
 
-OUT = Path("debug/capabilities.ipynb")
+OUT = Path("notebooks/capabilities.ipynb")
 
 CELLS: list[tuple[str, str]] = []
 
@@ -54,9 +54,9 @@ import torch
 from lidar_bedlam.body.smpl import SmplModel
 from lidar_bedlam.data.base import add_smpl_derived, crop_sample
 from lidar_bedlam.data.bedlam import CM_TO_M, BedlamFramesSource
-from lidar_bedlam.io import read_exr_depth
+from lidar_bedlam.utils.io import read_exr_depth
 from lidar_bedlam.lidar.simulate import PRESETS, azimuth_window, camera_hfov_deg, select_mask, sensor_pose, simulate
-from lidar_bedlam.viz import (
+from lidar_bedlam.utils.viz import (
     box_trace, draw_mask_outline, draw_points, figure_3d, mesh_trace,
     point_to_surface_distance, points_trace,
 )

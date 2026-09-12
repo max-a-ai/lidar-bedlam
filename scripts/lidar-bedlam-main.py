@@ -1,6 +1,7 @@
 """Train the selective fusion model.
 
-    torchrun --nproc_per_node 4 main.py --config configs/main_mixed.yaml \\
+    torchrun --nproc_per_node 4 scripts/lidar-bedlam-main.py \\
+        --config configs/main_mixed.yaml \\
         --wandb-project lidar-bedlam --wandb-name main-mixed-000 \\
         --set optim.max_steps=17000
 

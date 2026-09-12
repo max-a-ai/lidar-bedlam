@@ -153,7 +153,7 @@ BEDLAM) at the largest batch that fits.
 AdamW + warm-up/cosine, bf16, eval every N steps, `last.pt`/`best.pt`,
 auto-resume, SIGUSR1 checkpoint-and-exit, `DONE`, offline wandb),
 `metrics/protocol.py`, gate modes `learned|none|hard|image_only|lidar_only`,
-IoU-confidence head, `main.py`, `evaluate.py`, 16 configs,
+IoU-confidence head, `main.py`, `evaluate.py` (now `scripts/lidar-bedlam-{main,eval}.py`), 16 configs,
 `slurm/train.sbatch` (self-resubmitting), `slurm/wandb_sync.sh`. SMPL heads
 forced to float32 under autocast. Smoke run: 40 steps on the 4090. 5 tests
 (68 total). Helma: `/anvme` and `$WORK` not on compute nodes,
@@ -163,7 +163,7 @@ forced to float32 under autocast. Smoke run: 40 steps on the 4090. 5 tests
 ViT with TokenHMR ViT-H weights (0 missing keys), point tokenizer, gated
 dual cross-attention decoder with routing priors, SMPL heads (6D
 rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
-`debug/capabilities.ipynb`.
+`notebooks/capabilities.ipynb`.
 
 ## Experiments
 
@@ -186,6 +186,15 @@ contribution bullets; 6.3 extrinsics questions.
 
 ## Housekeeping
 
+### 2026-09-12 — preparation finished: final layout before moving to Helma
+Flat package `lidar_bedlam/` (no `src/`), `utils/` for io and viz, entry
+points `scripts/lidar-bedlam-{main,eval}.py`, `notebooks/` at the top
+level, job logs under `outputs/logs/`; ruff excludes `third_party/`,
+uv default groups `dev` + `debug`. `HANDOFF.md` carries the `tree -L 2`
+and the fixed package structure as the template for new projects. From
+here on the work happens on Helma; the wandb hook must be extended to
+match `*-main.py`.
+
 ### 2026-09-08 18:08 — scaffold (c9beeab)
 uv, hatchling, ruff, mypy strict; five baseline submodules; BEDLAM audit;
 dataset survey.
@@ -204,7 +213,7 @@ dataset survey.
 ## Model
 
 - [ ] Batch tests running; then launch `mix80` and `synth_only` at the largest batch, then `main_mixed`, on Helma once the sync is complete (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
-- [ ] SMPL mesh overlays in the BEDLAM cells of `debug/capabilities.ipynb`.
+- [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
 ## Experiments

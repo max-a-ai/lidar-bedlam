@@ -1,4 +1,4 @@
-"""Execute ``debug/capabilities.ipynb`` and fail on any cell or widget error.
+"""Execute ``notebooks/capabilities.ipynb``; fail on cell or widget errors.
 
 Widget cells (ipywidgets ``Output``) make nbclient wait for its per-cell
 timeout after the work is done, so the timeout is kept short; every cell's
@@ -20,8 +20,8 @@ from typing import Any
 import nbformat
 from nbclient import NotebookClient
 
-SRC = Path("debug/capabilities.ipynb")
-DST = Path("debug/capabilities.executed.ipynb")
+SRC = Path("notebooks/capabilities.ipynb")
+DST = Path("notebooks/capabilities.executed.ipynb")
 
 
 def widget_errors(nb: Any) -> list[str]:

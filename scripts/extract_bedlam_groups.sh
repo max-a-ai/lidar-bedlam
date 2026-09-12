@@ -19,12 +19,12 @@ GROUPS_12=(
 )
 mkdir -p logs
 for g in "${GROUPS_12[@]}"; do
-  if [ -d "data/generated/bedlam_raw/$g/depth" ] && [ -f "logs/extract_$g.done" ]; then
+  if [ -d "data/generated/bedlam_raw/$g/depth" ] && [ -f "outputs/logs/extract_$g.done" ]; then
     echo "skip $g (done)"; continue
   fi
   echo "$(date +%F_%T) start $g"
   uv run python scripts/extract_bedlam.py --group "$g" --frame-stride 5 \
-      --modalities gt masks png depth > "logs/extract_$g.log" 2>&1 \
-    && touch "logs/extract_$g.done" && echo "$(date +%F_%T) done $g" \
-    || echo "$(date +%F_%T) FAILED $g (see logs/extract_$g.log)"
+      --modalities gt masks png depth > "outputs/logs/extract_$g.log" 2>&1 \
+    && touch "outputs/logs/extract_$g.done" && echo "$(date +%F_%T) done $g" \
+    || echo "$(date +%F_%T) FAILED $g (see outputs/logs/extract_$g.log)"
 done

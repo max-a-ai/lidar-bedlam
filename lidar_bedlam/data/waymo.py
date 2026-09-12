@@ -31,7 +31,7 @@ from lidar_bedlam.geometry.camera import (
     se3,
     transform_points,
 )
-from lidar_bedlam.io import read_image
+from lidar_bedlam.utils.io import read_image
 
 FloatArray = NDArray[np.float64]
 NUM_JOINTS = 15

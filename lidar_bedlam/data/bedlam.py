@@ -32,7 +32,7 @@ from lidar_bedlam.data.bedlam_labels import (
 )
 from lidar_bedlam.data.schema import Sample, SampleMeta
 from lidar_bedlam.geometry.camera import PinholeCamera
-from lidar_bedlam.io import read_exr_depth, read_image, read_mask
+from lidar_bedlam.utils.io import read_exr_depth, read_image, read_mask
 
 CM_TO_M = 0.01
 SKY_DEPTH_CM = 1e7  # anything beyond this is background

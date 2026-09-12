@@ -28,12 +28,11 @@ wandb/
 *.pth
 *.pkl
 *.npz
-!src/**/*.npz
+!lidar_bedlam/**/*.npz
 
 # Third-party body models (licensed, never commit)
 body_models/
-/logs/
-/debug/*.executed.ipynb
+/notebooks/*.executed.ipynb
 /.docs/latex-draft/*.aux
 /.docs/latex-draft/*.bbl
 /.docs/latex-draft/*.blg

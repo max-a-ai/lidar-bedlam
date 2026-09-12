@@ -47,6 +47,6 @@
   "smoke": {
     "config": "configs/smoke.yaml",
     "needs": ["data/generated/real/v1", "data/generated/body_models/smpl/SMPL_NEUTRAL.pkl"],
-    "command": "uv run torchrun --standalone --nproc_per_node 1 main.py --config configs/smoke.yaml --wandb-project lidar-bedlam --wandb-name smoke-local --wandb-mode offline"
+    "command": "uv run torchrun --standalone --nproc_per_node 1 scripts/lidar-bedlam-main.py --config configs/smoke.yaml --wandb-project lidar-bedlam --wandb-name smoke-local --wandb-mode offline"
   }
 }

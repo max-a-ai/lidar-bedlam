@@ -86,7 +86,7 @@ forward_usr1() {
 trap forward_usr1 USR1
 
 # shellcheck disable=SC2086
-uv run torchrun --standalone --nproc_per_node 4 main.py \
+uv run torchrun --standalone --nproc_per_node 4 scripts/lidar-bedlam-main.py \
   --config "$CONFIG" \
   --wandb-project "$WANDB_PROJECT" --wandb-name "$RUN_NAME" \
   --wandb-mode offline \

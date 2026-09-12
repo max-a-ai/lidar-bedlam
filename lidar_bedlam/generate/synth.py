@@ -32,7 +32,6 @@ from lidar_bedlam.geometry.crop import (
     square_crop_from_bbox,
 )
 from lidar_bedlam.geometry.rotations import axis_angle_to_matrix
-from lidar_bedlam.io import read_exr_depth, read_image
 from lidar_bedlam.lidar.distance import move_camera_back, shrink_factor
 from lidar_bedlam.lidar.motion import (
     EgoMotion,
@@ -54,6 +53,7 @@ from lidar_bedlam.lidar.simulate import (
     simulate,
 )
 from lidar_bedlam.rigs.registry import load_all_rigs
+from lidar_bedlam.utils.io import read_exr_depth, read_image
 
 FloatArray = NDArray[np.float64]
 

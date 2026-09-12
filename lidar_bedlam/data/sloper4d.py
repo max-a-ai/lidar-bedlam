@@ -18,7 +18,7 @@ from lidar_bedlam.body.smpl import SmplModel, SmplParams, transform_smpl_params
 from lidar_bedlam.data.base import SampleSource
 from lidar_bedlam.data.schema import Sample, SampleMeta
 from lidar_bedlam.geometry.camera import PinholeCamera, transform_points
-from lidar_bedlam.io import read_image
+from lidar_bedlam.utils.io import read_image
 
 
 def _skel_2d(raw: object) -> NDArray[np.float64] | None:
