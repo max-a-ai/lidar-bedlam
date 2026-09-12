@@ -1,0 +1,52 @@
+{
+  "_comment": "Machine-independent inventory of what the project needs. scripts/dm_link.py materialises data/, checkpoints/ and outputs/ on each machine from the 'hosts' block; keys starting with '_' are documentation and are skipped.",
+  "project": "lidar-bedlam",
+  "hosts": {
+    "_example_": {
+      "nas": "/path/to/publicdatasets",
+      "generated": "/path/to/fast/local/disk/lidar-bedlam"
+    },
+    "mbwm": {
+      "nas": "/home/max/nas_drive/publicdatasets",
+      "nas2": "/home/max/nas_drive2",
+      "bike": "/home/max/nas_drive/bike_data",
+      "methods": "/home/max/nas_drive/methods",
+      "generated": "/mnt/md0/lidar-bedlam"
+    },
+    "helma": {
+      "generated": "/hnvme/workspace/v103fe17-lidar-bedlam/data/generated"
+    }
+  },
+  "datasets": {
+    "_example_": {"source": "{nas}/SomeDataset", "role": "what it is used for"},
+    "bedlam": {"source": "{nas}/bedlam", "role": "synthetic source archives (png, depth, masks, gt)"},
+    "sloper4d": {"source": "{nas}/SLOPER4D", "role": "real: LiDAR + RGB + SMPL + calibration, secondary target"},
+    "lidarhuman26m": {"source": "{nas}/LiDARHuman26M", "role": "real: images + human LiDAR + SMPL (dropped from the paper)"},
+    "waymo_perception": {"source": "{nas}/WaymoPerception", "role": "real: v2 parquet (images, lidar, calibration, keypoints)"},
+    "waymo_extracted": {"source": "{nas}/waymo_extracted", "role": "real: per-object keypoints + pedestrian LiDAR crops, primary target"},
+    "nuscenes": {"source": "{nas}/nuscenes", "role": "rig calibration tables"},
+    "freemotion": {"source": "{nas}/FreeMotion", "role": "real, raw archives (unused)"},
+    "reli11d": {"source": "{nas}/RELI11D_Dataset", "role": "real, pkl format (unused)"},
+    "ava": {"source": "{nas2}/car_data/dataset/nuscenes_sample", "role": "own car rig (nuScenes export)"},
+    "fusebike": {"source": "{bike}/v2b/2_processed_rosbags/nusc/elisabeth/fusebike", "role": "own bicycle rig (nuScenes export)"},
+    "body_models": {"source": "{methods}/max/data/body_models", "role": "SMPL / SMPL-X model files (licensed, never committed)"},
+    "generated": {"source": "{generated}", "role": "our shards, tokens, extracted BEDLAM frames and converted body models", "create": true}
+  },
+  "checkpoints": {
+    "_example_": {"source": "{methods}/some/model.ckpt", "role": "pretrained weights"},
+    "tokenhmr_vith": {"source": "{methods}/max/data/checkpoints/tokenhmr/tokenhmr_model_latest/data/checkpoints/tokenhmr_model_latest.ckpt", "role": "frozen ViT-H image backbone (TokenHMR weights)"}
+  },
+  "methods": {
+    "_comment": "git submodules under third_party/, evaluated as baselines",
+    "TokenHMR": "third_party/TokenHMR",
+    "CameraHMR": "third_party/CameraHMR",
+    "LiDAR-HMR": "third_party/LiDAR-HMR",
+    "sam-3d-body": "third_party/sam-3d-body",
+    "lif": "third_party/lif"
+  },
+  "smoke": {
+    "config": "configs/smoke.yaml",
+    "needs": ["data/generated/real/v1", "data/generated/body_models/smpl/SMPL_NEUTRAL.pkl"],
+    "command": "uv run torchrun --standalone --nproc_per_node 1 main.py --config configs/smoke.yaml --wandb-project lidar-bedlam --wandb-name smoke-local --wandb-mode offline"
+  }
+}

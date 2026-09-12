@@ -17,14 +17,17 @@ Enforce on every change.
 
 ## Workflow
 
-- Keep `.vault-<project>/progress.md` updated each session — append a
-  dated log entry (instruction, decisions, steps, result).
-- Keep `.vault-<project>/todo.md` updated — promote items to done
-  (delete), add newly-discovered items at the end.
+- Keep `.docs/progress.md` updated each session. It has three parts
+  sharing the same section names: the gantt timetable at the top, the
+  `# Log` in the middle, `# Todos` at the bottom.
+- Append log entries as `### YYYY-MM-DD HH:MM — <what> (<commit>)` under
+  the section the work belongs to, so any line traces back to a diff.
+- Promote finished todos by deleting them; add newly-discovered ones
+  under the matching section.
 - Keep `HANDOFF.md` current. When you learn something future-you would
   need to pick this up cold, write it down there.
-- When you add a new source module, add a node for it to the Obsidian
-  canvas in the vault so the dashboard stays current.
+- Every training run writes to `outputs/<run-name>/`. A run worth
+  keeping is *copied* into `.docs/runs/<run-name>/` — never moved.
 
 ## Verification before saying "done"
 
@@ -34,8 +37,21 @@ Enforce on every change.
 4. If there's an entry point: `uv run <script-name>` → it launches
    without crashing on the expected platform.
 
-## Obsidian canvas gotcha
+## Directories
 
-Every node and edge in a `.canvas` JSON file MUST include
-`"styleAttributes": {}`. Missing this causes silent render failure in
-Obsidian ≥1.5. When hand-editing the canvas, preserve this field.
+`data/`, `checkpoints/` and `outputs/` are gitignored and built per
+machine by `python3 scripts/dm_link.py`. Never commit them, never
+hand-create a fourth name for the same idea, and never put a `.venv`
+inside an HPC workspace — those filesystems are limited by inodes.
+
+## Project-specific
+
+- Training always goes through `main.py` with `--wandb-project` and
+  `--wandb-name` (hook-enforced); runs land in `outputs/<run-name>/`
+  with `last.pt`, `best.pt`, `val_*.json`, `wandb/` and `DONE`.
+- Shards and precomputed ViT tokens live under `data/generated/`; the
+  layout is documented in `.docs/data_pipeline.md`.
+- The paper is `.docs/latex-draft/main.tex`; build it with `latexmk` in
+  that folder. Keep it double-blind (no rig or group names).
+- `.docs/progress.md` sections are Data, Model, Experiments, Paper,
+  Housekeeping; timetable, log and todos use exactly these names.

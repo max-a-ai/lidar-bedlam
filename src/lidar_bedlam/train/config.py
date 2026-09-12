@@ -88,7 +88,7 @@ class TrainConfig:
     experiment: str = "main-mixed"
     seed: int = 0
     body_models: str = "data/generated/body_models"
-    checkpoint_root: str = "checkpoints"
+    checkpoint_root: str = "outputs"  # one directory per run
     wandb_entity: str = "erik_hm"
     wandb_project: str = "lidar-bedlam"
     wandb_mode: str = "offline"

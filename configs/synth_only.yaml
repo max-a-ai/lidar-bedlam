@@ -2,7 +2,7 @@
 experiment: synth-only
 seed: 0
 body_models: ${DATA_ROOT}/body_models
-checkpoint_root: checkpoints
+checkpoint_root: outputs
 data:
   train:
     - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11"], pattern: "*.npz", weight: 1.0, variant: random_main}

@@ -2,7 +2,7 @@
 experiment: abl-scale-16x
 seed: 0
 body_models: ${DATA_ROOT}/body_models
-checkpoint_root: checkpoints
+checkpoint_root: outputs
 data:
   train:
     - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}

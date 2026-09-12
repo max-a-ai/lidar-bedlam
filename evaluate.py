@@ -1,6 +1,6 @@
 """Evaluate a checkpoint on validation shards.
 
-    python evaluate.py --checkpoint checkpoints/main-mixed-000/best.pt \\
+    python evaluate.py --checkpoint outputs/main-mixed-000/best.pt \\
         --config configs/main_mixed.yaml [--set data.val=...] \\
         --out results/main-mixed-000.json
 """

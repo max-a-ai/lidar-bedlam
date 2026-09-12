@@ -1,8 +1,0 @@
-FUSE-Bike (bicycle)
-  base: own bicycle export: ego x fwd, y left, z up at top LiDAR
-  source: fusebike/v1.0-mini/calibrated_sensor.json
-  base_link
-    ├─ lidar  LIDAR_CONC       t=(+0.00, +0.00, +0.08) m, rot 180.0 deg
-    ├─ lidar  LIDAR_TOP        t=(+0.00, +0.00, +0.08) m, rot 180.0 deg
-    ├─ lidar  LIDAR_TOP_2      t=(-0.00, +0.01, +0.22) m, rot 179.8 deg
-    └─ camera CAMERA_FRONT     t=(+0.16, +0.01, -0.12) m, rot 118.6 deg, 2200x1200 px, f=1489

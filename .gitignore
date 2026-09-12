@@ -23,6 +23,7 @@ wandb/
 /data/
 /outputs/
 /checkpoints/
+/outputs/
 *.ckpt
 *.pth
 *.pkl
@@ -33,4 +34,14 @@ wandb/
 body_models/
 /logs/
 /debug/*.executed.ipynb
-/.vault-lidar-bedlam/rigs/plotly.min.js
+/.docs/latex-draft/*.aux
+/.docs/latex-draft/*.bbl
+/.docs/latex-draft/*.blg
+/.docs/latex-draft/*.brf
+/.docs/latex-draft/*.fdb_latexmk
+/.docs/latex-draft/*.fls
+/.docs/latex-draft/*.lbl
+/.docs/latex-draft/*.log
+/.docs/latex-draft/*.out
+/.docs/latex-draft/*.synctex.gz
+/.docs/figures/rigs/plotly.min.js

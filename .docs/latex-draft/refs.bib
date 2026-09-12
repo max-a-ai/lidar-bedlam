@@ -1,0 +1,227 @@
+% Venue names come from bib/bib-short.def or bib/bib-long.def (switch the
+% \input in main.tex). Keys: <firstauthor><year><shortname>.
+
+% ---------------------------------------------------------------- body models
+@Article{loper2015smpl,
+  author  = {Loper, Matthew and Mahmood, Naureen and Romero, Javier and Pons-Moll, Gerard and Black, Michael J.},
+  title   = {{SMPL}: A Skinned Multi-Person Linear Model},
+  journal = {\acmtog},
+  volume  = {34},
+  number  = {6},
+  pages   = {248:1--248:16},
+  year    = {2015},
+}
+@InProceedings{pavlakos2019smplx,
+  author    = {Pavlakos, Georgios and Choutas, Vasileios and Ghorbani, Nima and Bolkart, Timo and Osman, Ahmed A. A. and Tzionas, Dimitrios and Black, Michael J.},
+  title     = {Expressive Body Capture: {3D} Hands, Face, and Body from a Single Image},
+  booktitle = {\cvpr},
+  year      = {2019},
+}
+
+% ------------------------------------------------------ image-based HMR
+@InProceedings{bogo2016smplify,
+  author    = {Bogo, Federica and Kanazawa, Angjoo and Lassner, Christoph and Gehler, Peter and Romero, Javier and Black, Michael J.},
+  title     = {Keep It {SMPL}: Automatic Estimation of {3D} Human Pose and Shape from a Single Image},
+  booktitle = {\eccv},
+  year      = {2016},
+}
+@InProceedings{kanazawa2018hmr,
+  author    = {Kanazawa, Angjoo and Black, Michael J. and Jacobs, David W. and Malik, Jitendra},
+  title     = {End-to-End Recovery of Human Shape and Pose},
+  booktitle = {\cvpr},
+  year      = {2018},
+}
+@InProceedings{kolotouros2019spin,
+  author    = {Kolotouros, Nikos and Pavlakos, Georgios and Black, Michael J. and Daniilidis, Kostas},
+  title     = {Learning to Reconstruct {3D} Human Pose and Shape via Model-Fitting in the Loop},
+  booktitle = {\iccv},
+  year      = {2019},
+}
+@InProceedings{kocabas2021spec,
+  author    = {Kocabas, Muhammed and Huang, Chun-Hao P. and Tesch, Joachim and M{\"u}ller, Lea and Hilliges, Otmar and Black, Michael J.},
+  title     = {{SPEC}: Seeing People in the Wild with an Estimated Camera},
+  booktitle = {\iccv},
+  year      = {2021},
+}
+@InProceedings{goel2023humans4d,
+  author    = {Goel, Shubham and Pavlakos, Georgios and Rajasegaran, Jathushan and Kanazawa, Angjoo and Malik, Jitendra},
+  title     = {Humans in {4D}: Reconstructing and Tracking Humans with Transformers},
+  booktitle = {\iccv},
+  year      = {2023},
+}
+@InProceedings{dwivedi2024tokenhmr,
+  author    = {Dwivedi, Sai Kumar and Sun, Yu and Patel, Priyanka and Feng, Yao and Black, Michael J.},
+  title     = {{TokenHMR}: Advancing Human Mesh Recovery with a Tokenized Pose Representation},
+  booktitle = {\cvpr},
+  year      = {2024},
+}
+@InProceedings{patel2025camerahmr,
+  author    = {Patel, Priyanka and Black, Michael J.},
+  title     = {{CameraHMR}: Aligning People with Perspective},
+  booktitle = {\threedv},
+  year      = {2025},
+}
+@Article{sam3dbody2025,
+  author  = {Yang, Xitong and Kukreja, Devansh and Pinkus, Don and Sagar, Anushka and Fan, Taosha and Park, Jinhyung and Shin, Soyong and Cao, Jinkun and Liu, Jiawei and Ugrinovic, Nicolas and Feiszli, Matt and Malik, Jitendra and Doll{\'a}r, Piotr and Kitani, Kris},
+  title   = {{SAM 3D Body}: Robust Full-Body Human Mesh Recovery},
+  journal = {arXiv preprint arXiv:2602.15989},
+  year    = {2026},
+}
+
+% ------------------------------------------------------ image encoders
+@InProceedings{xu2022vitpose,
+  author    = {Xu, Yufei and Zhang, Jing and Zhang, Qiming and Tao, Dacheng},
+  title     = {{ViTPose}: Simple Vision Transformer Baselines for Human Pose Estimation},
+  booktitle = {\nips},
+  year      = {2022},
+}
+@Article{oquab2024dinov2,
+  author  = {Oquab, Maxime and Darcet, Timoth{\'e}e and Moutakanni, Th{\'e}o and Vo, Huy and Szafraniec, Marc and Khalidov, Vasil and Fernandez, Pierre and Haziza, Daniel and Massa, Francisco and El-Nouby, Alaaeldin and Assran, Mahmoud and Ballas, Nicolas and Galuba, Wojciech and Howes, Russell and Huang, Po-Yao and Li, Shang-Wen and Misra, Ishan and Rabbat, Michael and Sharma, Vasu and Synnaeve, Gabriel and Xu, Hu and J{\'e}gou, Herv{\'e} and Mairal, Julien and Labatut, Patrick and Joulin, Armand and Bojanowski, Piotr},
+  title   = {{DINOv2}: Learning Robust Visual Features without Supervision},
+  journal = {Transactions on Machine Learning Research},
+  year    = {2024},
+}
+@InProceedings{qi2017pointnetpp,
+  author    = {Qi, Charles R. and Yi, Li and Su, Hao and Guibas, Leonidas J.},
+  title     = {{PointNet++}: Deep Hierarchical Feature Learning on Point Sets in a Metric Space},
+  booktitle = {\nips},
+  year      = {2017},
+}
+
+% ------------------------------------------------------ LiDAR and fusion HMR
+@InProceedings{li2022lidarcap,
+  author    = {Li, Jialian and Zhang, Jingyi and Wang, Zhiyong and Shen, Siqi and Wen, Chenglu and Ma, Yuexin and Xu, Lan and Yu, Jingyi and Wang, Cheng},
+  title     = {{LiDARCap}: Long-range Marker-less {3D} Human Motion Capture with {LiDAR} Point Clouds},
+  booktitle = {\cvpr},
+  year      = {2022},
+}
+@Article{fan2025lidarhmr,
+  author  = {Fan, Bohao and Zheng, Wenzhao and Feng, Jianjiang and Zhou, Jie},
+  title   = {{LiDAR-HMR}: {3D} Human Mesh Recovery from {LiDAR}},
+  journal = {\tmm},
+  year    = {2025},
+  doi     = {10.1109/TMM.2025.3590928},
+}
+@InProceedings{ren2024livehps,
+  author    = {Ren, Yiming and Han, Xiao and Zhao, Chengfeng and Wang, Jingya and Xu, Lan and Yu, Jingyi and Ma, Yuexin},
+  title     = {{LiveHPS}: {LiDAR}-based Scene-level Human Pose and Shape Estimation in Free Environment},
+  booktitle = {\cvpr},
+  year      = {2024},
+}
+@InProceedings{buettner_iv2026_lifnet,
+  author    = {Buettner, Max A. and Schuetz, Erik and Flohr, Fabian B.},
+  title     = {{LIF-Net}: {LiDAR}-Camera Fusion for {3D} Human Pose in Urban Scenes},
+  booktitle = {\iv},
+  year      = {2026},
+}
+
+% ------------------------------------------------------ datasets: humans
+@Article{ionescu2014human36m,
+  author  = {Ionescu, Catalin and Papava, Dragos and Olaru, Vlad and Sminchisescu, Cristian},
+  title   = {{Human3.6M}: Large Scale Datasets and Predictive Methods for {3D} Human Sensing in Natural Environments},
+  journal = {\pami},
+  volume  = {36},
+  number  = {7},
+  pages   = {1325--1339},
+  year    = {2014},
+}
+@InProceedings{vonmarcard2018threedpw,
+  author    = {von Marcard, Timo and Henschel, Roberto and Black, Michael J. and Rosenhahn, Bodo and Pons-Moll, Gerard},
+  title     = {Recovering Accurate {3D} Human Pose in the Wild Using {IMUs} and a Moving Camera},
+  booktitle = {\eccv},
+  year      = {2018},
+}
+@InProceedings{patel2021agora,
+  author    = {Patel, Priyanka and Huang, Chun-Hao P. and Tesch, Joachim and Hoffmann, David T. and Tripathi, Shashank and Black, Michael J.},
+  title     = {{AGORA}: Avatars in Geography Optimized for Regression Analysis},
+  booktitle = {\cvpr},
+  year      = {2021},
+}
+@InProceedings{black2023bedlam,
+  author    = {Black, Michael J. and Patel, Priyanka and Tesch, Joachim and Yang, Jinlong},
+  title     = {{BEDLAM}: A Synthetic Dataset of Bodies Exhibiting Detailed Lifelike Animated Motion},
+  booktitle = {\cvpr},
+  year      = {2023},
+}
+@InProceedings{dai2023sloper4d,
+  author    = {Dai, Yudi and Lin, Yitai and Lin, Xiping and Wen, Chenglu and Xu, Lan and Yi, Hongwei and Shen, Siqi and Ma, Yuexin and Wang, Cheng},
+  title     = {{SLOPER4D}: A Scene-Aware Dataset for Global {4D} Human Pose Estimation in Urban Environments},
+  booktitle = {\cvpr},
+  year      = {2023},
+}
+@InProceedings{yan2023cimi4d,
+  author    = {Yan, Ming and Wang, Xin and Dai, Yudi and Shen, Siqi and Wen, Chenglu and Xu, Lan and Ma, Yuexin and Wang, Cheng},
+  title     = {{CIMI4D}: A Large Multimodal Climbing Motion Dataset under Human-Scene Interactions},
+  booktitle = {\cvpr},
+  year      = {2023},
+}
+@InProceedings{xu2023hucenlife,
+  author    = {Xu, Yiteng and Cong, Peishan and Yao, Yichen and Chen, Runnan and Hou, Yuenan and Zhu, Xinge and He, Xuming and Yu, Jingyi and Ma, Yuexin},
+  title     = {Human-centric Scene Understanding for {3D} Large-scale Scenarios},
+  booktitle = {\iccv},
+  year      = {2023},
+}
+@Article{fan2023humanm3,
+  author  = {Fan, Bohao and Wang, Siqi and Guo, Wenxuan and Zheng, Wenzhao and Feng, Jianjiang and Zhou, Jie},
+  title   = {{Human-M3}: A Multi-view Multi-modal Dataset for {3D} Human Pose Estimation in Outdoor Scenes},
+  journal = {arXiv preprint arXiv:2308.00628},
+  year    = {2023},
+}
+@InProceedings{yan2024reli11d,
+  author    = {Yan, Ming and Zhang, Yan and Cai, Shuqiang and Fan, Shuqi and Lin, Xincheng and Dai, Yudi and Shen, Siqi and Wen, Chenglu and Xu, Lan and Ma, Yuexin and Wang, Cheng},
+  title     = {{RELI11D}: A Comprehensive Multimodal Human Motion Dataset and Method},
+  booktitle = {\cvpr},
+  year      = {2024},
+}
+@Article{cong2024laserhuman,
+  author  = {Cong, Peishan and Wang, Ziyi and Dou, Zhiyang and Ren, Yiming and Yin, Wei and Cheng, Kai and Sun, Yujing and Long, Xiaoxiao and Zhu, Xinge and Ma, Yuexin},
+  title   = {{LaserHuman}: Language-guided Scene-aware Human Motion Generation in Free Environment},
+  journal = {arXiv preprint arXiv:2403.13307},
+  year    = {2024},
+}
+
+% ------------------------------------------------------ datasets: driving
+@InProceedings{geiger2012kitti,
+  author    = {Geiger, Andreas and Lenz, Philip and Urtasun, Raquel},
+  title     = {Are We Ready for Autonomous Driving? {The KITTI} Vision Benchmark Suite},
+  booktitle = {\cvpr},
+  year      = {2012},
+}
+@InProceedings{caesar2020nuscenes,
+  author    = {Caesar, Holger and Bankiti, Varun and Lang, Alex H. and Vora, Sourabh and Liong, Venice Erin and Xu, Qiang and Krishnan, Anush and Pan, Yu and Baldan, Giancarlo and Beijbom, Oscar},
+  title     = {{nuScenes}: A Multimodal Dataset for Autonomous Driving},
+  booktitle = {\cvpr},
+  year      = {2020},
+}
+@InProceedings{sun2020waymo,
+  author    = {Sun, Pei and Kretzschmar, Henrik and Dotiwalla, Xerxes and Chouard, Aur{\'e}lien and Patnaik, Vijaysai and Tsui, Paul and Guo, James and Zhou, Yin and Chai, Yuning and Caine, Benjamin and Vasudevan, Vijay and Han, Wei and Ngiam, Jiquan and Zhao, Hang and Timofeev, Aleksei and Ettinger, Scott and Krivokon, Maxim and Gao, Amy and Joshi, Aditya and Zhang, Yu and Shlens, Jonathon and Chen, Zhifeng and Anguelov, Dragomir},
+  title     = {Scalability in Perception for Autonomous Driving: {Waymo Open Dataset}},
+  booktitle = {\cvpr},
+  year      = {2020},
+}
+@InProceedings{zheng2022waymokeypoints,
+  author    = {Zheng, Jingxiao and Shi, Xinwei and Gorban, Alexander and Mao, Junhua and Song, Yang and Qi, Charles R. and Liu, Ting and Chari, Visesh and Cornman, Andre and Zhou, Yin and Li, Congcong and Anguelov, Dragomir},
+  title     = {Multi-modal {3D} Human Pose Estimation with {2D} Weak Supervision in Autonomous Driving},
+  booktitle = {{\cvpr} Workshops},
+  year      = {2022},
+}
+
+% ------------------------------------------------------ LiDAR simulation
+@InProceedings{dosovitskiy2017carla,
+  author    = {Dosovitskiy, Alexey and Ros, German and Codevilla, Felipe and Lopez, Antonio and Koltun, Vladlen},
+  title     = {{CARLA}: An Open Urban Driving Simulator},
+  booktitle = {\corl},
+  year      = {2017},
+}
+@InProceedings{manivasagam2020lidarsim,
+  author    = {Manivasagam, Sivabalan and Wang, Shenlong and Wong, Kelvin and Zeng, Wenyuan and Sazanovich, Mikita and Tan, Shuhan and Yang, Bin and Ma, Wei-Chiu and Urtasun, Raquel},
+  title     = {{LiDARsim}: Realistic {LiDAR} Simulation by Leveraging the Real World},
+  booktitle = {\cvpr},
+  year      = {2020},
+}
+@InProceedings{buettner_icpr2026_bikeactions,
+  author    = {Buettner, Max A. and Mazumder, Kanak and Koecher, Luca and Finkbeiner, Mario and Niebler, Sebastian and Flohr, Fabian B.},
+  title     = {{BikeActions}: An Open Platform and Benchmark for Cyclist-Centric {VRU} Action Recognition},
+  booktitle = {\icpr},
+  year      = {2026},
+}

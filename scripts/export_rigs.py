@@ -1,12 +1,12 @@
-"""Export every sensor rig into the Obsidian vault (PNG, HTML, GLB, tree).
+"""Export every sensor rig into .docs/figures (PNG, HTML, GLB, tree).
 
 Usage::
 
     uv run python scripts/export_rigs.py            # all rigs
     uv run python scripts/export_rigs.py waymo ava  # a subset
 
-Writes ``.vault-lidar-bedlam/rigs/<slug>.{png,html,glb,txt}`` plus the
-note ``.vault-lidar-bedlam/rigs.md`` that embeds them. The GLB files open
+Writes ``.docs/figures/rigs/<slug>.{png,html,glb,txt}`` plus the
+note ``.docs/figures/rigs.md`` that embeds them. The GLB files open
 in Obsidian with a 3D-model viewer community plugin (glTF support) and in
 any glTF viewer; the HTML files open in a browser and need the
 ``plotly.min.js`` written next to them.
@@ -20,7 +20,7 @@ from pathlib import Path
 from lidar_bedlam.rigs.export import export_rig
 from lidar_bedlam.rigs.registry import load_all_rigs
 
-VAULT = Path(".vault-lidar-bedlam")
+VAULT = Path(".docs/figures")
 OUT = VAULT / "rigs"
 NOTE = VAULT / "rigs.md"
 

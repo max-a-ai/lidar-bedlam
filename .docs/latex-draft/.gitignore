@@ -1,0 +1,27 @@
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.synctex.gz
+*.synctex(busy)
+*.nav
+*.snm
+*.vrb
+*.dvi
+*.ps
+*.xdv
+main.pdf
+build/
+# keep the vendored style zip out of the tree (unpacked copy is tracked)
+eg-style/*.zip
+*.brf
+*.lbl

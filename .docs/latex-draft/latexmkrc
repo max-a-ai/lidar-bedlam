@@ -1,0 +1,9 @@
+# Plain `latexmk` (or an editor plugin) builds the paper from this folder;
+# the vendored Eurographics style is also copied next to main.tex, so no
+# environment variables are needed. Kept in sync with the Makefile.
+$pdf_mode = 1;
+$pdflatex = 'pdflatex -synctex=1 -interaction=nonstopmode -file-line-error %O %S';
+$bibtex_use = 2;
+ensure_path('TEXINPUTS', './eg-style/egPublStyle-cgf//');
+ensure_path('BSTINPUTS', './eg-style/egPublStyle-cgf//');
+@default_files = ('main.tex');

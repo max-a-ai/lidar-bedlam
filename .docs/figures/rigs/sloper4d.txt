@@ -1,0 +1,6 @@
+SLOPER4D (helmet)
+  base: head LiDAR: x forward, y left, z up
+  source: seq008_running_001/dataset_params.json
+  base_link
+    ├─ lidar  LIDAR_HEAD       t=(+0.00, +0.00, +0.00) m, rot   0.0 deg
+    └─ camera CAM_HEAD         t=(+0.10, -0.01, -0.05) m, rot 120.8 deg, 1920x1080 px, f=600

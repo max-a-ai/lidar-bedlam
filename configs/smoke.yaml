@@ -2,7 +2,7 @@
 experiment: smoke
 seed: 0
 body_models: ${DATA_ROOT}/body_models
-checkpoint_root: checkpoints
+checkpoint_root: outputs
 data:
   train:
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 1.0, max_shards: 4}

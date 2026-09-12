@@ -469,7 +469,7 @@ Every dataset's calibration as a star graph around its base link: each sensor is
 its own x (red), y (green), z (blue) axes at its calibrated pose, cameras with an orange
 frustum computed from their intrinsics (through the dataset's camera axis convention).
 Tick up to three rigs in the table; each figure is titled with the dataset and its mount.
-The same rigs are exported to the Obsidian vault by `scripts/export_rigs.py` (PNG, HTML, GLB).
+The same rigs are exported to `.docs/figures` by `scripts/export_rigs.py` (PNG, HTML, GLB).
 """)
 
 code("""
