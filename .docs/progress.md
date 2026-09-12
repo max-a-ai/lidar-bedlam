@@ -46,10 +46,11 @@ gantt
 runs, `config-global.json` + `scripts/dm_link.py` replacing
 `link_data.sh`; `PROJECT.md` and `CHANGELOG.md` merged into this file.
 
-### 2026-09-11 — synthetic groups 02-11 finished, group 12 generating
-304,930 records in 601 shards from 117,657 frames; group 12 (30,740
-frames) generating; ViT tokens for the 601 shards computing on the 4090;
-body models, group 01 and all real shards (85 GB) on Helma.
+### 2026-09-12 — synthetic pool complete
+Groups 02-11: 304,930 records in 601 shards (tokens done, syncing to
+Helma); group 12: 75,342 records in 156 shards (tokens computing). With
+group 01 (10,101) the pool is 390,373 records, 85x the Waymo train count.
+Body models, group 01 and all real shards (85 GB) already on Helma.
 
 ### 2026-09-10 10:46 — BEDLAM frames without depth are skipped (dc8a628)
 `BedlamFramesSource` indexes only frames whose png and depth exist
@@ -109,6 +110,15 @@ in cm); BEDLAM 2.0 skipped.
 
 ## Model
 
+### 2026-09-12 — batch-size scaling tests submitted on Helma (1bba8d2, 7fdeb54)
+`configs/batchtest.yaml` (80/10/10 mixture on group 01 + real shards,
+600 steps) at batch 256 / 512 / 1024 / 2048, 1 h each, h100 partition,
+run names `batchtest-b<N>`; trainer logs samples/s and peak GPU memory;
+wandb login on the Helma login node with `slurm/wandb_sync_loop.sh`
+detached there. Requested runs afterwards: `configs/mix80.yaml` (80 %
+BEDLAM, 10 % SLOPER4D, 10 % Waymo) and `configs/synth_only.yaml` (100 %
+BEDLAM) at the largest batch that fits.
+
 ### 2026-09-10 09:41 — training stack (5e51d6f)
 `train/config.py` (YAML + overrides, `${DATA_ROOT}`), `train/sampler.py`
 (fixed per-batch mixture, DDP-sharded), `train/loop.py` (torchrun DDP,
@@ -156,7 +166,7 @@ dataset survey.
 
 ## Data
 
-- [ ] Group 12 generation, then tokens for groups 02-12 and rsync to Helma (`/hnvme/workspace/v103fe17-lidar-bedlam/data/generated`).
+- [ ] Tokens for group 12, then rsync groups 02-12 to Helma (`/hnvme/workspace/v103fe17-lidar-bedlam/data/generated`), running.
 - [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels) and the comparison table.
 - [ ] Run the official xxh128 validation on the NAS (`scripts/validate_bedlam_on_nas.sh`).
 - [ ] Rolling shutter: apply `SpeedSetting` + `apply_rolling_shutter` in the generator (default speed 0 for v1).
@@ -165,7 +175,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Launch `main_mixed` on Helma once the sync is complete (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Batch tests running; then launch `mix80` and `synth_only` at the largest batch, then `main_mixed`, on Helma once the sync is complete (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `debug/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
