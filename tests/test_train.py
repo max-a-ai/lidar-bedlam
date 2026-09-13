@@ -152,3 +152,21 @@ def test_max_epochs_sets_steps_and_metrics_file(tmp_path: Path) -> None:
     assert cfg.optim.max_steps == 3 and trainer.step == 3
     assert trainer.steps_per_epoch == 2 and trainer.epoch == 1.5
     assert (run_dir / "config.json").exists() and (run_dir / "DONE").exists()
+
+
+def test_source_shards_skips_side_files(tmp_path: Path) -> None:
+    from lidar_bedlam.train.loop import source_shards
+
+    for name in (
+        "waymo_train_00000.npz",
+        "waymo_train_00001.npz",
+        "waymo_train_00000.fit.npz",
+        "waymo_train_stats.npz",
+        "waymo_train_00000.tokens.npy",
+    ):
+        (tmp_path / name).write_bytes(b"")
+    src = SourceConfig("w", [str(tmp_path)], "waymo_train_*.npz")
+    assert [p.name for p in source_shards(src)] == [
+        "waymo_train_00000.npz",
+        "waymo_train_00001.npz",
+    ]

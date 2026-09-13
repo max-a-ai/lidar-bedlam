@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         p
         for d in args.shard_dirs
         for p in d.glob("*.npz")
-        if not p.name.endswith("stats.npz")
+        if not p.name.endswith("stats.npz") and ".fit." not in p.name
     )
     t0 = time.time()
     for n, path in enumerate(shards):

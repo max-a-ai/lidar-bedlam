@@ -564,7 +564,7 @@ from lidar_bedlam.generate.records import Shard
 from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
 
 def load_shards(pattern):
-    paths = sorted(Path("resources/data/generated").glob(pattern))
+    paths = sorted(p for p in Path("resources/data/generated").glob(pattern) if ".fit." not in p.name and not p.name.endswith("stats.npz"))
     return [Shard(p) for p in paths]
 
 def project_crop(K, pts):

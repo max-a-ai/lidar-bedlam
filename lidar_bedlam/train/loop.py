@@ -54,7 +54,11 @@ TENSOR_KEYS = (
 def source_shards(src: SourceConfig) -> list[Path]:
     """Shard files of a source (sorted, optionally truncated)."""
     files = sorted(p for d in src.dirs for p in Path(d).glob(src.pattern))
-    files = [f for f in files if not f.name.endswith("stats.npz")]
+    files = [
+        f
+        for f in files
+        if not f.name.endswith("stats.npz") and ".fit." not in f.name
+    ]  # side files (stats, pseudo-fit errors) are not shards
     if src.max_shards:
         files = files[: src.max_shards]
     return files
