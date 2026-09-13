@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -38,7 +39,9 @@ def _open_run(run_dir: Path, cfg: dict[str, Any]) -> Any:
         id=run_dir.name,
         resume="allow",
         config=cfg,
-        dir=str(run_dir),
+        # wandb writes hundreds of files per run: keep them out of
+        # inode-limited workspaces (WANDB_MIRROR_DIR, e.g. $HOME/wandb-mirror)
+        dir=os.environ.get("WANDB_MIRROR_DIR", str(run_dir)),
         reinit="create_new",
     )
     # epochs on the x axis of every chart; the raw step stays available

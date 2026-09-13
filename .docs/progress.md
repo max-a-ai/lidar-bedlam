@@ -41,6 +41,12 @@ gantt
 
 ## Data
 
+### 2026-09-13 — 3DPW images are numbered by index, not by video id
+The first 3DPW pass paired labels with `image_<img_frame_ids[i]>.jpg`;
+those ids are 60 Hz video ids (2i), so half the frames were missing and
+the other half paired with the wrong image. Images are numbered by the
+sequence index (as in the SPIN loader); shards regenerated.
+
 ### 2026-09-13 — pseudo-GT SMPL for Waymo and mesh-LiDAR samples from 3DPW
 Two new data sources for later ablations. (1) `generate/pseudo_smpl.py` +
 `scripts/pseudo_smpl_waymo.py`: SMPL fitted per Waymo training record,
@@ -339,6 +345,15 @@ and a `latexmkrc` (8445f2e).
 contribution bullets; 6.3 extrinsics questions.
 
 ## Housekeeping
+
+### 2026-09-13 — Helma file quota hit by wandb run folders
+`rsync` to the workspace failed with "Disk quota exceeded": `outputs/`
+held 50,127 files, 49,713 of them wandb run directories (about 700 per
+mirrored or offline run; the workspace allows 61k files). Removed the
+superseded run folders (batch tests, `mix80-000`, the 80/10/10 and the
+invalid scaling ablations, all deleted from wandb by the user as well)
+and every `outputs/*/wandb`; the mirror now writes its wandb files to
+`$HOME/wandb-mirror` (`WANDB_MIRROR_DIR`). 268 files left in `outputs/`.
 
 ### 2026-09-12 — final layout, round 2 (top level minimal)
 `scripts/` and `slurm/` moved inside the package; `data/` and

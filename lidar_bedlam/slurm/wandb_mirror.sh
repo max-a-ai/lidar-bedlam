@@ -6,6 +6,8 @@ set -uo pipefail
 cd "$(dirname "$0")/../.."
 export UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT:-$HOME/venvs/lidar-bedlam}
 INTERVAL=${INTERVAL:-120}
+export WANDB_MIRROR_DIR=${WANDB_MIRROR_DIR:-$HOME/wandb-mirror}  # not in the workspace (file quota)
+mkdir -p "$WANDB_MIRROR_DIR"
 while true; do
   uv run python lidar_bedlam/scripts/wandb_mirror.py --root outputs --once 2>&1 | grep -v "^wandb: " | grep -v "^$"
   for run in outputs/*/wandb/offline-run-*; do
