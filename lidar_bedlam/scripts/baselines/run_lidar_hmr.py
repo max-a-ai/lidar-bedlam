@@ -140,6 +140,8 @@ def run(args: argparse.Namespace) -> None:
         str(SMPL_DIR), model_type="smpl", gender="neutral", num_betas=10
     ).cuda()
     regressor = smpl.J_regressor.double().cpu().numpy()
+    v_template = smpl.v_template.double().cpu().numpy()
+    shapedirs = smpl.shapedirs.double().cpu().numpy()[:, :, :10]
     rng = np.random.default_rng(args.seed)
     preds = Predictions()
     timer = Timer()
@@ -171,9 +173,10 @@ def run(args: argparse.Namespace) -> None:
             r_zup = Rotation.from_rotvec(theta[:, 0]).as_matrix()
             r_cam = CAM_TO_ZUP.T @ r_zup
             aa = Rotation.from_matrix(r_cam).as_rotvec()
-            with torch.no_grad():
-                rest = smpl(betas=torch.from_numpy(betas).float().cuda())
-            rest_pelvis = rest.joints[:, 0].double().cpu().numpy()
+            # rest pelvis of the predicted shape: regressor on the shaped
+            # template (transl = posed root joint - rest pelvis)
+            v_shaped = v_template + np.einsum("bl,vkl->bvk", betas, shapedirs)
+            rest_pelvis = np.einsum("v,bvk->bk", regressor[0], v_shaped)
             joints = np.einsum("jv,nvk->njk", regressor, verts)
             transl = joints[:, 0] - rest_pelvis
             preds.add(
