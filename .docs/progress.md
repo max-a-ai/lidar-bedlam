@@ -222,6 +222,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-13 — state at the machine switch
+Helma queue (all pending, partition full): `ablation-{image-only,
+lidar-only,gate-none,gate-hard}` seed 0 on 50/40/10, the same four plus
+`ablation-mixed-short` as `-s1` (seed 1), `ablation-pseudo-waymo` (job
+847660). The login-node mirror loop is running (`WANDB_MIRROR_DIR`).
+On mbwm a detached script `outputs/logs/post_3dpw.sh` (log
+`post_3dpw.log`) waits for the 3DPW generation, computes the tokens,
+copies `meshlidar/v1` to Helma, submits `ablation-3dpw` and re-executes
+the notebook. To follow from another machine: `ssh helma squeue -u
+$USER`, wandb `erik_hm/lidar-bedlam`, and the Slurm logs in
+`outputs/slurm-*.out` on Helma; results as `outputs/<run>/val_*.json`.
+
 ### 2026-09-13 — fusion ablations on 50/40/10 and a second seed (9 jobs)
 Submitted: `abl-{image-only,lidar-only,gate-none,gate-hard}-001` (seed 0,
 50/40/10, vs `abl-mixed-short-001`) and seed 1 of the reference and the
