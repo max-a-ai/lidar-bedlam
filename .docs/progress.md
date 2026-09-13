@@ -41,6 +41,14 @@ gantt
 
 ## Data
 
+### 2026-09-13 — 3DPW shards final, both new ablations queued
+3,444 frames -> 4,468 records in 12 shards (`meshlidar/v1`), tokens
+computed, copied to Helma; `ablation-3dpw` (job 847706) and
+`ablation-pseudo-waymo` (847660) queued. Notebook executed with 34 cells
+and 0 errors; sections 10 and 11 render (figures live inside the
+re-roll Output widgets). Detached runs must use `.venv/bin/python`:
+`uv run` exits 120 without a terminal.
+
 ### 2026-09-13 — 3DPW images are numbered by index, not by video id
 The first 3DPW pass paired labels with `image_<img_frame_ids[i]>.jpg`;
 those ids are 60 Hz video ids (2i), so half the frames were missing and
