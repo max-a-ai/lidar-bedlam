@@ -69,6 +69,8 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
     for metrics in sorted(root.glob("*/metrics.jsonl")):
         run_dir = metrics.parent
         offset_file = run_dir / ".mirror_offset"
+        if (run_dir / ".mirror_done").exists():
+            continue  # finished and fully mirrored
         offset = int(offset_file.read_text()) if offset_file.exists() else 0
         size = metrics.stat().st_size
         done = (run_dir / "DONE").exists()
@@ -90,6 +92,7 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
         if done:
             run.finish()
             del open_runs[run_dir.name]
+            (run_dir / ".mirror_done").write_text(str(offset))
             sys.stdout.write(f"{run_dir.name}: finished\n")
     return sent
 

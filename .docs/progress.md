@@ -243,8 +243,9 @@ $USER`, wandb `erik_hm/lidar-bedlam`, and the Slurm logs in
 `outputs/slurm-*.out` on Helma; results as `outputs/<run>/val_*.json`.
 
 ### 2026-09-13 — fusion ablations on 50/40/10 and a second seed (9 jobs)
-Submitted: `abl-{image-only,lidar-only,gate-none,gate-hard}-001` (seed 0,
-50/40/10, vs `abl-mixed-short-001`) and seed 1 of the reference and the
+Submitted: the four variants `abl-{image-only,lidar-only,gate-none,gate-hard}`
+(seed 0, 50/40/10, vs `abl-mixed-short-001`; on Helma and wandb they carry
+the reused name `-000`, since the 80/10/10 folders were deleted before) and seed 1 of the reference and the
 four variants (`abl-*-s1`, `EXTRA_SET=seed=1`), jobs 847325-847333.
 
 ### 2026-09-13 — scaling curve at fixed compute: flat
