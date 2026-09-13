@@ -198,6 +198,26 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-13 — scaling curve at fixed compute: flat
+50/40/10 mixture, 3,468 steps each, synthetic pool capped at k x the
+Waymo train count (18 / 36 / 73 / 145 / 291 shards vs 806 for the
+reference):
+
+| synthetic pool | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|
+| 2x (9k records) | 108.8 | 88.4 | 0.523 | 0.436 | 82.5 | 59.9 | 0.101 | 0.705 |
+| 4x | 119.7 | 102.2 | 0.517 | 0.440 | 85.2 | 62.8 | 0.092 | 0.651 |
+| 8x | 107.3 | 88.4 | 0.520 | 0.449 | 76.8 | 56.8 | 0.101 | 0.678 |
+| 16x | 110.8 | 91.5 | 0.520 | 0.435 | 79.6 | 57.0 | 0.087 | 0.721 |
+| 32x | 103.0 | 84.0 | 0.501 | 0.482 | 77.8 | 55.9 | 0.107 | 0.669 |
+| full (85x, reference) | 111.8 | 95.4 | 0.507 | 0.465 | 81.3 | 59.2 | 0.079 | 0.723 |
+
+Reading: within the noise (about +-5 mm, +-0.03 mAP) the size of the
+synthetic pool does not matter at this budget; 9k synthetic records
+already give the full effect. The gain comes from the presence and
+variety of simulated LiDAR, not from volume, at least at 3.5 M synthetic
+samples seen; a longer schedule may separate the curve.
+
 ### 2026-09-13 — synthesis axis done; scaling curve rerun at fixed steps
 50/40/10 mixture, 17 epochs = 3,468 steps, reference `abl-mixed-short-001`:
 
@@ -333,7 +353,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Running on Helma: synthesis axis + scaling curve (9 jobs). Open: baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body), model-axis ablations on 50/40/10 if the paper uses that mixture. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Open: baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body); model-axis ablations on 50/40/10; a full-length run with ball 0.25 m (won the synthesis axis); seeds for noise bars. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
