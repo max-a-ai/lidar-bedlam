@@ -564,7 +564,7 @@ from lidar_bedlam.generate.records import Shard
 from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
 
 def load_shards(pattern):
-    paths = sorted(p for p in Path("resources/data/generated").glob(pattern) if ".fit." not in p.name and not p.name.endswith("stats.npz"))
+    paths = sorted(p for p in (DATA / "generated").glob(pattern) if ".fit." not in p.name and not p.name.endswith("stats.npz"))
     return [Shard(p) for p in paths]
 
 def project_crop(K, pts):
@@ -620,12 +620,12 @@ the fitted mesh inside the point cloud. Re-roll as above.""")
 
 code("""
 ps_shards = load_shards("real/v1_pseudo/waymo_train_*.npz")
-ps_fit = {p.name.replace(".fit.npz", ""): np.load(p) for p in sorted(Path("resources/data/generated/real/v1_pseudo").glob("*.fit.npz"))}
+ps_fit = {p.name.replace(".fit.npz", ""): np.load(p) for p in sorted((DATA / "generated" / "real" / "v1_pseudo").glob("*.fit.npz"))}
 ps_total = sum(len(s) for s in ps_shards)
 ps_roll = 0
 ps_btn = W.Button(description="re-roll", icon="refresh"); ps_out = W.Output()
 WSEL = np.nonzero(WAYMO15_TO_COCO17 >= 0)[0]; CSEL = WAYMO15_TO_COCO17[WSEL]
-J_COCO = np.load("resources/data/generated/body_models/J_regressor_coco.npy")
+J_COCO = np.load(DATA / "generated" / "body_models" / "J_regressor_coco.npy")
 
 def ps_render(*_):
     global ps_roll
