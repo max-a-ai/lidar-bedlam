@@ -263,6 +263,7 @@ instead of estimating them.
 | HMR2.0 (4D Humans) | 104.4 | 69.8 | 1.34 m | 0.016 | 91.3 | 70.8 | 0.121 m | 0.40 |
 | TokenHMR (tight crop) | 98.5 | 66.3 | 1.15 m | 0.024 | 74.5 | 54.8 | 0.204 m | 0.26 |
 | CameraHMR (GT intrinsics) | 76.9 | 60.0 | 1.02 m | 0.029 | 51.6 | 44.4 | 0.196 m | 0.40 |
+| LiDAR-HMR (LiDAR only, Waymo weights) | 84.7 | 62.9 | 0.38 m | 0.21 | 100.2 | 65.8 | 0.089 m | 0.76 |
 | ours main-mixed (10.2k steps, S on first 4,000) | 92.6 | 75.6 | 0.52 m | 0.44 | 55.7 | 45.5 | 0.08 m | 0.83 |
 
 SLOPER4D on the full test set (9,904) vs the trainer's first 4,000: MPJPE
@@ -281,15 +282,25 @@ is close to us on Waymo (98.5 vs 92.6) and behind on SLOPER4D (74.5 vs
 55.7). The paper claim therefore rests on placement and detection quality,
 not on pose accuracy; the final 20 h runs decide the pose column.
 
-Open: LiDAR-HMR (Waymo release weights) runs in a new `lidar-hmr` conda env
-(torch 2.2 cu121, PyG wheels, `pointops` from PointTransformerV2 and the
-vendored `pointnet2_ops` compiled with `TORCH_CUDA_ARCH_LIST=8.9`, chumpy
-patched for numpy 1.26, a pytorch3d shim); the runner is written and the
-model loads, the 492 MB checkpoint is still copying from the slow NAS to
-`resources/pretrained-checkpoints/lidar-hmr/`. Local, untracked setup in
-the submodules: `third_party/CameraHMR/data/` symlinks,
+LiDAR-HMR (release weights trained on Waymo, 1024 points centred on the
+box centre in a z-up frame, mesh rotated back; `lidar-hmr` conda env:
+torch 2.2 cu121, torch_geometric 2.4 + PyG wheels, `pointops` from
+PointTransformerV2 and the vendored `pointnet2_ops` compiled with
+`TORCH_CUDA_ARCH_LIST=8.9`, chumpy patched for numpy 1.26, a pytorch3d
+shim; checkpoint copied to `resources/pretrained-checkpoints/lidar-hmr/`,
+md5 f3f970fd…) runs at ~98 samples/s. On its own training domain (Waymo)
+it is the best baseline for placement, 0.38 m (ours 0.52), and beats our
+pose there too (84.7 vs 92.6 mm); on SLOPER4D its placement is as good as
+ours (0.089 m, mAP 0.76 full / 0.83 on the first 4,000 = ours) but the
+pose is far worse (100 vs 56 mm MPJPE). Reading: LiDAR alone gives the
+placement, images alone give the pose, and our model is the only one
+with both on both datasets, but the Waymo placement and pose columns are
+not yet won, so the final runs matter. Local, untracked setup in the
+submodules: `third_party/CameraHMR/data/` symlinks,
 `third_party/LiDAR-HMR/smplx_models/smpl/SMPL_NEUTRAL.pkl` symlink and the
-`pointnet2_ops_lib/setup.py` arch list.
+`pointnet2_ops_lib/setup.py` arch list. Prediction files are in
+`outputs/baselines/<method>-<crop>/<split>.npz`, scores in
+`outputs/baselines/results_*.json`.
 
 ### 2026-09-14 — final-schedule runs submitted (6 x ~20 h)
 `configs/full_*.yaml`: 150,000 steps at batch 2048 (about 20 h incl.
@@ -512,7 +523,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Pending on Helma (AssocGrpGRES): six final-schedule runs (~20 h). Baselines TokenHMR / HMR2 / CameraHMR scored (see 2026-09-14); LiDAR-HMR next, then the paper tables. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Pending on Helma (AssocGrpGRES): six final-schedule runs (~20 h). All four baselines scored (see 2026-09-14); next the paper tables once the final runs land. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
@@ -523,7 +534,8 @@ dataset survey.
 - [ ] Synthesis axis: `ablation_ball025`, `ablation_rig_waymo`, `ablation_target_waymo`; log validation curves for the convergence question.
 - [ ] Data curve: `ablation_scale_{2,4,8,16,32}x`.
 - [x] Baseline runners for TokenHMR, HMR2, CameraHMR (`lidar_bedlam/scripts/baselines/`, `score_baselines.py`).
-- [ ] LiDAR-HMR baseline (env ready, checkpoint copying from the NAS); SAM 3D Body (MHR to joints) if time permits.
+- [x] LiDAR-HMR baseline (`lidar-hmr` conda env, results 2026-09-14).
+- [ ] SAM 3D Body (MHR to joints) if time permits; baselines table in the paper once the final runs land.
 - [ ] After hand-in: realism ablations (no augmentation, no occlusion), LoRA on the backbone.
 
 ## Paper
