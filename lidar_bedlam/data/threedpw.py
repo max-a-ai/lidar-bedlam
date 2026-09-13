@@ -57,8 +57,10 @@ class ThreeDPWSource:
         smpl_models: dict[str, SmplModel],
         frame_stride: int = 5,
         sequences: list[str] | None = None,
+        image_root: Path | None = None,
     ) -> None:
         self.root = root
+        self.image_root = image_root or root  # images may stay on the NAS
         self.split = split
         self.models = smpl_models
         seq_dir = root / "sequenceFiles" / split
@@ -93,7 +95,7 @@ class ThreeDPWSource:
         world_to_cam = np.asarray(data["cam_poses"][i], dtype=np.float64)
         frame_id = int(data["img_frame_ids"][i])
         image_path = (
-            self.root / "imageFiles" / seq / f"image_{frame_id:05d}.jpg"
+            self.image_root / "imageFiles" / seq / f"image_{frame_id:05d}.jpg"
         )
         actors = []
         for a, gender in enumerate(data["genders"]):

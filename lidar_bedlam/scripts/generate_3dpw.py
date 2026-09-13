@@ -41,11 +41,15 @@ def _models() -> dict[str, SmplModel]:
 
 
 def _worker(
-    args: tuple[int, str, list[int], SynthConfig, MeshSynthConfig, Path, int],
+    args: tuple[
+        int, str, list[int], SynthConfig, MeshSynthConfig, Path, int, Path
+    ],
 ) -> dict[str, Any]:
-    wid, split, indices, cfg, mesh_cfg, out, stride = args
+    wid, split, indices, cfg, mesh_cfg, out, stride, image_root = args
     models = _models()
-    src = ThreeDPWSource(ROOT, split, models, frame_stride=stride)
+    src = ThreeDPWSource(
+        ROOT, split, models, frame_stride=stride, image_root=image_root
+    )
     gen = MeshLidarGenerator(src, models, cfg, mesh_cfg, DATA, seed_offset=wid)
     return generate_mesh(gen, indices, out, f"threedpw_{split}_w{wid:02d}")
 
@@ -61,6 +65,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--offset-min", type=float, default=0.01)
     ap.add_argument("--offset-max", type=float, default=0.04)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--image-root",
+        type=Path,
+        default=ROOT,
+        help="folder holding imageFiles/ (may be the NAS)",
+    )
     args = ap.parse_args(argv)
     cfg = replace(SynthConfig(), seed=args.seed, distance_aug_fraction=0.0)
     mesh_cfg = MeshSynthConfig(args.offset_min, args.offset_max)
@@ -79,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             mesh_cfg,
             args.out,
             args.frame_stride,
+            args.image_root,
         )
         for w in range(n)
     ]
