@@ -59,6 +59,9 @@ class MeshLidarGenerator(SynthGenerator):
         """Records of frame ``index`` of the 3DPW split."""
         assert self.pw is not None
         frame = self.pw.frame(index)
+        if not frame.image_path.exists():  # 3DPW frame ids have gaps
+            self.stats.frames_missing_image += 1
+            return []
         image = self.pw.read_image(frame)
         return self.records_from_frame(frame, image, self.pw.split)
 

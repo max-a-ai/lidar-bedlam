@@ -93,6 +93,7 @@ class FrameStats:
     persons_unlabelled: int = 0
     rejected_box: int = 0
     rejected_points: int = 0
+    frames_missing_image: int = 0  # label rows without an image file (3DPW)
     records: int = 0
     per_group: dict[str, int] = field(default_factory=dict)
 
