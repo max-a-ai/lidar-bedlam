@@ -4,7 +4,8 @@ Design:
 - one process per GPU (``torchrun``); rank 0 logs and checkpoints
 - ``last.pt`` every ``checkpoint_every_steps`` and on SIGUSR1 (Slurm sends
   it before the wall-time limit), ``best.pt`` on the best validation
-  translation error; ``resume()`` restores model, optimiser, schedule, step
+  box mAP of the primary set; ``resume()`` restores model, optimiser,
+  schedule, step
   and sampler seed, so a re-queued job continues where it stopped
 - wandb runs in the mode of the config (``offline`` on clusters without
   internet; sync from the login node afterwards)
@@ -422,9 +423,8 @@ class Trainer:
             json.dumps({k: asdict(v) for k, v in results.items()}, indent=1)
         )
         primary = self.cfg.data.val[0].name
-        score = (
-            results[primary].transl_err_m if primary in results else math.inf
-        )
+        # best.pt = highest box mAP on the primary set (the headline metric)
+        score = -results[primary].map if primary in results else math.inf
         if score < self.best:
             self.best = score
             self.save("best")
