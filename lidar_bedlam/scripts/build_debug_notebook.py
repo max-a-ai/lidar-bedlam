@@ -595,7 +595,7 @@ def pw_render(*_):
             ax.imshow(sh.array("image")[i]); draw_mask_outline(ax, sh.array("mask")[i], "yellow")
             sc = sh.scan(i, "main_0"); uv = project_crop(K, sc.points)
             sp = ax.scatter(uv[:, 0], uv[:, 1], c=sc.points[:, 2], s=8, cmap="turbo")
-            ax.set_title(f"{sh.array('key')[i].split('/')[2]} f{sh.array('key')[i].split('/')[3]} p{sh.array('key')[i].split('/')[4]}\n{sc.channels}ch x {sc.steps}: {len(sc.points)} returns", fontsize=9)
+            ax.set_title(f"{sh.array('key')[i].split('/')[2]} f{sh.array('key')[i].split('/')[3]} p{sh.array('key')[i].split('/')[4]}\\n{sc.channels}ch x {sc.steps}: {len(sc.points)} returns", fontsize=9)
             ax.set_xlim(0, 256); ax.set_ylim(256, 0); ax.set_xticks([]); ax.set_yticks([])
             if j == 0:
                 params = SmplParams(sh.row("global_orient", i), sh.row("body_pose", i), sh.row("betas", i), sh.row("transl", i))
@@ -651,7 +651,7 @@ def ps_render(*_):
             uvv = project_crop(K, v[::10]); ax.scatter(uvv[:, 0], uvv[:, 1], s=1, c="red", alpha=0.4)
             ax.scatter(kp[:15][ok, 0], kp[:15][ok, 1], s=25, c="lime", label="Waymo kp")
             uvc = project_crop(K, coco[CSEL]); ax.scatter(uvc[:, 0], uvc[:, 1], s=25, c="red", marker="x", label="fitted COCO")
-            ax.set_title(f"{sh.array('key')[i].split('/')[-1][:24]}\naccepted={bool(sh.array('has_smpl')[i])}, kp err {err:.0f} mm", fontsize=9)
+            ax.set_title(f"{sh.array('key')[i].split('/')[-1][:24]}\\naccepted={bool(sh.array('has_smpl')[i])}, kp err {err:.0f} mm", fontsize=9)
             ax.set_xlim(0, 256); ax.set_ylim(256, 0); ax.set_xticks([]); ax.set_yticks([])
             if j == 0:
                 ax.legend(loc="lower left", fontsize=8)
