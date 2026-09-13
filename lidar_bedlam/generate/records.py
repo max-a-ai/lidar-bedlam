@@ -228,3 +228,18 @@ class Shard:
                 np.float64
             ),
         )
+
+
+def rewrite_shard(
+    src: Path, dst: Path, updates: dict[str, NDArray[Any]]
+) -> None:
+    """Copy a shard, replacing whole stacked arrays (same shapes)."""
+    with np.load(src, allow_pickle=False) as z:
+        arrays = {k: z[k] for k in z.files}
+    for name, value in updates.items():
+        if arrays[name].shape != value.shape:
+            msg = f"{name}: {arrays[name].shape} vs {value.shape}"
+            raise ValueError(msg)
+        arrays[name] = value.astype(arrays[name].dtype)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(dst, **arrays)

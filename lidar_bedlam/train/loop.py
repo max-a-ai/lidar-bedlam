@@ -42,6 +42,7 @@ from lidar_bedlam.models.selective_attention import SelectiveDecoder
 from lidar_bedlam.models.vit import VIT_H
 from lidar_bedlam.train.config import SourceConfig, TrainConfig, to_dict
 from lidar_bedlam.train.sampler import MixtureBatchSampler, concat
+from lidar_bedlam.utils.eval_vis import eval_figures
 
 TENSOR_KEYS = (
     "image", "tokens", "points", "points_valid", "intrinsics", "has_image",
@@ -405,7 +406,14 @@ class Trainer:
                 f"pa {r.pa_mpjpe:.1f} transl {r.transl_err_m:.3f} m "
                 f"mAP {r.map:.3f}"
             )
-        self._wandb_log(log)
+        try:
+            figures = eval_figures(
+                self.model, val, self.run_dir, self.step, self.device
+            )
+        except Exception as exc:  # figures must never stop a run
+            self._log(f"eval figures skipped: {exc}")
+            figures = {}
+        self._wandb_log({**log, **figures})
         (self.run_dir / f"val_{self.step:07d}.json").write_text(
             json.dumps({k: asdict(v) for k, v in results.items()}, indent=1)
         )
@@ -438,7 +446,7 @@ class Trainer:
             dir=str(self.run_dir),
         )
 
-    def _wandb_log(self, values: dict[str, float]) -> None:
+    def _wandb_log(self, values: dict[str, Any]) -> None:
         """Append to ``metrics.jsonl`` (mirrored to wandb from a node with
         internet, see ``lidar_bedlam/scripts/wandb_mirror.py``) and to
         wandb if live."""
@@ -448,7 +456,15 @@ class Trainer:
         with open(self.run_dir / "metrics.jsonl", "a") as fh:
             fh.write(json.dumps(row) + "\n")
         if self.wandb is not None:
-            self.wandb.log(row, step=self.step)
+            import wandb
+
+            live = {
+                k: wandb.Image(str(self.run_dir / v))
+                if k.startswith("image/")
+                else v
+                for k, v in row.items()
+            }
+            self.wandb.log(live, step=self.step)
 
 
 def _wandb_mode(mode: str) -> Literal["online", "offline", "disabled"]:

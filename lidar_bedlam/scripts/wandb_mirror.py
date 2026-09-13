@@ -47,6 +47,19 @@ def _open_run(run_dir: Path, cfg: dict[str, Any]) -> Any:
     return run
 
 
+def _with_images(row: dict[str, Any], run_dir: Path) -> dict[str, Any]:
+    """``image/*`` values are relative PNG paths: upload them as images."""
+    out: dict[str, Any] = {}
+    for k, v in row.items():
+        if k.startswith("image/") and isinstance(v, str):
+            path = run_dir / v
+            if path.exists():
+                out[k] = wandb.Image(str(path))
+        else:
+            out[k] = v
+    return out
+
+
 def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
     """Push the new rows of every run under ``root``; returns rows sent."""
     sent = 0
@@ -67,7 +80,7 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
                 if not line.endswith("\n"):
                     break  # partial write, next pass
                 row = json.loads(line)
-                run.log(row, step=int(row["step"]))
+                run.log(_with_images(row, run_dir), step=int(row["step"]))
                 offset += len(line.encode())
                 sent += 1
         offset_file.write_text(str(offset))

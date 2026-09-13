@@ -120,13 +120,15 @@ class SynthGenerator:
 
     def __init__(
         self,
-        source: BedlamFramesSource,
+        source: BedlamFramesSource | None,
         smpl: SmplModel,
         cfg: SynthConfig,
         data_dir: Path,
         seed_offset: int = 0,
+        dataset: str = "bedlam",
     ) -> None:
         self.src = source
+        self.dataset = dataset
         self.smpl = smpl
         self.cfg = cfg
         self.rng = np.random.default_rng(cfg.seed + seed_offset)
@@ -170,6 +172,7 @@ class SynthGenerator:
     def frame_records(self, index: int) -> list[Record]:
         """All records of the frame that contains sample ``index``."""
         cfg = self.cfg
+        assert self.src is not None
         group, seq, frame = self.src.frame_of(index)
         labels = self.src.matched_labels(group, seq, frame)
         masks = self.src.person_masks(group, seq, frame)
@@ -309,8 +312,8 @@ class SynthGenerator:
         kp = np.ones((24, 3))
         kp[:, :2] = crop_cam.project(joints)
         return Record(
-            key=f"bedlam/{group}/{seq}/{frame}/{pid}",
-            dataset="bedlam",
+            key=f"{self.dataset}/{group}/{seq}/{frame}/{pid}",
+            dataset=self.dataset,
             image=img_crop,
             image_aug=img_aug,
             mask=crop_mask(mask, spec_crop),

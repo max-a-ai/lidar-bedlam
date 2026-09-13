@@ -51,7 +51,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import torch
 
-from lidar_bedlam.body.smpl import SmplModel
+from lidar_bedlam.body.smpl import SmplModel, SmplParams
 from lidar_bedlam.data.base import add_smpl_derived, crop_sample
 from lidar_bedlam.data.bedlam import CM_TO_M, BedlamFramesSource
 from lidar_bedlam.utils.io import read_exr_depth, read_mask
@@ -548,6 +548,122 @@ def render_rigs(*_):
 for cb in rig_boxes.values():
     cb.observe(render_rigs, "value")
 display(W.VBox(rows), rig_out); render_rigs()
+""")
+
+md("""## 10. 3DPW: real image + LiDAR simulated on the clothing-offset mesh
+
+3DPW has real images and SMPL labels but no depth. The labelled mesh is
+pushed outwards along its normals by 1-4 cm (the clothing layer a LiDAR
+actually hits), rasterised into a depth map and scanned with the same
+sensor plan as BEDLAM. Shards live in `resources/data/generated/meshlidar/v1`.
+Executing the cell shows set 0; **re-roll** shows set 1, 2, ... (seeded:
+the same sets every session).""")
+
+code("""
+from lidar_bedlam.generate.records import Shard
+from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
+
+def load_shards(pattern):
+    paths = sorted(Path("resources/data/generated").glob(pattern))
+    return [Shard(p) for p in paths]
+
+def project_crop(K, pts):
+    z = np.maximum(pts[:, 2], 1e-3)
+    return np.stack([K[0, 0] * pts[:, 0] / z + K[0, 2], K[1, 1] * pts[:, 1] / z + K[1, 2]], 1)
+
+pw_shards = load_shards("meshlidar/v1/threedpw_*.npz")
+pw_total = sum(len(s) for s in pw_shards)
+pw_roll = 0
+pw_btn = W.Button(description="re-roll", icon="refresh"); pw_out = W.Output()
+
+def pw_render(*_):
+    global pw_roll
+    with pw_out:
+        clear_output(wait=True)
+        if not pw_shards:
+            print("no 3DPW shards yet: run lidar_bedlam/scripts/generate_3dpw.py"); return
+        rng = np.random.default_rng(1000 + pw_roll)
+        picks = rng.integers(0, pw_total, 4)
+        print(f"set {pw_roll}: {pw_total} records, showing", list(picks))
+        fig, axes = plt.subplots(1, 4, figsize=(20, 5.5))
+        traces = []
+        for j, (ax, g) in enumerate(zip(axes, picks)):
+            si, i = 0, int(g)
+            while i >= len(pw_shards[si]):
+                i -= len(pw_shards[si]); si += 1
+            sh = pw_shards[si]; K = sh.array("intrinsics")[i]
+            ax.imshow(sh.array("image")[i]); draw_mask_outline(ax, sh.array("mask")[i], "yellow")
+            sc = sh.scan(i, "main_0"); uv = project_crop(K, sc.points)
+            sp = ax.scatter(uv[:, 0], uv[:, 1], c=sc.points[:, 2], s=8, cmap="turbo")
+            ax.set_title(f"{sh.array('key')[i].split('/')[2]} f{sh.array('key')[i].split('/')[3]} p{sh.array('key')[i].split('/')[4]}\n{sc.channels}ch x {sc.steps}: {len(sc.points)} returns", fontsize=9)
+            ax.set_xlim(0, 256); ax.set_ylim(256, 0); ax.set_xticks([]); ax.set_yticks([])
+            if j == 0:
+                params = SmplParams(sh.row("global_orient", i), sh.row("body_pose", i), sh.row("betas", i), sh.row("transl", i))
+                v, _ = smpl.forward(params)
+                traces += [mesh_trace(v, smpl.faces, "SMPL label (skin)", opacity=0.45),
+                           points_trace(sc.points, "LiDAR returns (clothing offset)", color=sc.points[:, 2], size=3, colorscale="Turbo")]
+        fig.colorbar(sp, ax=axes[-1], fraction=0.03, label="depth [m]"); plt.tight_layout(); plt.show()
+        figure_3d(traces, "first sample: label mesh and simulated returns").show()
+    pw_roll += 1
+
+pw_btn.on_click(pw_render); display(pw_btn, pw_out); pw_render()
+""")
+
+md("""## 11. Waymo pseudo ground truth: fitted SMPL on the point cloud
+
+Waymo has 3D keypoints, no meshes. `lidar_bedlam/scripts/pseudo_smpl_waymo.py`
+initialises SMPL from the trained model and fits pose, shape and
+translation to the keypoints, the 2D keypoints and the LiDAR returns
+(pulled to 3 cm outside the mesh). Shards: `real/v1_pseudo`. Green =
+Waymo keypoints, red = COCO joints of the fitted mesh; the 3D view shows
+the fitted mesh inside the point cloud. Re-roll as above.""")
+
+code("""
+ps_shards = load_shards("real/v1_pseudo/waymo_train_*.npz")
+ps_fit = {p.name.replace(".fit.npz", ""): np.load(p) for p in sorted(Path("resources/data/generated/real/v1_pseudo").glob("*.fit.npz"))}
+ps_total = sum(len(s) for s in ps_shards)
+ps_roll = 0
+ps_btn = W.Button(description="re-roll", icon="refresh"); ps_out = W.Output()
+WSEL = np.nonzero(WAYMO15_TO_COCO17 >= 0)[0]; CSEL = WAYMO15_TO_COCO17[WSEL]
+J_COCO = np.load("resources/data/generated/body_models/J_regressor_coco.npy")
+
+def ps_render(*_):
+    global ps_roll
+    with ps_out:
+        clear_output(wait=True)
+        if not ps_shards:
+            print("no pseudo-GT shards yet: run lidar_bedlam/scripts/pseudo_smpl_waymo.py"); return
+        rng = np.random.default_rng(2000 + ps_roll)
+        picks = rng.integers(0, ps_total, 3)
+        print(f"set {ps_roll}: {ps_total} records, showing", list(picks))
+        fig, axes = plt.subplots(1, 3, figsize=(16, 5.5))
+        traces = []
+        for j, (ax, g) in enumerate(zip(axes, picks)):
+            si, i = 0, int(g)
+            while i >= len(ps_shards[si]):
+                i -= len(ps_shards[si]); si += 1
+            sh = ps_shards[si]; K = sh.array("intrinsics")[i]
+            params = SmplParams(sh.row("global_orient", i), sh.row("body_pose", i), sh.row("betas", i), sh.row("transl", i))
+            v, _ = smpl.forward(params); coco = J_COCO @ v
+            kp = sh.array("kp2d")[i]; ok = kp[:15, 2] > 0
+            err = ps_fit[sh.path.stem]["error_m"][i] * 1000 if sh.path.stem in ps_fit else float("nan")
+            ax.imshow(sh.array("image")[i])
+            uvv = project_crop(K, v[::10]); ax.scatter(uvv[:, 0], uvv[:, 1], s=1, c="red", alpha=0.4)
+            ax.scatter(kp[:15][ok, 0], kp[:15][ok, 1], s=25, c="lime", label="Waymo kp")
+            uvc = project_crop(K, coco[CSEL]); ax.scatter(uvc[:, 0], uvc[:, 1], s=25, c="red", marker="x", label="fitted COCO")
+            ax.set_title(f"{sh.array('key')[i].split('/')[-1][:24]}\naccepted={bool(sh.array('has_smpl')[i])}, kp err {err:.0f} mm", fontsize=9)
+            ax.set_xlim(0, 256); ax.set_ylim(256, 0); ax.set_xticks([]); ax.set_yticks([])
+            if j == 0:
+                ax.legend(loc="lower left", fontsize=8)
+                sc = sh.scan(i, "real")
+                traces += [mesh_trace(v, smpl.faces, "pseudo-GT SMPL", opacity=0.5),
+                           points_trace(sc.points, "LiDAR returns", color="black", size=3),
+                           points_trace(sh.array("joints3d")[i][:15][sh.array("joints3d_valid")[i][:15]], "Waymo keypoints", color="lime", size=6)]
+        plt.tight_layout(); plt.show()
+        figure_3d(traces, "first sample: fitted mesh in the point cloud").show()
+    ps_roll += 1
+
+ps_btn.on_click(ps_render); display(ps_btn, ps_out); ps_render()
 """)
 
 

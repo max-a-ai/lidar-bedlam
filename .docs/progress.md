@@ -41,6 +41,24 @@ gantt
 
 ## Data
 
+### 2026-09-13 — pseudo-GT SMPL for Waymo and mesh-LiDAR samples from 3DPW
+Two new data sources for later ablations. (1) `generate/pseudo_smpl.py` +
+`scripts/pseudo_smpl_waymo.py`: SMPL fitted per Waymo training record,
+initialised by `main-mixed-000`, optimised on the 13 shared keypoints,
+the 2D keypoints and the LiDAR returns (pulled to 3 cm outside the mesh),
+with a pose prior on the init; accepted when the keypoint error is below
+8 cm; written as `real/v1_pseudo` (keypoints stay the joint labels,
+`has_smpl=True` on accepted fits). First shards: 100 % accepted, keypoint
+error 105 -> 21 mm. (2) `data/threedpw.py` (world-to-camera verified
+against `poses2d`, gendered SMPL), `lidar/mesh_depth.py` (z-buffer
+rasteriser, vertices pushed 1-4 cm along their normals = clothing),
+`generate/mesh_synth.py` (same scan plan and record builder as BEDLAM,
+`dataset="3dpw"`), `scripts/generate_3dpw.py`; returns sit 3.0 cm from
+the skin mesh (median). Configs `ablation_pseudo_waymo.yaml`,
+`ablation_3dpw.yaml`. Notebook sections 10 and 11 (seeded re-roll
+buttons). Trainer now writes an evaluation figure per source and step
+(`outputs/<run>/vis/`), mirrored to wandb as images. 3 tests.
+
 ### 2026-09-12 — person masks now include the hair
 BEDLAM ships a `hair` mask part in the `*handhair*` groups; the loader
 unioned only `body` and `clothing`, so long-haired heads were cut and
@@ -358,7 +376,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Running: fusion ablations on 50/40/10 + seed 1 (9 jobs). Open: baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body); a full-length run with ball 0.25 m; seeds for the main table. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Running: fusion ablations on 50/40/10 + seed 1 (9 jobs). Open: `ablation_pseudo_waymo`, `ablation_3dpw` once the data is on Helma; baselines; a full-length run with ball 0.25 m; seeds for the main table. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 

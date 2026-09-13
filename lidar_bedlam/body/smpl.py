@@ -72,14 +72,17 @@ class SmplParams:
 class SmplModel:
     """Thin wrapper around ``smplx.SMPL`` (neutral, 10 betas)."""
 
-    def __init__(self, model_dir: Path, device: str = "cpu") -> None:
+    def __init__(
+        self, model_dir: Path, device: str = "cpu", gender: str = "neutral"
+    ) -> None:
         import smplx
 
         self.device = torch.device(device)
+        self.gender = gender
         self._model = smplx.create(
             str(model_dir),
             model_type="smpl",
-            gender="neutral",
+            gender=gender,
             num_betas=NUM_BETAS,
         ).to(self.device)
         self._model.eval()
