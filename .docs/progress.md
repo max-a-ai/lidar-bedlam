@@ -230,6 +230,15 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — final-schedule runs submitted (6 x ~20 h)
+`configs/full_*.yaml`: 150,000 steps at batch 2048 (about 20 h incl.
+evaluations every 2,000 steps on the full SLOPER4D test set of 9,904 and
+Waymo val), checkpoints every 1,000 steps, the chain job resumes past the
+24 h wall time; `best.pt` now = highest Waymo box mAP. Jobs 850403-850408:
+`full-synth-only`, `full-real-only`, `full-main-mixed`, `full-mix80`,
+`full-pseudo-waymo`, `full-3dpw`. These replace the 10.2k/12k-step main
+table; the 3,468-step ablations stay as relative comparisons.
+
 ### 2026-09-13 — fusion ablations with two seeds; pseudo-GT and 3DPW ablations
 50/40/10 mixture, 17 epochs = 3,468 steps; mean +- half-range over seeds
 0 and 1 (Helma/wandb names: `abl-<variant>-000` and `abl-<variant>-s1`,
@@ -442,7 +451,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Open: pseudo-GT at full schedule / lower transl weight; baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body); full-length run with ball 0.25 m; seeds for the main table; queue on Helma is empty. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Running: six final-schedule runs (~20 h). Next: baseline runners (TokenHMR, 4D Humans, CameraHMR, LiDAR-HMR) on the same crops and protocol; then the paper tables. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
