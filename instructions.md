@@ -34,7 +34,8 @@ Enforce on every change.
 1. `uv run ruff check .` → zero errors
 2. `uv run ruff format --check .` → clean
 3. `uv run mypy` → zero errors
-4. If there's an entry point: `uv run <script-name>` → it launches
+4. `uv run pytest` → green
+5. If there's an entry point: `uv run <script-name>` → it launches
    without crashing on the expected platform.
 
 ## Directories
@@ -60,7 +61,8 @@ inside an HPC workspace — those filesystems are limited by inodes.
 
 - Training always goes through `lidar_bedlam/scripts/lidar-bedlam-main.py` with `--wandb-project` and
   `--wandb-name` (hook-enforced); runs land in `outputs/<run-name>/`
-  with `last.pt`, `best.pt`, `val_*.json`, `wandb/` and `DONE`.
+  with `config.json`, `metrics.jsonl`, `val_*.json`, `vis/`, `last.pt`,
+  `best.pt` and `DONE`; the login-node mirror pushes them to wandb.
 - Shards and precomputed ViT tokens live under `resources/data/generated/`; the
   layout is documented in `.docs/data_pipeline.md`.
 - The paper is `.docs/latex-draft/main.tex`; build it with `latexmk` in
