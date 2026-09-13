@@ -242,6 +242,19 @@ Our contributions are threefold:
 % 3D box AP / mAP (IoU thresholds TODO).
 \todo{Describe datasets, splits, metrics.}
 
+\subsection{Training}
+\begin{itemize}
+  \item One node with four H100s, batch 2048 (throughput saturates at
+    1024 and memory peaks at 14\,GB per GPU in short tests from 256 to
+    2048), AdamW with learning rate $3\cdot10^{-4}$, 500 warm-up steps,
+    cosine decay, bf16, frozen ViT-H with precomputed tokens.
+  \item Main-table runs use 10{,}200 steps for every mixture, i.e.\ equal
+    compute; ablations share one mixture and use one third of it.
+  \item Discarded and rerun, not reported: a first mixed run whose Waymo
+    keypoints were mapped to the wrong joints, and ablations on a
+    preliminary 80/10/10 mixture.
+\end{itemize}
+
 \subsection{Baselines}
 % TODO: CameraHMR~\cite{patel2025camerahmr}, TokenHMR~\cite{dwivedi2024tokenhmr},
 % LiDAR-HMR~\cite{fan2025lidarhmr}, SAM 3D Body~\cite{sam3dbody2025},
