@@ -198,6 +198,11 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-13 — fusion ablations on 50/40/10 and a second seed (9 jobs)
+Submitted: `abl-{image-only,lidar-only,gate-none,gate-hard}-001` (seed 0,
+50/40/10, vs `abl-mixed-short-001`) and seed 1 of the reference and the
+four variants (`abl-*-s1`, `EXTRA_SET=seed=1`), jobs 847325-847333.
+
 ### 2026-09-13 — scaling curve at fixed compute: flat
 50/40/10 mixture, 3,468 steps each, synthetic pool capped at k x the
 Waymo train count (18 / 36 / 73 / 145 / 291 shards vs 806 for the
@@ -353,7 +358,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Open: baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body); model-axis ablations on 50/40/10; a full-length run with ball 0.25 m (won the synthesis axis); seeds for noise bars. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Running: fusion ablations on 50/40/10 + seed 1 (9 jobs). Open: baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body); a full-length run with ball 0.25 m; seeds for the main table. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
