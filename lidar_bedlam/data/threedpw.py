@@ -4,7 +4,8 @@
 (F, 72), ``betas`` (10), ``trans`` (F, 3) in the world frame,
 ``cam_poses`` (F, 4, 4) world-to-camera (verified against ``poses2d``),
 ``cam_intrinsics`` (3, 3) and ``genders``. Images are
-``imageFiles/<seq>/image_XXXXX.jpg``. There is no depth and no LiDAR: the
+``imageFiles/<seq>/image_XXXXX.jpg``, numbered by sequence index (the
+``img_frame_ids`` are 60 Hz video ids). There is no depth and no LiDAR: the
 mesh-based generator renders both from the labelled meshes.
 """
 
@@ -93,7 +94,9 @@ class ThreeDPWSource:
         data = self._data(seq)
         k = np.asarray(data["cam_intrinsics"], dtype=np.float64)
         world_to_cam = np.asarray(data["cam_poses"][i], dtype=np.float64)
-        frame_id = int(data["img_frame_ids"][i])
+        # images are numbered by the sequence index, not by img_frame_ids
+        # (the shipped frames are contiguous; ids only record video gaps)
+        frame_id = i
         image_path = (
             self.image_root / "imageFiles" / seq / f"image_{frame_id:05d}.jpg"
         )
