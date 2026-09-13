@@ -230,6 +230,36 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-13 — fusion ablations with two seeds; pseudo-GT and 3DPW ablations
+50/40/10 mixture, 17 epochs = 3,468 steps; mean +- half-range over seeds
+0 and 1 (Helma/wandb names: `abl-<variant>-000` and `abl-<variant>-s1`,
+reference `abl-mixed-short-001` / `-s1`):
+
+| variant | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|
+| learned gates (reference) | 108.4+-3.4 | 90.3+-5.1 | 0.509 | 0.467 | 80.2+-1.1 | 59.9+-0.6 | 0.079 | 0.738+-0.015 |
+| image only | 118.0+-0.3 | 94.6+-0.5 | 2.232 | 0.002 | 112.6+-6.8 | 78.5+-3.6 | 0.730 | 0.021 |
+| LiDAR only | 218.3+-6.1 | 164.0+-1.3 | 0.589 | 0.331 | 144.6+-0.8 | 103.3+-0.5 | 0.068 | 0.635 |
+| gate none (plain sum) | 115.7+-2.0 | 94.6+-1.0 | 0.511 | 0.444 | 101.5+-3.5 | 75.8+-1.3 | 0.096 | 0.555+-0.057 |
+| gate hard (fixed priors) | 112.0+-1.6 | 93.7+-3.3 | 0.525 | 0.444 | 83.1+-4.3 | 62.2+-0.6 | 0.085 | 0.633+-0.045 |
+| + pseudo-GT SMPL on Waymo (1 seed) | 108.5 | 73.4 | 1.443 | 0.167 | 69.5 | 48.4 | 0.065 | 0.717 |
+| + 3DPW mesh-LiDAR 10 % (1 seed) | 104.1 | 84.6 | 0.514 | 0.456 | 80.4 | 60.9 | 0.072 | 0.737 |
+
+Reading. With two seeds the fusion ordering is clear on SLOPER4D and on
+mAP: learned gates 80 mm / 0.74 vs fixed priors 83 / 0.63 vs plain sum
+102 / 0.56; on Waymo pose the three are within 4-8 mm (learned best).
+Image only cannot place (2.2 m), LiDAR only cannot pose (218 mm).
+3DPW records give a small Waymo pose gain (104 vs 108 mm) at equal
+placement. Pseudo-GT Waymo labels give the best pose of every short run
+(Waymo PA 73 vs 90 mm; SLOPER4D 69.5 / 48.4 mm) but Waymo placement is
+far worse (1.44 m, mAP 0.17) and still falling at the end of the run;
+on its own training shard the checkpoint is 0.85 m off the fitted
+translations while the fitted translations themselves sit at the
+keypoint hip centre, so the labels are consistent and the run is not
+converged on placement (the direct translation loss on 40 % of every
+batch starts at about 2.5 m). Candidates: longer schedule or a lower
+translation weight for pseudo rows.
+
 ### 2026-09-13 — state at the machine switch
 Helma queue (all pending, partition full): `ablation-{image-only,
 lidar-only,gate-none,gate-hard}` seed 0 on 50/40/10, the same four plus
@@ -412,7 +442,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Running: fusion ablations on 50/40/10 + seed 1 (9 jobs). Open: `ablation_pseudo_waymo`, `ablation_3dpw` once the data is on Helma; baselines; a full-length run with ball 0.25 m; seeds for the main table. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Open: pseudo-GT at full schedule / lower transl weight; baselines (TokenHMR, CameraHMR, LiDAR-HMR, SAM 3D Body); full-length run with ball 0.25 m; seeds for the main table; queue on Helma is empty. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
