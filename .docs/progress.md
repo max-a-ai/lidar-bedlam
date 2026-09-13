@@ -230,6 +230,67 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — image baselines scored with our protocol (TokenHMR, HMR2, CameraHMR)
+
+Runners in `lidar_bedlam/scripts/baselines/` execute each published model
+in its own conda env on exactly our evaluation records (the 256 px crops
+of `real/v1`, `waymo_val` 894 and `sloper4d_test` 9,904) and write
+camera-frame meshes; `lidar_bedlam/scripts/score_baselines.py` then derives
+SMPL/COCO joints and the 3D box the same way as for our model and runs
+`metrics/protocol.py` unchanged (translation = SMPL transl parameter, box
+confidence 1). Weak-perspective cameras are converted to metric
+translation with the crop's true intrinsics (HMR2's `cam_crop_to_full`
+with the real principal point); CameraHMR gets the intrinsics as input
+instead of estimating them.
+
+- Environments: `4D-humans` conda env for all three image methods (numpy
+  pinned < 2 so torch 2.2 initialises; `flatten_dict` added for TokenHMR);
+  HMR2 from `~/Documents/4D-Humans` (`~/.cache/4DHumans` weights, epoch 35),
+  TokenHMR from `~/Documents/tokenHMR` (that checkout hardcodes a NAS
+  checkpoint path in `lib/utils/misc.py`, the runner swaps in the identical
+  local file), CameraHMR from `third_party/CameraHMR` with `data/` symlinks
+  to our SMPL, the mean params and `~/Downloads/camerahmr_checkpoint_cleaned.ckpt`.
+- Inference cost is negligible: ~115 crops/s per ViT-H method on the 4090
+  (8 s for Waymo val, ~90-170 s for SLOPER4D test); the whole pass over
+  10.8k crops takes ~3 min per method, scoring ~2 min. The work was the
+  adapters and environments (~4 h).
+- Two input variants: `full` = our 256 px crop as is (same pixels our model
+  sees), `tight` = HMR2-style square re-crop around the labelled joints.
+  They agree within 1 mm and 0.02 mAP, so `full` is the protocol.
+
+| method (full crop) | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|
+| HMR2.0 (4D Humans) | 104.4 | 69.8 | 1.34 m | 0.016 | 91.3 | 70.8 | 0.121 m | 0.40 |
+| TokenHMR (tight crop) | 98.5 | 66.3 | 1.15 m | 0.024 | 74.5 | 54.8 | 0.204 m | 0.26 |
+| CameraHMR (GT intrinsics) | 76.9 | 60.0 | 1.02 m | 0.029 | 51.6 | 44.4 | 0.196 m | 0.40 |
+| ours main-mixed (10.2k steps, S on first 4,000) | 92.6 | 75.6 | 0.52 m | 0.44 | 55.7 | 45.5 | 0.08 m | 0.83 |
+
+SLOPER4D on the full test set (9,904) vs the trainer's first 4,000: MPJPE
+differs by up to 9 mm for HMR2/TokenHMR (82 vs 91, 66 vs 75), CameraHMR is
+stable (51.7 vs 51.6); `outputs/baselines/results_4000.json` holds the
+subset numbers, `results_full.json` the full ones.
+
+Reading: HMR2 on Waymo reproduces the 106 mm reported for the same weights
+in the LiDAR-HMR checkpoint notes, so the pipeline is sound. Image-only
+methods are at 1.0-1.3 m placement error on Waymo (0.12-0.20 m on the
+near-range SLOPER4D) and 0.02-0.03 box mAP; our fusion model is 2x closer
+on Waymo, 2.5x on SLOPER4D and 0.44 / 0.83 mAP. On pose, CameraHMR is the
+strongest baseline and beats our current checkpoints (Waymo 76.9 vs 92.6
+mm, SLOPER4D 51.6 vs 55.7 mm); TokenHMR, whose frozen ViT-H tokens we use,
+is close to us on Waymo (98.5 vs 92.6) and behind on SLOPER4D (74.5 vs
+55.7). The paper claim therefore rests on placement and detection quality,
+not on pose accuracy; the final 20 h runs decide the pose column.
+
+Open: LiDAR-HMR (Waymo release weights) runs in a new `lidar-hmr` conda env
+(torch 2.2 cu121, PyG wheels, `pointops` from PointTransformerV2 and the
+vendored `pointnet2_ops` compiled with `TORCH_CUDA_ARCH_LIST=8.9`, chumpy
+patched for numpy 1.26, a pytorch3d shim); the runner is written and the
+model loads, the 492 MB checkpoint is still copying from the slow NAS to
+`resources/pretrained-checkpoints/lidar-hmr/`. Local, untracked setup in
+the submodules: `third_party/CameraHMR/data/` symlinks,
+`third_party/LiDAR-HMR/smplx_models/smpl/SMPL_NEUTRAL.pkl` symlink and the
+`pointnet2_ops_lib/setup.py` arch list.
+
 ### 2026-09-14 — final-schedule runs submitted (6 x ~20 h)
 `configs/full_*.yaml`: 150,000 steps at batch 2048 (about 20 h incl.
 evaluations every 2,000 steps on the full SLOPER4D test set of 9,904 and
@@ -451,7 +512,7 @@ dataset survey.
 
 ## Model
 
-- [ ] Running: six final-schedule runs (~20 h). Next: baseline runners (TokenHMR, 4D Humans, CameraHMR, LiDAR-HMR) on the same crops and protocol; then the paper tables. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
+- [ ] Pending on Helma (AssocGrpGRES): six final-schedule runs (~20 h). Baselines TokenHMR / HMR2 / CameraHMR scored (see 2026-09-14); LiDAR-HMR next, then the paper tables. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
 - [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
 - [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
 
@@ -461,7 +522,8 @@ dataset survey.
 - [ ] Model axis: `ablation_image_only`, `ablation_gate_none`, `ablation_gate_hard`, `ablation_lidar_only` vs `ablation_mixed_short`.
 - [ ] Synthesis axis: `ablation_ball025`, `ablation_rig_waymo`, `ablation_target_waymo`; log validation curves for the convergence question.
 - [ ] Data curve: `ablation_scale_{2,4,8,16,32}x`.
-- [ ] Baseline runners for TokenHMR, CameraHMR, LiDAR-HMR (checkpoint arrives on the NAS), SAM 3D Body (MHR to joints).
+- [x] Baseline runners for TokenHMR, HMR2, CameraHMR (`lidar_bedlam/scripts/baselines/`, `score_baselines.py`).
+- [ ] LiDAR-HMR baseline (env ready, checkpoint copying from the NAS); SAM 3D Body (MHR to joints) if time permits.
 - [ ] After hand-in: realism ablations (no augmentation, no occlusion), LoRA on the backbone.
 
 ## Paper

@@ -70,7 +70,7 @@ lidar-bedlam/
 ├── lidar_bedlam/            # THE package, flat layout, named after the repo (hyphen -> underscore)
 │   ├── data/  models/  losses/  metrics/  train/  utils/     # mandatory subpackages
 │   ├── body/  geometry/  lidar/  rigs/  generate/            # project-domain subpackages
-│   ├── scripts/             # CLIs: lidar-bedlam-main.py, lidar-bedlam-eval.py, dm_link.py, data preparation
+│   ├── scripts/             # CLIs: lidar-bedlam-main.py, lidar-bedlam-eval.py, dm_link.py, data preparation, baselines/ (published models in their own envs) + score_baselines.py
 │   ├── slurm/               # cluster jobs: train.sbatch (chain job), wandb_mirror.sh
 │   └── __init__.py  __main__.py  app.py  py.typed
 ├── configs/                 # one yaml per experiment (main, real/synth only, ablations, smoke)

@@ -93,7 +93,7 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = ["smplx", "smplx.*", "OpenExr", "OpenEXR", "Imath", "pyarrow", "pyarrow.*", "PIL", "PIL.*", "plotly", "plotly.*", "matplotlib", "matplotlib.*", "sam3", "sam3.*", "trimesh", "trimesh.*", "wandb", "wandb.*"]
+module = ["hmr2", "hmr2.*", "lib", "lib.*", "core.*", "models.*", "pytorch3d", "smplx", "smplx.*", "OpenExr", "OpenEXR", "Imath", "pyarrow", "pyarrow.*", "PIL", "PIL.*", "plotly", "plotly.*", "matplotlib", "matplotlib.*", "sam3", "sam3.*", "trimesh", "trimesh.*", "wandb", "wandb.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
