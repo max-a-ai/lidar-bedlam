@@ -74,7 +74,9 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     cfg = replace(SynthConfig(), seed=args.seed, distance_aug_fraction=0.0)
     mesh_cfg = MeshSynthConfig(args.offset_min, args.offset_max)
-    src = ThreeDPWSource(ROOT, args.split, _models(), args.frame_stride)
+    # index only (no SMPL models): torch must not be initialised before the
+    # pool forks, or the workers deadlock in OpenMP
+    src = ThreeDPWSource(ROOT, args.split, {}, args.frame_stride)
     indices = list(range(len(src)))
     if args.max_frames:
         indices = indices[: args.max_frames]
