@@ -22,8 +22,8 @@ from pathlib import Path
 from typing import Any
 
 SPLITS = (("W", "waymo_val"), ("S", "sloper4d_test"))
-METRICS = ("mpjpe", "pa_mpjpe", "abs_mpjpe", "transl_err_m", "map")
-LABELS = ("MPJPE", "PA", "abs", "transl", "mAP")
+METRICS = ("mpjpe", "pa_mpjpe", "pve", "abs_mpjpe", "transl_err_m", "map")
+LABELS = ("MPJPE", "PA", "PVE", "abs", "transl", "mAP")
 HIGHER_IS_BETTER = {"map"}
 
 STATIC_ROWS = [
@@ -133,6 +133,22 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ("+ pseudo-GT SMPL on Waymo", ["abl-pseudo-waymo-000"]),
             ("+ 3DPW mesh-LiDAR 10 %", ["abl-3dpw-000"]),
         ],
+    ),
+]
+
+# numbers reported by other papers on their own protocol (no code or
+# weights to run on our records): SLOPER4D paper, Table 4a, LiDARCap
+# trained on SLOPER4D / on LiDARHuman26M + SLOPER4D, tested on SLOPER4D
+REPORTED_ROWS = [
+    (
+        "LiDARCap (SLOPER4D-trained)",
+        "LiDAR only, reported in the SLOPER4D paper, own protocol",
+        {"S_mpjpe": 86.1, "S_pa_mpjpe": 65.1},
+    ),
+    (
+        "LiDARCap (LH26M + SLOPER4D)",
+        "LiDAR only, reported in the SLOPER4D paper, own protocol",
+        {"S_mpjpe": 79.2, "S_pa_mpjpe": 60.1},
     ),
 ]
 
@@ -272,15 +288,19 @@ def ranks(rows: list[Row], key: str) -> dict[int, int]:
     return {i: pos for pos, (i, _) in enumerate(valid[:3])}
 
 
+def _keys() -> list[str]:
+    return [f"{tag}_{m}" for tag, _ in SPLITS for m in METRICS]
+
+
 def table_html(rows: list[Row]) -> str:
     """One ranked table."""
-    keys = [f"{tag}_{m}" for tag, _ in SPLITS for m in METRICS]
+    keys = _keys()
     rank_by_key = {k: ranks(rows, k) for k in keys}
     cls = ["g", "y", "r"]
     h = [
         '<div class="wrap"><table><thead><tr><th></th>'
-        '<th class="group" colspan="5">Waymo val · 894</th>'
-        '<th class="group" colspan="5">SLOPER4D test · 9,904</th></tr><tr><th>method</th>'
+        '<th class="group" colspan="6">Waymo val · 894</th>'
+        '<th class="group" colspan="6">SLOPER4D test · 9,904</th></tr><tr><th>method</th>'
     ]
     h.append("".join(f"<th>{lbl}</th>" for _ in SPLITS for lbl in LABELS))
     h.append("</tr></thead><tbody>")
@@ -348,8 +368,13 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
     for i, (title, desc, spec) in enumerate(GROUPS):
         rows = group_rows(root, spec)
         if i == 0:
+            reported = [
+                Row(label, note, "static", dict.fromkeys(_keys()) | dict(vals))
+                for label, note, vals in REPORTED_ROWS
+            ]
             rows = (
                 static_rows(baselines / "results_static.json", STATIC_ROWS)
+                + reported
                 + rows
             )
         if not rows:
@@ -379,7 +404,7 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 <header>
   <div class="eyebrow">{stamp}</div>
   <h1>Placement, box and pose against the published pipelines</h1>
-  <p class="lede">Every row is scored on the same records with the same protocol: Waymo val (894 crops, 13 COCO joints, hip-centre placement) and the full SLOPER4D test split (9,904 crops, 24 SMPL joints, SMPL translation). MPJPE and PA-MPJPE in mm are root-centred; abs is the mean joint error as predicted, pose and placement together; placement in metres; mAP over box IoU 0.25/0.5/0.7.</p>
+  <p class="lede">Every row is scored on the same records with the same protocol: Waymo val (894 crops, 13 COCO joints, hip-centre placement) and the full SLOPER4D test split (9,904 crops, 24 SMPL joints, SMPL translation). MPJPE, PA-MPJPE and PVE (per-vertex, SMPL labels only) in mm are root-relative; abs is the mean joint error as predicted, pose and placement together, which exposes the depth ambiguity of image-only methods; placement in metres; mAP over 3D box IoU 0.25/0.5/0.7 (mesh-only methods get a box from the mesh extent, scaled to Waymo's padded box convention).</p>
 </header>
 <section><div class="legend"><span>Per column, within each table:</span>
 <span class="chip g">best</span><span class="chip y">second</span><span class="chip r">third</span>

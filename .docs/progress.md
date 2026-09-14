@@ -230,6 +230,34 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — PVE, box convention for mesh-only methods, LiDARCap quoted
+
+- **Why LiDAR-HMR had a low Waymo mAP with the best placement.** Decomposing
+  the box IoU on Waymo val: LiDAR-HMR centre error median 0.11 m (ours
+  0.26 m), heading error median 10 deg (ours 7), but its box size is the
+  tight mesh extent, 0.63 / 0.96 / 0.57 of the labelled box (x, up, z);
+  CameraHMR the same 0.63 / 0.59. Waymo's labelled boxes are padded; our
+  box head learns that from the box loss (size ratio 0.98 / 0.99 / 0.94),
+  mesh-only methods cannot. The scorer now scales mesh-derived boxes on
+  Waymo records by the median labelled-box / mesh-extent ratio measured on
+  1,148 pseudo-GT fits of Waymo train, (1.39, 1.05, 1.45); SLOPER4D boxes
+  are mesh extents already. abs / transl were never affected: abs is the
+  mean joint distance without any centring, transl the pelvis (SLOPER4D)
+  or hip-centre (Waymo) distance.
+- **PVE** (root-relative per-vertex error, GT mesh from the record's SMPL
+  parameters with the neutral model) added to the protocol, the trainer
+  log, the eval script, the scorer and the scoreboard; Waymo has no meshes,
+  so it is a SLOPER4D column. Re-evaluation job resubmitted on Helma with
+  FORCE=1 for every finished run.
+- **LiDARCap** (LiDARHuman26M's method, no code or weights we can run):
+  quoted from the SLOPER4D paper, Table 4a, tested on SLOPER4D: trained on
+  SLOPER4D 86.1 / 65.1 mm, trained on LH26M + SLOPER4D 79.2 / 60.1 mm
+  (MPJPE / PA-MPJPE, their protocol). Shown as reported rows in the
+  scoreboard and named as quoted in the paper.
+- Paper: the metrics paragraph now says MPJPE / PA-MPJPE / PVE are
+  root-relative and that the absolute joint error and the placement error
+  are reported because image-only methods are depth-ambiguous.
+
 ### 2026-09-14 — LiDAR simulator: offset sensors were clipped, no facing test
 
 Found through notebook section 5 (sensor 1 m to the right showed half a

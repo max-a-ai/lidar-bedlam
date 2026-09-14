@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     for name, r in results.items():
         sys.stdout.write(
             f"{name}: n={r.n} MPJPE {r.mpjpe:.1f} PA {r.pa_mpjpe:.1f} "
-            f"abs {r.abs_mpjpe:.1f} "
+            f"abs {r.abs_mpjpe:.1f} PVE {r.pve:.1f} "
             f"transl {r.transl_err_m:.3f} m mAP {r.map:.3f}\n"
         )
     return 0

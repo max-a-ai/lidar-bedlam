@@ -42,6 +42,13 @@ from lidar_bedlam.train.loop import build_dataset
 
 FloatArray = np.ndarray[Any, np.dtype[np.float64]]
 
+# Waymo's labelled 3D boxes are padded, a mesh's tight extent is not: median
+# GT box / mesh-extent ratio over 1,148 pseudo-GT fits on Waymo train
+# (x, up, z). Applied to every mesh-derived box on Waymo records so the box
+# mAP of methods without a box head follows the dataset's convention (our
+# model learns it from the box loss). SLOPER4D boxes are mesh extents.
+WAYMO_BOX_SCALE = np.array([1.39, 1.05, 1.45])
+
 
 class PredictionTable:
     """Predictions of one method on one split, addressable by record key."""
@@ -70,10 +77,18 @@ class PredictionTable:
         )
         joints = np.einsum("jv,nvk->njk", regressor, verts)
         boxes = []
-        for v, aa in zip(verts, self.global_orient[idx], strict=True):
+        for v, aa, key in zip(
+            verts,
+            self.global_orient[idx],
+            [keys[i] for i in rows],
+            strict=True,
+        ):
             forward = axis_angle_to_matrix(aa) @ SMPL_FORWARD
             yaw = heading_yaw(forward, CAMERA_UP_AXIS)
-            boxes.append(oriented_box_from_points(v, yaw, CAMERA_UP_AXIS))
+            box = oriented_box_from_points(v, yaw, CAMERA_UP_AXIS)
+            if key.startswith("waymo"):
+                box[3:6] *= WAYMO_BOX_SCALE
+            boxes.append(box)
         pred = {
             "vertices": torch.from_numpy(verts),
             "joints3d": torch.from_numpy(joints),
@@ -150,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(
             f"{table.name:>18} {table.split:<14} n={summary.n:<5} "
             f"MPJPE {summary.mpjpe:6.1f}  PA {summary.pa_mpjpe:6.1f}  "
-            f"abs {summary.abs_mpjpe:6.1f}  "
+            f"abs {summary.abs_mpjpe:6.1f}  PVE {summary.pve:6.1f}  "
             f"transl {summary.transl_err_m:6.3f} m  mAP {summary.map:.3f}  "
             f"IoU {summary.mean_iou:.3f}  missing {missing}\n"
         )

@@ -423,6 +423,7 @@ class Trainer:
                     f"val/{name}/mpjpe": r.mpjpe,
                     f"val/{name}/pa_mpjpe": r.pa_mpjpe,
                     f"val/{name}/abs_mpjpe": r.abs_mpjpe,
+                    f"val/{name}/pve": r.pve,
                     f"val/{name}/transl_err": r.transl_err_m,
                     f"val/{name}/map": r.map,
                     f"val/{name}/mean_iou": r.mean_iou,

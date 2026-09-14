@@ -238,9 +238,24 @@ Our contributions are threefold:
 % TODO: SLOPER4D, LiDARHuman26M and Waymo splits; how real sequences are
 % converted to our format (camera frame, SMPL); training regimes
 % synthetic-only / real-only / synthetic+real.
-% Metrics: MPJPE, PA-MPJPE, PVE (mm); translation error (cm);
-% 3D box AP / mAP (IoU thresholds TODO).
-\todo{Describe datasets, splits, metrics.}
+\paragraph{Metrics.}
+MPJPE, PA-MPJPE and PVE are root-relative: the predicted and the
+labelled joints (vertices) are centred on their pelvis before the mean
+Euclidean distance is taken, PA-MPJPE after an additional similarity
+alignment. They measure pose and shape only and cannot see where a method
+puts the person. Because image-only regressors are depth-ambiguous, we
+also report the \emph{absolute} joint error (mean joint distance without
+any centring, pose and placement together) and the \emph{placement
+error}, the distance between the predicted and the labelled pelvis
+(SLOPER4D) or hip centre (Waymo, over the records with both hips
+labelled). Detection quality is the mean AP of the predicted 3D box over
+IoU thresholds $0.25$, $0.5$ and $0.7$; methods without a box head get
+the oriented extent of their mesh, scaled to Waymo's padded box
+convention. Waymo has no meshes, so PVE is reported on SLOPER4D only, and
+its 15 keypoints are compared to the 13 COCO joints regressed from the
+predicted mesh. Numbers of methods we cannot run on our records
+(LiDARCap on SLOPER4D) are quoted from their papers and marked as such.
+\todo{Describe datasets and splits.}
 
 \subsection{Training}
 \begin{itemize}

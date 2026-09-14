@@ -15,7 +15,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from lidar_bedlam.body.smpl import SmplModel
+from lidar_bedlam.body.smpl import SmplModel, SmplParams
 from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
 from lidar_bedlam.geometry.boxes import iou3d
 from lidar_bedlam.geometry.camera import CAMERA_UP_AXIS
@@ -116,8 +116,21 @@ def sample_metrics(
             box_conf=float(conf[i]),
             n_joints=int(valid.sum()),
         )
-        if has_smpl[i] and "gt_vertices" in batch:
-            m.pve = pve(verts[i], _to_np(_t(batch["gt_vertices"]))[i])
+        if has_smpl[i]:
+            # per-vertex error, root-relative like MPJPE: the GT mesh comes
+            # from the record's SMPL parameters (neutral model)
+            if "gt_vertices" in batch:
+                gt_verts = _to_np(_t(batch["gt_vertices"]))[i]
+            else:
+                gt_verts, _ = smpl.forward(
+                    SmplParams(
+                        _to_np(_t(batch["global_orient"]))[i],
+                        _to_np(_t(batch["body_pose"]))[i],
+                        _to_np(_t(batch["betas"]))[i],
+                        gt_transl[i],
+                    )
+                )
+            m.pve = pve(verts[i] - joints[i][0], gt_verts - gt_joints[i][0])
         out.append(m)
     return out
 
