@@ -116,6 +116,33 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
         ],
     ),
     (
+        "Loss axis (1/3 schedule, 17 epochs, mean of 2 seeds)",
+        "Reference abl-mixed-short plus LiDAR-to-surface terms (chamfer with "
+        "a learned clothing offset, rigid ICP residual) and the Pose2Mesh "
+        "mesh terms (vertex L1, surface normal, edge length), alone and combined.",
+        [
+            ("reference", ["abl-mixed-short-001", "abl-mixed-short-s1"]),
+            ("+ chamfer", ["abl-loss-chamfer-000", "abl-loss-chamfer-s1"]),
+            ("+ ICP", ["abl-loss-icp-000", "abl-loss-icp-s1"]),
+            ("+ mesh terms", ["abl-loss-mesh-000", "abl-loss-mesh-s1"]),
+            (
+                "+ chamfer + ICP",
+                ["abl-loss-chamfer-icp-000", "abl-loss-chamfer-icp-s1"],
+            ),
+            (
+                "+ ICP + mesh terms",
+                ["abl-loss-icp-mesh-000", "abl-loss-icp-mesh-s1"],
+            ),
+            (
+                "+ chamfer + ICP + mesh terms",
+                [
+                    "abl-loss-chamfer-icp-mesh-000",
+                    "abl-loss-chamfer-icp-mesh-s1",
+                ],
+            ),
+        ],
+    ),
+    (
         "Synthesis axis (1/3 schedule)",
         "How the LiDAR is simulated on the synthetic records.",
         [
@@ -166,11 +193,6 @@ REPORTED_ROWS = [
         "LiDARCap (SLOPER4D-trained)",
         "LiDAR only, reported in the SLOPER4D paper, own protocol",
         {"S_mpjpe": 86.1, "S_pa_mpjpe": 65.1},
-    ),
-    (
-        "LiDARCap (LH26M + SLOPER4D)",
-        "LiDAR only, reported in the SLOPER4D paper, own protocol",
-        {"S_mpjpe": 79.2, "S_pa_mpjpe": 60.1},
     ),
 ]
 
