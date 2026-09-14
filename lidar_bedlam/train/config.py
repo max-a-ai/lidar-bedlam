@@ -133,7 +133,10 @@ _SECTIONS = {
 }
 
 
-DEFAULT_DATA_ROOT = "resources/data/generated"
+# absolute, so a notebook or script run from another folder finds the shards
+DEFAULT_DATA_ROOT = str(
+    Path(__file__).resolve().parents[2] / "resources" / "data" / "generated"
+)
 
 
 def _expand(value: Any) -> Any:
