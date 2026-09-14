@@ -13,3 +13,6 @@
 [submodule "third_party/CameraHMR"]
 	path = third_party/CameraHMR
 	url = https://github.com/pixelite1201/CameraHMR.git
+[submodule "third_party/Human3R"]
+	path = third_party/Human3R
+	url = https://github.com/fanegg/Human3R.git
