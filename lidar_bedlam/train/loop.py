@@ -401,6 +401,7 @@ class Trainer:
                 {
                     f"val/{name}/mpjpe": r.mpjpe,
                     f"val/{name}/pa_mpjpe": r.pa_mpjpe,
+                    f"val/{name}/abs_mpjpe": r.abs_mpjpe,
                     f"val/{name}/transl_err": r.transl_err_m,
                     f"val/{name}/map": r.map,
                     f"val/{name}/mean_iou": r.mean_iou,
@@ -408,7 +409,8 @@ class Trainer:
             )
             self._log(
                 f"val {name}: n={r.n} mpjpe {r.mpjpe:.1f} "
-                f"pa {r.pa_mpjpe:.1f} transl {r.transl_err_m:.3f} m "
+                f"pa {r.pa_mpjpe:.1f} abs {r.abs_mpjpe:.1f} "
+                f"transl {r.transl_err_m:.3f} m "
                 f"mAP {r.map:.3f}"
             )
         try:

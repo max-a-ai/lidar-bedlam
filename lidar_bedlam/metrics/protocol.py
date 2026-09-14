@@ -34,6 +34,7 @@ class SampleMetrics:
     dataset: str
     mpjpe: float
     pa_mpjpe: float
+    abs_mpjpe: float  # joints as predicted, no centring: pose + placement
     transl_err_m: float
     gt_depth_m: float
     iou: float
@@ -49,6 +50,7 @@ class MetricSummary:
     n: int
     mpjpe: float
     pa_mpjpe: float
+    abs_mpjpe: float
     pve: float
     transl_err_m: float
     ap: dict[float, float]
@@ -90,9 +92,13 @@ def sample_metrics(
             p = coco[WAYMO15_TO_COCO17[:15][sel]]
             g = gt_joints[i][:15][sel]
             valid = gt_valid[i][:15][sel]
-            # placement error on Waymo: pelvis approximated by the hip centre
+            # placement error on Waymo: pelvis approximated by the hip centre;
+            # unlabelled joints carry garbage coordinates, so records without
+            # both hips get no placement error (nan, skipped by the mean)
             p_root = (coco[11] + coco[12]) / 2.0
             g_root = (gt_joints[i][4] + gt_joints[i][10]) / 2.0
+            if not (gt_valid[i][4] and gt_valid[i][10]):
+                g_root = np.full(3, np.nan)
         else:
             p, g, valid = joints[i], gt_joints[i][:24], gt_valid[i][:24]
             p_root, g_root = transl[i], gt_transl[i]
@@ -103,6 +109,7 @@ def sample_metrics(
             dataset=str(datasets[i]),
             mpjpe=mpjpe(rel_p, rel_g, valid),
             pa_mpjpe=pa_mpjpe(p, g, valid),
+            abs_mpjpe=mpjpe(p, g, valid),
             transl_err_m=float(np.linalg.norm(p_root - g_root)),
             gt_depth_m=float(g_root[2]),
             iou=iou3d(boxes[i], gt_box[i], CAMERA_UP_AXIS),
@@ -133,22 +140,26 @@ def summarize(
 
     if not samples:
         return MetricSummary(
-            0, *(float("nan"),) * 4, {}, float("nan"), float("nan")
+            0, *(float("nan"),) * 5, {}, float("nan"), float("nan")
         )
     ious = np.array([s.iou for s in samples])
     confs = np.array([s.box_conf for s in samples])
     ap = {t: average_precision(ious >= t, confs) for t in thresholds}
     err = np.array([s.transl_err_m for s in samples])
     depth = np.array([s.gt_depth_m for s in samples])
+    if not np.isfinite(err).any():
+        err = np.array([float("nan")])
+        depth = np.array([float("nan")])
     pves = np.array([s.pve for s in samples])
     return MetricSummary(
         n=len(samples),
         mpjpe=float(np.nanmean([s.mpjpe for s in samples])),
         pa_mpjpe=float(np.nanmean([s.pa_mpjpe for s in samples])),
+        abs_mpjpe=float(np.nanmean([s.abs_mpjpe for s in samples])),
         pve=float(np.nanmean(pves))
         if np.isfinite(pves).any()
         else float("nan"),
-        transl_err_m=float(err.mean()),
+        transl_err_m=float(np.nanmean(err)),  # nan: GT root unlabelled
         ap=ap,
         map=float(np.mean(list(ap.values()))),
         mean_iou=float(ious.mean()),

@@ -150,6 +150,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(
             f"{table.name:>18} {table.split:<14} n={summary.n:<5} "
             f"MPJPE {summary.mpjpe:6.1f}  PA {summary.pa_mpjpe:6.1f}  "
+            f"abs {summary.abs_mpjpe:6.1f}  "
             f"transl {summary.transl_err_m:6.3f} m  mAP {summary.map:.3f}  "
             f"IoU {summary.mean_iou:.3f}  missing {missing}\n"
         )
