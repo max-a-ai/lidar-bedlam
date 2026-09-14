@@ -1,5 +1,5 @@
-# Data-size axis, 3x schedule (10,404 steps): the full synthetic pool (reference for ablation_scale_long_2x).
-experiment: abl-scale-long-full
+# Data axis at the final schedule: synthetic pool capped at 2x the Waymo train count (18 shards, 9k records).
+experiment: full-scale-2x
 seed: 0
 body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
@@ -7,7 +7,7 @@ data:
   train:
     - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.4}
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: random_main}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: random_main, max_shards: 18}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
@@ -16,7 +16,7 @@ data:
   point_augment: true
   require_tokens: true
   num_workers: 16
-  val_max_samples: 4000
+  val_max_samples: 10000  # full SLOPER4D test (9,904) and Waymo val (894)
 model:
   dim: 512
   num_heads: 8
@@ -31,10 +31,9 @@ optim:
   lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
   weight_decay: 0.05
   warmup_steps: 500
-  max_steps: 10404  # fixed compute for the data-size axis: the capped pool
-  # would shrink an epoch, so the curve compares equal steps (= 17 epochs of the full pool)
-  max_epochs: 0
+  max_steps: 150000  # ~20 h at 0.42 s/step incl. evals; the chain job resumes past 24 h
+  # compute (10,200 steps x 2048 = mix80-001's 50 epochs) is the fair schedule
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 500
-  checkpoint_every_steps: 500
+  eval_every_steps: 2000
+  checkpoint_every_steps: 1000

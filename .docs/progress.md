@@ -230,6 +230,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — all pending comparison runs moved to the 150k schedule
+
+Comparability over cost: the short pending jobs (`abl-rig-sloper4d` x2,
+`abl-scale-long-*`, 853642-853645) were cancelled and replaced by full-
+schedule twins of `full_main_mixed` that differ in one line each:
+`full_rig_sloper4d`, `full_rig_waymo`, `full_ball025` (synthesis axis) and
+`full_scale_2x` (data axis, 18 shards), jobs 853709-853712, single seed
+like the finals. Together with `full-gate-none/hard`, `full-image-only`,
+`full-lidar-only` (853646-853649) every row of the headline table then
+has the same 150k steps; the 1/3-schedule ablation tables stay as the
+cheap two-seed screen. `abl-scale-long-*` configs removed.
+
 ### 2026-09-14 — placement metric bug, absolute MPJPE, mirror test, comparison runs
 
 **Which run is the main experiment.** The headline run is `full-main-mixed`

@@ -50,6 +50,13 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ("ours · gate hard (fixed priors)", ["full-gate-hard-000"]),
             ("ours · image only", ["full-image-only-000"]),
             ("ours · LiDAR only", ["full-lidar-only-000"]),
+            (
+                "ours · LiDAR at the SLOPER4D rig pose",
+                ["full-rig-sloper4d-000"],
+            ),
+            ("ours · LiDAR at the Waymo rig pose", ["full-rig-waymo-000"]),
+            ("ours · ball 0.25 m", ["full-ball025-000"]),
+            ("ours · synthetic pool 2x (9k records)", ["full-scale-2x-000"]),
         ],
     ),
     (
@@ -83,15 +90,11 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ),
             ("ball 0.25 m", ["abl-ball025-000"]),
             ("LiDAR at the Waymo rig pose", ["abl-rig-waymo-000"]),
-            (
-                "LiDAR at the SLOPER4D rig pose",
-                ["abl-rig-sloper4d-000", "abl-rig-sloper4d-s1"],
-            ),
             ("Waymo resolution only", ["abl-target-waymo-000"]),
         ],
     ),
     (
-        "Data axis (fixed 3,468 steps; long = 10,404 steps)",
+        "Data axis (fixed 3,468 steps)",
         "Synthetic pool capped at k x the Waymo train count; the reference "
         "is the full pool (85x).",
         [
@@ -104,8 +107,6 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 "full pool (reference)",
                 ["abl-mixed-short-001", "abl-mixed-short-s1"],
             ),
-            ("2x, long schedule", ["abl-scale-long-2x-000"]),
-            ("full pool, long schedule", ["abl-scale-long-full-000"]),
         ],
     ),
     (
