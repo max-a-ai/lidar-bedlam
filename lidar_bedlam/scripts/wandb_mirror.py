@@ -32,18 +32,33 @@ def _run_config(run_dir: Path) -> dict[str, Any]:
 
 
 def _open_run(run_dir: Path, cfg: dict[str, Any]) -> Any:
-    run = wandb.init(
-        entity=cfg.get("wandb_entity", "erik_hm"),
-        project=cfg.get("wandb_project", "lidar-bedlam"),
-        name=run_dir.name,
-        id=run_dir.name,
-        resume="allow",
-        config=cfg,
-        # wandb writes hundreds of files per run: keep them out of
-        # inode-limited workspaces (WANDB_MIRROR_DIR, e.g. $HOME/wandb-mirror)
-        dir=os.environ.get("WANDB_MIRROR_DIR", str(run_dir)),
-        reinit="create_new",
-    )
+    # a run deleted on wandb cannot be resumed under its id: the retry
+    # gets a fresh id (kept in .mirror_id so later passes resume it)
+    id_file = run_dir / ".mirror_id"
+    run_id = id_file.read_text().strip() if id_file.exists() else run_dir.name
+    for attempt in range(2):
+        try:
+            run = wandb.init(
+                entity=cfg.get("wandb_entity", "erik_hm"),
+                project=cfg.get("wandb_project", "lidar-bedlam"),
+                name=run_dir.name,
+                id=run_id,
+                resume="allow",
+                config=cfg,
+                # wandb writes hundreds of files per run: keep them out of
+                # inode-limited workspaces (WANDB_MIRROR_DIR)
+                dir=os.environ.get("WANDB_MIRROR_DIR", str(run_dir)),
+                reinit="create_new",
+            )
+            break
+        except wandb.errors.CommError as exc:
+            if attempt or "deleted" not in str(exc):
+                raise
+            run_id = f"{run_dir.name}-m{int(time.time()) % 100000}"
+            id_file.write_text(run_id)
+            sys.stdout.write(
+                f"{run_dir.name}: deleted on wandb, new id {run_id}\n"
+            )
     # epochs on the x axis of every chart; the raw step stays available
     run.define_metric("train/epoch")
     run.define_metric("*", step_metric="train/epoch")
@@ -77,7 +92,13 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
         if size <= offset and not done:
             continue
         if run_dir.name not in open_runs:
-            open_runs[run_dir.name] = _open_run(run_dir, _run_config(run_dir))
+            try:
+                open_runs[run_dir.name] = _open_run(
+                    run_dir, _run_config(run_dir)
+                )
+            except Exception as exc:  # one broken run must not stop the pass
+                sys.stdout.write(f"{run_dir.name}: skipped ({exc})\n")
+                continue
         run = open_runs[run_dir.name]
         with open(metrics) as fh:
             fh.seek(offset)
