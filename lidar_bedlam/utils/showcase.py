@@ -80,7 +80,7 @@ def run_model(
         loader = DataLoader(
             build_dataset(src, cfg, train=False),
             batch_size=batch_size,
-            num_workers=4,
+            num_workers=0,  # no workers: the kernel is RAM-bound
         )
         keys: list[str] = []
         verts, transl, orient, betas, gates = [], [], [], [], []
@@ -195,7 +195,9 @@ def per_record_metrics(
     cfg = load_config(config)
     src = next(s for s in cfg.data.val if s.name == source)
     loader = DataLoader(
-        build_dataset(src, cfg, train=False), batch_size=64, num_workers=4
+        build_dataset(src, cfg, train=False),
+        batch_size=64,
+        num_workers=0,  # no worker processes: the notebook kernel is RAM-bound
     )
     out: dict[str, dict[str, SampleMetrics]] = {n: {} for n in tables}
     for batch in loader:
