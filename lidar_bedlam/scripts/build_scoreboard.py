@@ -57,6 +57,9 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ("ours · LiDAR at the Waymo rig pose", ["full-rig-waymo-000"]),
             ("ours · ball 0.25 m", ["full-ball025-000"]),
             ("ours · synthetic pool 2x (9k records)", ["full-scale-2x-000"]),
+            ("ours · synthetic pool 16x", ["full-scale-16x-000"]),
+            ("ours · Waymo resolution only", ["full-target-waymo-000"]),
+            ("ours · main-mixed, seed 1", ["full-main-mixed-s1"]),
         ],
     ),
     (
