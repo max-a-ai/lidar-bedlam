@@ -230,6 +230,29 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — capabilities notebook: showcase sections 12-16
+
+`lidar_bedlam/utils/showcase.py` + six new sections in
+`build_debug_notebook.py` (12 architecture block diagram from
+`.docs/figures/architecture.html`; 13 scoreboard tables with the
+green/yellow/red ranking, one cell per ablation axis + mirror test; 14
+inference showcase: the headline checkpoint
+`resources/pretrained-checkpoints/ours/full-main-mixed-last.pt` (pulled
+from Helma at step 138k, re-pull when DONE) runs once over both validation
+sets into `outputs/ours/full-main-mixed/` (baseline format, plus the
+per-record gates), per-record protocol metrics for ours and the four
+baselines, automatic picks (image methods misplace most / LiDAR-HMR pose
+worst vs ours / farthest Waymo person) drawn as crop + bird's-eye + side
+view with every method's mesh in the LiDAR returns, plus a plotly 3D view;
+15 knowledge-transfer figure: real-only vs synth-only vs main-mixed vs
+mix80 bars and the validation curves over training; 16 placement error by
+distance bin for every method and the learned gates vs the priors).
+Scoring the cached main-mixed predictions (step 138k) with the corrected
+protocol: Waymo 84.1 / 66.5 mm, abs 358 mm, placement 0.347 m, mAP 0.30;
+SLOPER4D 52.9 / 44.3 mm, abs 116 mm, placement 0.093 m, mAP 0.74. LiDAR-HMR
+is at 0.081 m / 114 mm abs on Waymo: our placement there is the weak
+column and the argument for the LiDAR-query redesign.
+
 ### 2026-09-14 — finals plateau by 60k: early stop for every queued run
 
 Curves of the five running finals (eval every 2,000 steps): Waymo MPJPE

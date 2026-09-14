@@ -667,6 +667,179 @@ ps_btn.on_click(ps_render); display(ps_btn, ps_out); ps_render()
 """)
 
 
+md("""## 12. Architecture: selective-attention fusion
+
+Block diagram of the model (`.docs/figures/architecture.html`, an SVG that
+is also used in the paper draft). Image tokens come from a frozen ViT-H
+(TokenHMR weights, precomputed per shard); LiDAR returns go through a
+trained point tokenizer; 12 joint-group queries attend to both streams and
+mix them with a learned gate that starts from a routing prior.""")
+
+code("""
+from IPython.display import HTML
+display(HTML((ROOT / ".docs" / "figures" / "architecture.html").read_text()))
+""")
+
+md("""## 13. Scoreboard: our runs against the published pipelines
+
+Every row is scored on the same records with the same protocol
+(`metrics/protocol.py`): Waymo val (894 crops) and the full SLOPER4D test
+split (9,904). Baseline meshes come from `lidar_bedlam/scripts/baselines`
+(each model in its own env), our runs from Helma (`pull_helma_results.sh`).
+Per column within a table: green best, yellow second, red third; lower is
+better except mAP; `abs` is the joint error without any centring, i.e.
+pose and placement together.""")
+
+code("""
+import subprocess
+from lidar_bedlam.scripts import build_scoreboard as sb
+
+subprocess.run(["bash", str(ROOT / "lidar_bedlam/scripts/pull_helma_results.sh"), str(ROOT / "outputs/helma")], capture_output=True)
+HELMA, BASE = ROOT / "outputs" / "helma", ROOT / "outputs" / "baselines"
+display(HTML(f"<style>{sb.STYLE}</style>"))
+title, desc, spec = sb.GROUPS[0]
+rows = sb.static_rows(BASE / "results_static.json", sb.STATIC_ROWS) + sb.group_rows(HELMA, spec)
+display(HTML(f"<h3>{title}</h3><p>{desc}</p>" + sb.table_html(rows)))
+""")
+
+md("""### 13b. Ablation axes (one cell each)
+
+The one-third-schedule screen (17 epochs = 3,468 steps, reference
+`abl-mixed-short`, two seeds where available); every axis changes one thing.""")
+
+code("""
+title, desc, spec = sb.GROUPS[1]  # fusion axis
+display(HTML(f"<h3>{title}</h3><p>{desc}</p>" + sb.table_html(sb.group_rows(HELMA, spec))))
+""")
+
+code("""
+title, desc, spec = sb.GROUPS[2]  # synthesis axis
+display(HTML(f"<h3>{title}</h3><p>{desc}</p>" + sb.table_html(sb.group_rows(HELMA, spec))))
+""")
+
+code("""
+title, desc, spec = sb.GROUPS[3]  # data axis
+display(HTML(f"<h3>{title}</h3><p>{desc}</p>" + sb.table_html(sb.group_rows(HELMA, spec))))
+""")
+
+code("""
+title, desc, spec = sb.GROUPS[4]  # label sources
+display(HTML(f"<h3>{title}</h3><p>{desc}</p>" + sb.table_html(sb.group_rows(HELMA, spec))))
+mirror = sb.static_rows(BASE / "results_mirror.json", sb.MIRROR_ROWS)
+if mirror:
+    display(HTML("<h3>Mirror test (memorisation check)</h3><p>Inputs mirrored left/right, meshes mirrored back through the SMPL symmetry map; a memorised validation set would collapse.</p>" + sb.table_html(mirror)))
+""")
+
+md("""## 14. Inference: where the mesh lands in 3D
+
+Our headline checkpoint (`resources/pretrained-checkpoints/ours/full-main-mixed-last.pt`,
+pulled from Helma) is run once over both validation sets and cached in
+`outputs/ours/full-main-mixed/`; the baselines' meshes are read from
+`outputs/baselines/`. For every method the paper protocol is evaluated per
+record, then three records per dataset are picked automatically: the one
+where the image methods misplace the person most while we do not, the one
+where LiDAR-HMR's pose is worst relative to ours, and (Waymo) the farthest
+person we still place within 0.3 m. Bird's-eye view: depth along the ray is
+where the image methods fail; side view: pose.""")
+
+code("""
+from lidar_bedlam.utils import showcase as sc
+
+CFG = ROOT / "configs" / "full_main_mixed.yaml"
+CKPT = ROOT / "resources" / "pretrained-checkpoints" / "ours" / "full-main-mixed-last.pt"
+OURS = ROOT / "outputs" / "ours" / "full-main-mixed"
+smpl_eval = SmplModel(DATA / "generated" / "body_models")
+if CKPT.exists():
+    ours_paths = sc.run_model(CFG, CKPT, OURS, device=device)
+    print("our predictions:", {k: str(p.relative_to(ROOT)) for k, p in ours_paths.items()})
+else:
+    ours_paths = {}
+    print("checkpoint missing:", CKPT)
+""")
+
+code("""
+showcase = {}
+for split in ["waymo_val", "sloper4d_test"]:
+    if split not in ours_paths:
+        continue
+    tables = sc.load_tables(ours_paths[split], ROOT / "outputs" / "baselines", split)
+    per_record = {name: sc.per_record_metrics(t, CFG, split, smpl_eval) for name, t in tables.items()}
+    index = sc.ValIndex(CFG, split)
+    picks = sc.pick_records(per_record, split)
+    showcase[split] = (tables, per_record, index, picks)
+    print(split, "records with predictions per method:", {n: len(m) for n, m in per_record.items()})
+    for p in picks:
+        print("  pick:", p.key, "—", p.reason)
+""")
+
+code("""
+for split, (tables, per_record, index, picks) in showcase.items():
+    for p in picks:
+        fig = sc.comparison_figure(index.row(p.key), tables, per_record, smpl_eval, title=f"{split}: {p.reason}")
+        plt.show()
+""")
+
+code("""
+# first pick of each set in 3D: every method's mesh inside the LiDAR returns
+for split, (tables, per_record, index, picks) in showcase.items():
+    if not picks:
+        continue
+    rec = index.row(picks[0].key)
+    traces = [points_trace(rec["points"], "LiDAR returns", color="black", size=2)]
+    if rec["has_smpl"]:
+        v_gt, _ = smpl_eval.forward(rec["smpl"])
+        traces.append(mesh_trace(v_gt, smpl_eval.faces, "GT SMPL", color="limegreen", opacity=0.35))
+    for name, t in tables.items():
+        if picks[0].key in t.index:
+            traces.append(mesh_trace(t.vertices[t.index[picks[0].key]].astype(np.float64), smpl_eval.faces, name, color=sc.COLORS.get(name, "grey"), opacity=0.45))
+    figure_3d(traces, f"{split}: {picks[0].reason}").show()
+""")
+
+md("""## 15. Knowledge transfer: cheap synthetic data on top of real data
+
+Same architecture, same schedule; the only difference is the training
+mixture. `real-only` sees Waymo + SLOPER4D train records only,
+`synth-only` sees BEDLAM with simulated LiDAR only, `main-mixed` adds the
+synthetic pool at 50 % of every batch. If the synthetic data transfers, the
+mixed run must beat real-only on both real validation sets, and the curves
+should show real-only overfitting its small pool.""")
+
+code("""
+fig = sc.transfer_figure(HELMA, {
+    "real-only": "full-real-only-000",
+    "synth-only": "full-synth-only-000",
+    "main-mixed (real + synth)": "full-main-mixed-000",
+    "mix80 (real + 80 % synth)": "full-mix80-000",
+})
+plt.show()
+""")
+
+md("""## 16. Placement error by distance and the learned gates
+
+Left: Waymo placement error per ground-truth distance bin (image methods
+degrade with distance, LiDAR-based methods do not). Right: the gates of the
+trained model averaged over the validation records, compared with the
+priors they started from (section 8): the decoder keeps 3D cues on the
+LiDAR stream and semantic cues on the image stream, and learns per-layer
+deviations from the prior.""")
+
+code("""
+res_ours = OURS / "results.json"
+if not res_ours.exists() and ours_paths:
+    subprocess.run(["uv", "run", "python", str(ROOT / "lidar_bedlam/scripts/score_baselines.py"), "--config", str(CFG),
+                    "--pred", *[str(p) for p in ours_paths.values()], "--out", str(res_ours)], cwd=ROOT, capture_output=True)
+fig = sc.distance_figure(ROOT / "outputs" / "baselines" / "results_static.json", res_ours if res_ours.exists() else None)
+plt.show()
+""")
+
+code("""
+for split, path in ours_paths.items():
+    g = np.load(path)["gates"].astype(np.float64)  # (N, layers, groups)
+    fig = sc.gates_figure(g, [gr.name for gr in JOINT_GROUPS], f"learned gates of full-main-mixed on {split} (mean over {len(g)} records)")
+    plt.show()
+""")
+
+
 def main() -> int:
     """Write the notebook."""
     nb = nbformat.v4.new_notebook()
