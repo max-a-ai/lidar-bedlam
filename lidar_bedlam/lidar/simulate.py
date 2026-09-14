@@ -194,10 +194,19 @@ def azimuth_window(
     p_cam = np.stack([x * z, y * z, z], -1).reshape(-1, 3)
     p_sen = (p_cam - pose[:3, 3]) @ pose[:3, :3]  # R^T (p - t)
     az = np.rad2deg(np.arctan2(p_sen[:, 0], p_sen[:, 2]))
-    return AzimuthWindow(hfov, float(az.min()), float(az.max()), columns)
+    # unwrap around the image centre's azimuth so a sensor looking
+    # backwards (image at +-180 deg) gets one contiguous window
+    centre = np.array([0.0, 0.0, float(np.median(zs))]) - pose[:3, 3]
+    centre = centre @ pose[:3, :3]
+    az0 = float(np.rad2deg(np.arctan2(centre[0], centre[2])))
+    rel = (az - az0 + 180.0) % 360.0 - 180.0
+    return AzimuthWindow(
+        hfov, az0 + float(rel.min()), az0 + float(rel.max()), columns
+    )
 
 
-WALL_JUMP_M = 0.5  # larger depth steps between neighbours are silhouettes
+WALL_JUMP_M = 0.5  # depth steps beyond this are silhouettes: no normal there
+SIDE_DEPTH_M = 0.25  # how far behind the front a side-entry return may lie
 
 
 def surface_normals(
@@ -266,15 +275,10 @@ def _refine(
     t_hi: float,
     gap_lo: FloatArray,
     gap_hi: FloatArray,
-    active: NDArray[np.bool_],
     iterations: int = 6,
-) -> tuple[FloatArray, NDArray[np.bool_]]:
-    """Bisect the crossing between ``t_lo`` (in front) and ``t_hi`` (behind).
-
-    Returns the crossing parameter and a wall flag: True where the two
-    ends of the final interval look at surface depths more than
-    ``WALL_JUMP_M`` apart, i.e. the ray crossed a silhouette.
-    """
+) -> FloatArray:
+    """Bisect the crossing between ``t_lo`` (in front) and ``t_hi`` (behind)
+    and interpolate the surface inside the final interval."""
     lo = t_lo.copy()
     hi = np.full(len(dirs), float(t_hi))
     g_lo, g_hi = gap_lo.copy(), gap_hi.copy()
@@ -286,12 +290,8 @@ def _refine(
         g_hi = np.where(behind, g_mid, g_hi)
         lo = np.where(behind, lo, mid)
         g_lo = np.where(behind, g_lo, g_mid)
-    _, s_lo = _gap_at(origin, dirs, depth, camera, lo)
-    _, s_hi = _gap_at(origin, dirs, depth, camera, hi)
     frac = -g_lo / np.maximum(g_hi - g_lo, 1e-9)
-    t_est = lo + np.clip(frac, 0.0, 1.0) * (hi - lo)
-    wall = active & ~(np.abs(s_hi - s_lo) <= WALL_JUMP_M)
-    return np.asarray(t_est), np.asarray(wall)
+    return np.asarray(lo + np.clip(frac, 0.0, 1.0) * (hi - lo))
 
 
 def _march(
@@ -337,13 +337,16 @@ def _march(
         crossing = (
             ~hit & inside & (gap > 0) & np.isfinite(prev_gap) & (prev_gap <= 0)
         )
-        # refine the crossing by bisection on the depth surface; a
-        # crossing whose refined interval still spans a depth jump larger
-        # than a body's thickness went through a silhouette wall
-        t_est, wall = _refine(
-            origin, dirs, depth, camera, prev_t, t, prev_gap, gap, crossing
-        )
-        crossing &= ~wall
+        # refine the crossing by bisection on the depth surface: a ray
+        # entering a silhouette from the side lands on the silhouette line,
+        # i.e. within the body's thickness of the unseen side surface
+        t_est = _refine(origin, dirs, depth, camera, prev_t, t, prev_gap, gap)
+        # a ray entering a silhouette from the side lands on the silhouette
+        # line: within a body's thickness behind the front it stands in for
+        # the side surface the camera never saw, farther behind it is a
+        # wall (the ray would have hit the body) and returns nothing
+        gap_hit, _ = _gap_at(origin, dirs, depth, camera, t_est)
+        crossing &= (gap_hit >= -0.05) & (gap_hit <= SIDE_DEPTH_M)
         # pixel of the crossing point itself (not of the previous sample)
         p_hit = origin + t_est[:, None] * dirs
         zh = np.where(p_hit[:, 2] > 0, p_hit[:, 2], np.nan)

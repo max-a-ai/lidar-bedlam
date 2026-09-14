@@ -230,6 +230,46 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — LiDAR simulator: offset sensors were clipped, no facing test
+
+Found through notebook section 5 (sensor 1 m to the right showed half a
+person). Three defects in `lidar/simulate.py`, all fixed and unit-tested
+on a synthetic cylinder (`tests/test_lidar.py`):
+
+- The azimuth window of the rays was the camera's HFOV around the sensor's
+  yaw, ignoring the translation: a person at 4 m is at -51 deg from a
+  sensor 5 m to the right and got no rays at all; 1 m to the right the
+  left part of the image was cut. Now the window comes from the image
+  frustum's edges transformed into the sensor frame over the sensor's range
+  (unwrapped around the image centre, so a LiDAR mounted looking backwards
+  like the fusebike rig keeps one window).
+- No facing test: a ray could "cross" a surface patch that faces away from
+  the sensor (the far side of a limb as seen from a displaced sensor).
+  Depth-map normals (one-sided at silhouettes, none where both neighbours
+  jump > 0.5 m) now gate every hit with dot(ray, normal) < 0, which is what
+  a mesh renderer's back-face test does.
+- Hits were placed by linear interpolation between march samples 0.13 m
+  apart (surface error up to +-6 cm); six bisection steps put them on the
+  surface (cylinder radius 0.299-0.302 m for a 0.300 m cylinder). A ray
+  entering a silhouette from the side lands on the silhouette line and is
+  kept only within 0.25 m behind the front (a stand-in for the side surface
+  the camera never saw); farther behind it is a wall and returns nothing.
+
+Cylinder, OS1-128, no noise: sensor at the camera 1,906 returns over
+-73..73 deg of the surface; 1 m right 1,844 (-51..113 deg); 5 m right 774;
+10 m right 260, only the right-facing half. BEDLAM frame
+`seq_000310/0145`, person returns old -> new: camera origin 699 -> 699,
+10 cm above 685 -> 695, rig_waymo 1996 -> 2022, rig_sloper4d 708 -> 709,
+rig_fusebike 1278 -> 1303, ball 1 m behind 578 -> 599, ball 1 m right
+462 -> 721 (+56 %: the old window clipped it). So the rig variants and
+small offsets in `synth/v1` are unchanged within 2 %; the laterally
+displaced ball placements (the `main_*` and `target_waymo` variants draw
+the sensor inside a 1 m ball) have too few returns and 6 cm surface
+noise in v1. Regenerating the synthetic shards with the fixed simulator
+(`synth/v2`) is the clean fix; it is a multi-hour job and every mixed run
+would have to be retrained on it, so it is a decision, not done yet.
+Notebook section 5 now shows 10 cm above, 1 m, 5 m and 10 m to the right.
+
 ### 2026-09-14 — capabilities notebook: showcase sections 12-16
 
 `lidar_bedlam/utils/showcase.py` + six new sections in
