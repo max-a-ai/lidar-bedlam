@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 SPLITS = (("W", "waymo_val"), ("S", "sloper4d_test"))
 METRICS = ("mpjpe", "pa_mpjpe", "pve", "abs_mpjpe", "transl_err_m", "map")
 LABELS = ("MPJPE", "PA", "PVE", "abs", "transl", "mAP")
@@ -270,7 +272,7 @@ def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
 
 
 def fmt(key: str, v: float | None) -> str:
-    if v is None:
+    if v is None or not np.isfinite(v):
         return "–"
     if key.endswith("transl_err_m"):
         return f"{v:.3f} m"
@@ -283,7 +285,7 @@ def ranks(rows: list[Row], key: str) -> dict[int, int]:
     """Row index -> rank (0..2) of the best three values in a column."""
     higher = key.split("_", 1)[1] in HIGHER_IS_BETTER
     have = [(i, r.values.get(key)) for i, r in enumerate(rows)]
-    valid = [(i, v) for i, v in have if v is not None]
+    valid = [(i, v) for i, v in have if v is not None and np.isfinite(v)]
     valid.sort(key=lambda t: -t[1] if higher else t[1])
     return {i: pos for pos, (i, _) in enumerate(valid[:3])}
 
