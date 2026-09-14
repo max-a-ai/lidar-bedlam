@@ -230,6 +230,45 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 — LiDAR-to-surface losses, Pose2Mesh mesh terms, Human3R, 3DPW test
+
+- **LiDAR-to-surface terms** (`losses/lidar_surface.py`). Correspondence
+  rule as in the simulator: a mesh vertex counts when one of its faces
+  has a normal pointing against the direction from the sensor origin
+  (`sensor_origin` is now in every dataset item); every valid LiDAR
+  return is matched to its nearest facing vertex (512 random facing
+  vertices per sample, chunked cdist). `lidar_chamfer` = mean |distance -
+  clothing offset|, the offset a learned model parameter (init 2 cm,
+  clamped 0-10 cm, `clothing_offset` in the outputs). `lidar_icp` = three
+  closest-point iterations solve the rigid Kabsch alignment of the facing
+  vertices with the returns (differentiable through the SVD); the loss is
+  the mean displacement of those vertices under that transform, so it
+  moves the body as a whole. On the main-mixed checkpoint: Waymo 0.17 m
+  chamfer residual, 0.21 m ICP displacement (the placement error it
+  should remove), SLOPER4D 0.02 / 0.03 m; 0.3 s per 64-crop batch.
+- **Pose2Mesh mesh terms** (`losses/mesh.py`), what LiDAR-HMR's paper
+  cites as [3] for its final mesh loss: vertex coordinate L1
+  (root-relative), joint coordinate loss (ours already), surface normal
+  loss (|cos| between predicted face edges and the labelled face normal)
+  and edge-length loss (|Delta length| per face edge); implemented from
+  `third_party/LiDAR-HMR/models/pose2mesh/loss.py` and applied on records
+  with SMPL labels (synthetic, SLOPER4D, 3DPW, pseudo-GT Waymo). Weights
+  `vertex`, `normal`, `edge` in the loss section. Tests
+  `tests/test_surface_losses.py`.
+- Three loss-axis runs at the final schedule submitted on Helma:
+  `full-chamfer` (5.0), `full-icp` (5.0), `full-meshloss` (5 / 0.5 / 5).
+- LiDAR-HMR checkpoints: the README offers one Baidu-pan link
+  ("Pretrained Models", not reachable from here); the copy on the NAS is
+  the waymov2 mesh model only. No SLOPER4D-trained weights available.
+- **Human3R** added as `third_party/Human3R`; runner
+  `baselines/run_human3r.py` (env `human3r`, checkout `~/Documents/Human3R`).
+  Detects 67 % of Waymo crops; depth on a tight crop is not metric (0.5x
+  the true depth with the demo's 60 deg pseudo camera, 0.07x with the true
+  K; the focal-normalised path needs a checkpoint variant we lack), so it
+  enters the scoreboard as a pose-only row. 3DPW test split (24 sequences,
+  4,483 frames, stride 5) is being generated with the fixed simulator from
+  the NAS images for a third validation column.
+
 ### 2026-09-14 — PVE, box convention for mesh-only methods, LiDARCap quoted
 
 - **Why LiDAR-HMR had a low Waymo mAP with the best placement.** Decomposing

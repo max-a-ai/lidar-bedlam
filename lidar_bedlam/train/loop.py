@@ -159,7 +159,14 @@ class Trainer:
         self.scaler = torch.amp.GradScaler(
             "cuda", enabled=cfg.optim.amp and self.device.type == "cuda"
         )
-        self.loss_fn = FusionLoss(LossWeights(**asdict(cfg.loss)))
+        faces = (
+            torch.as_tensor(np.asarray(self.model.smpl.faces, dtype=np.int64))
+            if self.model.smpl is not None
+            else None
+        )
+        self.loss_fn = FusionLoss(
+            LossWeights(**asdict(cfg.loss)), smpl=self.model.smpl, faces=faces
+        )
         self.smpl_eval = SmplModel(Path(cfg.body_models))
         self.step = 0
         self.steps_per_epoch = 1

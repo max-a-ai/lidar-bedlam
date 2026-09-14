@@ -13,6 +13,7 @@ Prediction keys (all float tensors, batch first):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import torch
@@ -171,15 +172,31 @@ class LossWeights:
     transl: float = 5.0
     box3d: float = 1.0
     box_conf: float = 1.0
+    lidar_chamfer: float = 0.0
+    lidar_icp: float = 0.0
+    vertex: float = 0.0
+    normal: float = 0.0
+    edge: float = 0.0
     crop_size: int = 256
     extra: dict[str, float] = field(default_factory=dict)
 
 
 class FusionLoss:
-    """Weighted sum of all terms; returns the total and the parts."""
+    """Weighted sum of all terms; returns the total and the parts.
 
-    def __init__(self, weights: LossWeights | None = None) -> None:
+    ``smpl`` (an smplx layer) and ``faces`` enable the mesh terms: the
+    labelled mesh is built from the record's parameters on the fly.
+    """
+
+    def __init__(
+        self,
+        weights: LossWeights | None = None,
+        smpl: Any = None,
+        faces: Tensor | None = None,
+    ) -> None:
         self.w = weights or LossWeights()
+        self.smpl = smpl
+        self.faces = faces
 
     def __call__(
         self, pred: dict[str, Tensor], batch: dict[str, Tensor]
@@ -194,9 +211,85 @@ class FusionLoss:
             parts["box_conf"] = box_conf_loss(
                 pred["box_conf"], pred["box3d"], batch
             )
+        parts.update(self._surface_terms(pred, batch))
+        parts.update(self._mesh_terms(pred, batch))
         total = torch.zeros(
             (), dtype=pred["betas"].dtype, device=pred["betas"].device
         )
         for name, value in parts.items():
             total = total + getattr(self.w, name) * value
         return total, parts
+
+    def _surface_terms(
+        self, pred: dict[str, Tensor], batch: dict[str, Tensor]
+    ) -> dict[str, Tensor]:
+        if (
+            self.faces is None
+            or "vertices" not in pred
+            or "points" not in batch
+        ):
+            return {}
+        if self.w.lidar_chamfer <= 0 and self.w.lidar_icp <= 0:
+            return {}
+        from lidar_bedlam.losses.lidar_surface import chamfer_loss, icp_loss
+
+        verts = pred["vertices"].float()
+        faces = self.faces.to(verts.device)
+        points = batch["points"].float()
+        valid = batch["points_valid"].bool()
+        origin = batch.get("sensor_origin")
+        if origin is None:
+            origin = torch.zeros(len(verts), 3, device=verts.device)
+        out: dict[str, Tensor] = {}
+        if self.w.lidar_chamfer > 0:
+            offset = pred.get(
+                "clothing_offset", torch.zeros((), device=verts.device)
+            )
+            out["lidar_chamfer"] = chamfer_loss(
+                verts, faces, origin.float(), points, valid, offset.float()
+            )
+        if self.w.lidar_icp > 0:
+            out["lidar_icp"] = icp_loss(
+                verts, faces, origin.float(), points, valid
+            )
+        return out
+
+    def _mesh_terms(
+        self, pred: dict[str, Tensor], batch: dict[str, Tensor]
+    ) -> dict[str, Tensor]:
+        if self.smpl is None or self.faces is None or "vertices" not in pred:
+            return {}
+        if self.w.vertex <= 0 and self.w.normal <= 0 and self.w.edge <= 0:
+            return {}
+        from lidar_bedlam.losses.mesh import (
+            edge_loss,
+            normal_loss,
+            vertex_loss,
+        )
+
+        has = batch["has_smpl"].bool()
+        if not has.any():
+            zero = pred["vertices"].sum() * 0.0
+            return {"vertex": zero, "normal": zero, "edge": zero}
+        with torch.no_grad():
+            gt = self.smpl(
+                betas=batch["betas"].float(),
+                global_orient=batch["global_orient"].float(),
+                body_pose=batch["body_pose"].float(),
+                transl=batch["transl"].float(),
+            )
+        gt_v = gt.vertices.float()
+        gt_root = gt.joints[:, 0].float()
+        pv = pred["vertices"].float()
+        root = pred["joints3d"][:, 0].float()
+        faces = self.faces.to(pv.device)
+        out: dict[str, Tensor] = {}
+        if self.w.vertex > 0:
+            out["vertex"] = _masked_mean(
+                vertex_loss(pv, gt_v, root, gt_root), has
+            )
+        if self.w.normal > 0:
+            out["normal"] = _masked_mean(normal_loss(pv, gt_v, faces), has)
+        if self.w.edge > 0:
+            out["edge"] = _masked_mean(edge_loss(pv, gt_v, faces), has)
+        return out

@@ -162,6 +162,9 @@ class SelectiveFusionModel(nn.Module):
         self.img_proj = nn.Linear(cfg.vit.embed_dim, cfg.dim)
         # stands in for the image tokens of LiDAR-only samples
         self.no_image = nn.Parameter(torch.zeros(1, 1, cfg.dim))
+        # clothing offset of the LiDAR returns outside the body surface,
+        # learned by the chamfer term (metres)
+        self.clothing_offset = nn.Parameter(torch.tensor(0.02))
         self.iou_head = nn.Linear(cfg.dim, 1)
         self.points = PointTokenizer(
             cfg.dim, cfg.point_tokens, cfg.point_knn, num_heads=cfg.num_heads
@@ -229,6 +232,7 @@ class SelectiveFusionModel(nn.Module):
             "transl": transl,
             "gates": gates,
             "box_conf": conf,
+            "clothing_offset": self.clothing_offset.clamp(0.0, 0.1),
         }
         if self.smpl is not None:
             self._add_smpl_outputs(out, batch["intrinsics"])

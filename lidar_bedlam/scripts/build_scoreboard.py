@@ -32,12 +32,7 @@ STATIC_ROWS = [
     ("hmr2-full", "HMR2.0 (4D Humans)", "image only"),
     ("tokenhmr-tight", "TokenHMR", "image only, tight crop"),
     ("camerahmr-full", "CameraHMR", "image only, GT intrinsics"),
-    (
-        "lidar-hmr-mirror",
-        "LiDAR-HMR (mirrored input)",
-        "LiDAR only, Waymo release weights; input mirrored left/right, since "
-        "the weights may have seen Waymo val (unmirrored: see the mirror test)",
-    ),
+    ("lidar-hmr-mirror", "LiDAR-HMR", "LiDAR only, mirrored"),
     (
         "human3r",
         "Human3R (pose only)",
@@ -68,6 +63,12 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ["full-gate-none-3dpw-000"],
             ),
             ("ours · gate none, mix80", ["full-gate-none-mix80-000"]),
+            ("ours · + LiDAR chamfer term", ["full-chamfer-000"]),
+            ("ours · + LiDAR ICP term", ["full-icp-000"]),
+            (
+                "ours · + mesh terms (vertex, normal, edge)",
+                ["full-meshloss-000"],
+            ),
             (
                 "ours · LiDAR at the SLOPER4D rig pose",
                 ["full-rig-sloper4d-000"],

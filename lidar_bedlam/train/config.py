@@ -86,6 +86,13 @@ class LossSection:
     transl: float = 5.0
     box3d: float = 1.0
     box_conf: float = 1.0
+    # LiDAR-to-surface terms (losses.lidar_surface), off by default
+    lidar_chamfer: float = 0.0
+    lidar_icp: float = 0.0
+    # Pose2Mesh-style mesh terms against the labelled mesh (losses.mesh)
+    vertex: float = 0.0
+    normal: float = 0.0
+    edge: float = 0.0
 
 
 @dataclass

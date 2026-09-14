@@ -126,6 +126,9 @@ class ShardDataset(Dataset[Item]):
             ),
             "points": torch.from_numpy(pts),
             "points_valid": torch.from_numpy(valid),
+            "sensor_origin": torch.from_numpy(
+                scan.sensor_pose[:3, 3].astype(np.float32)
+            ),
             "intrinsics": torch.from_numpy(shard.row("intrinsics", i)).float(),
             "crop_origin": torch.from_numpy(
                 shard.row("crop_origin", i)
