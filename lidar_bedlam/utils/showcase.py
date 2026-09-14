@@ -149,34 +149,74 @@ class ValIndex:
         return out
 
 
+class MeshTable(PredictionTable):
+    """PredictionTable whose vertices stay on disk (memory-mapped).
+
+    Five methods x two splits of float16 meshes would take ~4 GB in RAM;
+    the npz is unpacked once into ``<stem>.mm/`` and read lazily.
+    """
+
+    def __init__(self, path: Path) -> None:  # noqa: D107
+        cache = path.with_suffix(".mm")
+        if not (cache / "vertices.npy").exists():
+            cache.mkdir(exist_ok=True)
+            with np.load(path) as z:
+                for k in ("vertices", "transl", "global_orient"):
+                    np.save(cache / f"{k}.npy", z[k])
+                meta = {
+                    k[5:]: z[k].item()
+                    for k in z.files
+                    if k.startswith("meta/")
+                }
+                (cache / "keys.json").write_text(
+                    json.dumps(
+                        {"keys": [str(k) for k in z["key"]], "meta": meta}
+                    )
+                )
+        info = json.loads((cache / "keys.json").read_text())
+        self.index = {k: i for i, k in enumerate(info["keys"])}
+        self.vertices = np.load(cache / "vertices.npy", mmap_mode="r")
+        self.transl = np.load(cache / "transl.npy").astype(np.float64)
+        self.global_orient = np.load(cache / "global_orient.npy").astype(
+            np.float64
+        )
+        self.meta = info["meta"]
+        self.name = path.parent.name
+        self.split = path.stem
+
+
 def per_record_metrics(
-    table: PredictionTable, config: Path, source: str, smpl: SmplModel
-) -> dict[str, SampleMetrics]:
-    """Paper-protocol metrics of every record a method predicted."""
+    tables: dict[str, PredictionTable],
+    config: Path,
+    source: str,
+    smpl: SmplModel,
+) -> dict[str, dict[str, SampleMetrics]]:
+    """Paper-protocol metrics per record for every method (one data pass)."""
     cfg = load_config(config)
     src = next(s for s in cfg.data.val if s.name == source)
     loader = DataLoader(
         build_dataset(src, cfg, train=False), batch_size=64, num_workers=4
     )
-    out: dict[str, SampleMetrics] = {}
+    out: dict[str, dict[str, SampleMetrics]] = {n: {} for n in tables}
     for batch in loader:
         keys = [str(k) for k in batch["key"]]
-        pred, rows = table.batch(keys, smpl)
-        if rows:
-            for m in sample_metrics(pred, _select(batch, rows), smpl):
-                out[m.key] = m
+        for name, table in tables.items():
+            pred, rows = table.batch(keys, smpl)
+            if rows:
+                for m in sample_metrics(pred, _select(batch, rows), smpl):
+                    out[name][m.key] = m
     return out
 
 
 def load_tables(
     ours: Path, baselines_dir: Path, source: str
 ) -> dict[str, PredictionTable]:
-    """Prediction tables of ours and every baseline that has the source."""
-    tables = {"ours": PredictionTable(ours)}
+    """Mesh tables of ours and every baseline that has the source."""
+    tables: dict[str, PredictionTable] = {"ours": MeshTable(ours)}
     for label, folder in BASELINES.items():
         p = baselines_dir / folder / f"{source}.npz"
         if p.exists():
-            tables[label] = PredictionTable(p)
+            tables[label] = MeshTable(p)
     return tables
 
 

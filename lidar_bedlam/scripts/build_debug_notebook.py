@@ -763,7 +763,7 @@ for split in ["waymo_val", "sloper4d_test"]:
     if split not in ours_paths:
         continue
     tables = sc.load_tables(ours_paths[split], ROOT / "outputs" / "baselines", split)
-    per_record = {name: sc.per_record_metrics(t, CFG, split, smpl_eval) for name, t in tables.items()}
+    per_record = sc.per_record_metrics(tables, CFG, split, smpl_eval)
     index = sc.ValIndex(CFG, split)
     picks = sc.pick_records(per_record, split)
     showcase[split] = (tables, per_record, index, picks)
