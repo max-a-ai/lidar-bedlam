@@ -230,6 +230,26 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — finals plateau by 60k: early stop for every queued run
+
+Curves of the five running finals (eval every 2,000 steps): Waymo MPJPE
+bottoms at 38-66k steps for every run (main-mixed 78.8 @ 50k, 3dpw 77.5 @
+50k, mix80 84.5 @ 120k, synth-only 84.6 @ 66k) and then drifts up 3-4 mm
+inside a +-2 mm evaluation noise band; real-only overfits monotonically
+after 20k (Waymo 85.6 -> 90.0 mm, SLOPER4D 67 -> 79 mm, placement 0.18 ->
+0.30 m). Simulating "min 80k steps, then stop after K evaluations without
+a new best Waymo MPJPE" on the logged curves: K = 3, 5, 8 stop at 80k for
+four of six runs; mix80 continues to 80/80/116k, synth-only to 80/80/82k.
+Middle ground adopted: `optim.min_steps: 80000`, `optim.patience_evals: 5`
+(= 10k steps; a new best MPJPE on any validation source resets it), cap
+`max_steps: 150000` kept. Implemented in the trainer (rank 0 decides, the
+flag is broadcast so all DDP ranks break; DONE is written; state survives
+resume), unit-tested, set in all 16 `full_*.yaml`, synced to Helma so the
+eleven queued runs (853646-853649, 853709-853712, 853714-853716) pick it
+up; the five running finals finish their 150k. `best.pt` still tracks
+Waymo mAP, which peaks as early as 8k on main-mixed, so tables use
+`last.pt` of the early-stopped runs.
+
 ### 2026-09-14 — all pending comparison runs moved to the 150k schedule
 
 Comparability over cost: the short pending jobs (`abl-rig-sloper4d` x2,

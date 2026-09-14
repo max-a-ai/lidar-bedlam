@@ -121,6 +121,37 @@ def test_trainer_smoke_checkpoint_resume(tmp_path: Path) -> None:
     assert again.step == 5
 
 
+@pytest.mark.skipif(not SMPL_DIR.exists(), reason="SMPL model files absent")
+def test_patience_stops_early_and_marks_done(tmp_path: Path) -> None:
+    _write_shards(tmp_path / "shards")
+    os.environ["DATA_ROOT"] = str(tmp_path)
+    cfg_path = tmp_path / "c.yaml"
+    cfg_path.write_text(f"experiment: toy\nbody_models: {SMPL_DIR}\n")
+    cfg = load_config(cfg_path)
+    src = SourceConfig("toy", [str(tmp_path / "shards")], "toy_*.npz")
+    cfg.data.train = [src]
+    cfg.data.val = [SourceConfig("toy_val", src.dirs, src.pattern)]
+    cfg.data.num_workers = 0
+    cfg.data.n_points = 64
+    cfg.model.dim, cfg.model.num_layers, cfg.model.point_tokens = 64, 1, 8
+    cfg.model.point_knn = 4
+    cfg.optim.batch_size, cfg.optim.warmup_steps = 4, 1
+    cfg.optim.max_steps = 40
+    cfg.optim.eval_every_steps = cfg.optim.checkpoint_every_steps = 1
+    cfg.optim.min_steps, cfg.optim.patience_evals = 2, 1
+    cfg.optim.lr = 0.0  # frozen weights: no evaluation can improve
+    cfg.optim.amp = False
+    cfg.wandb_mode = "disabled"
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    trainer = Trainer(cfg, run_dir, "toy-000")
+    trainer.wandb = _NoWandb()
+    trainer.fit()
+    # eval 1 sets the best, eval 2 (step 2 >= min_steps) has no improvement
+    assert trainer.early_stop and trainer.step == 2
+    assert (run_dir / "DONE").read_text().strip() == "2"
+
+
 class _NoWandb:
     def log(self, *_: object, **__: object) -> None:
         pass

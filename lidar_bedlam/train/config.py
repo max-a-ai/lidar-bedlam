@@ -68,6 +68,10 @@ class OptimConfig:
     amp: bool = True
     eval_every_steps: int = 1000
     checkpoint_every_steps: int = 500
+    # early stop: after min_steps, stop once no validation source improved
+    # its MPJPE for patience_evals consecutive evaluations (0 = off)
+    min_steps: int = 0
+    patience_evals: int = 0
 
 
 @dataclass

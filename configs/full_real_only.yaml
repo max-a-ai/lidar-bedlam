@@ -31,6 +31,8 @@ optim:
   weight_decay: 0.05
   warmup_steps: 500
   max_steps: 150000  # ~20 h at 0.42 s/step incl. evals; the chain job resumes past 24 h
+  min_steps: 80000  # the finals plateaued by ~60k: stop once patience runs out
+  patience_evals: 5  # 5 evals x 2000 steps without a new best MPJPE on any source
   # compute (10,200 steps x 2048 = mix80-001's 50 epochs) is the fair schedule
   grad_clip: 1.0
   amp: true

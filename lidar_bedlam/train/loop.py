@@ -164,6 +164,9 @@ class Trainer:
         self.step = 0
         self.steps_per_epoch = 1
         self.best = math.inf
+        self.best_mpjpe: dict[str, float] = {}  # per validation source
+        self.evals_since_improve = 0
+        self.early_stop = False
         self.stop_requested = False
         self.wandb: Any = None
         signal.signal(signal.SIGUSR1, self._on_signal)
@@ -251,6 +254,8 @@ class Trainer:
             "scaler": self.scaler.state_dict(),
             "step": self.step,
             "best": self.best,
+            "best_mpjpe": self.best_mpjpe,
+            "evals_since_improve": self.evals_since_improve,
             "config": to_dict(self.cfg),
             "run_name": self.run_name,
         }
@@ -270,6 +275,8 @@ class Trainer:
         self.scaler.load_state_dict(state["scaler"])
         self.step = int(state["step"])
         self.best = float(state["best"])
+        self.best_mpjpe = dict(state.get("best_mpjpe", {}))
+        self.evals_since_improve = int(state.get("evals_since_improve", 0))
         self._log(f"resumed from step {self.step}")
         return True
 
@@ -380,12 +387,26 @@ class Trainer:
                 or self.step == cfg.optim.max_steps
             ):
                 self._eval_and_track(val)
+                if self.world > 1:  # rank 0 decides, every rank must break
+                    flag = torch.tensor(
+                        [int(self.early_stop)], device=self.device
+                    )
+                    torch.distributed.broadcast(flag, src=0)
+                    self.early_stop = bool(flag.item())
+                if self.early_stop:
+                    break
             if self.step % cfg.optim.checkpoint_every_steps == 0:
                 self.save("last")
         self.save("last")
-        if self.is_main and self.step >= cfg.optim.max_steps:
+        if self.is_main and (
+            self.step >= cfg.optim.max_steps or self.early_stop
+        ):
             (self.run_dir / "DONE").write_text(f"{self.step}\n")
-            self._log("finished")
+            self._log(
+                f"finished (early stop at step {self.step})"
+                if self.early_stop
+                else "finished"
+            )
         if self.wandb is not None:
             self.wandb.finish()
         if self.world > 1:
@@ -430,6 +451,26 @@ class Trainer:
         if score < self.best:
             self.best = score
             self.save("best")
+        # patience on pose: any source improving its best MPJPE counts
+        improved = False
+        for name, r in results.items():
+            if r.mpjpe < self.best_mpjpe.get(name, math.inf):
+                self.best_mpjpe[name] = r.mpjpe
+                improved = True
+        self.evals_since_improve = (
+            0 if improved else self.evals_since_improve + 1
+        )
+        opt = self.cfg.optim
+        if (
+            opt.patience_evals > 0
+            and self.step >= opt.min_steps
+            and self.evals_since_improve >= opt.patience_evals
+        ):
+            self.early_stop = True
+            self._log(
+                f"early stop: no MPJPE improvement in the last "
+                f"{self.evals_since_improve} evaluations (step {self.step})"
+            )
 
     @property
     def epoch(self) -> float:
