@@ -185,6 +185,12 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
 # methods whose placement is not meaningful on our crops
 PLACEMENT_BLANKED = {"human3r"}
 
+# manual display overrides requested for the intermediate table; the row
+# note names the measured value so the page never passes them off as data
+OVERRIDES: dict[str, dict[str, float]] = {
+    "camerahmr-full": {"W_pa_mpjpe": 63.3}
+}
+
 # numbers reported by other papers on their own protocol (no code or
 # weights to run on our records): SLOPER4D paper, Table 4a, LiDARCap
 # trained on SLOPER4D / on LiDARHuman26M + SLOPER4D, tested on SLOPER4D
@@ -322,6 +328,10 @@ def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
                         "map",
                     ):
                         values[k] = None
+            for k, v in OVERRIDES.get(key, {}).items():
+                measured = values.get(k)
+                note = f"{note}; {k.split('_', 1)[1]} shown as {v} by request (measured {measured:.1f})"
+                values[k] = v
             rows.append(Row(label, note, "static", values))
     return rows
 
