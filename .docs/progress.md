@@ -251,6 +251,22 @@ CameraHMR (76.9) still leads our best (80.8), and LiDAR-HMR's Waymo
 placement (0.38 m) beats ours (0.54). The pseudo-Waymo run again loses
 Waymo placement (1.28 m) while winning SLOPER4D pose.
 
+All comparable pipelines on the same records and protocol (🟢 best, 🟡 second,
+🔴 third per column; lower is better except mAP; SLOPER4D full test set):
+
+| method | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|
+| HMR2.0 (4D Humans) (image only) | 104.4 | 69.8 | 1.338 m | 0.02 | 91.3 | 70.8 | 0.121 m | 0.40 |
+| TokenHMR (image only, tight crop) | 98.5 | 66.3 | 1.154 m | 0.02 | 74.5 | 54.8 | 0.204 m | 0.26 |
+| CameraHMR (image only, GT intrinsics) | 🟢 76.9 | 🟢 60.0 | 1.023 m | 0.03 | 51.6 | 44.4 | 0.196 m | 0.40 |
+| LiDAR-HMR (LiDAR only, Waymo weights) | 84.7 | 🟡 62.9 | 🟢 0.376 m | 0.21 | 100.2 | 65.8 | 0.089 m | 0.76 |
+| ours · synth-only (step 98k) | 86.3 | 64.5 | 1.619 m | 0.18 | 59.9 | 47.4 | 0.287 m | 0.32 |
+| ours · real-only (step 106k) | 87.8 | 69.0 | 0.781 m | 0.21 | 75.6 | 52.2 | 0.254 m | 0.34 |
+| ours · main-mixed (step 96k) | 🔴 81.0 | 64.2 | 🔴 0.604 m | 🟡 0.38 | 52.2 | 44.2 | 0.081 m | 🟡 0.79 |
+| ours · mix80 (step 92k) | 85.8 | 69.5 | 🟡 0.545 m | 🟢 0.46 | 🟡 47.1 | 🟡 41.0 | 🟢 0.072 m | 🟢 0.80 |
+| ours · pseudo-waymo (step 140k) | 87.5 | 65.5 | 1.284 m | 0.19 | 🟢 45.9 | 🟢 39.5 | 🔴 0.080 m | 🔴 0.79 |
+| ours · 3dpw (step 98k) | 🟡 80.8 | 🔴 63.7 | 0.614 m | 🔴 0.38 | 🔴 51.6 | 🔴 43.0 | 🟡 0.079 m | 0.75 |
+
 ### 2026-09-14 — image baselines scored with our protocol (TokenHMR, HMR2, CameraHMR)
 
 Runners in `lidar_bedlam/scripts/baselines/` execute each published model
