@@ -11,8 +11,10 @@ Runs in the ``human3r`` conda environment from the local Human3R checkout
         --out outputs/baselines/human3r/waymo_val.npz
 
 Every crop is one single-frame sequence (fresh recurrent state), resized
-to the model's 512 px input with the crop's intrinsics scaled along, so
-the predicted translation is metric in the crop camera. Of the humans the
+to the model's 512 px input. The model expects full frames with scene
+context; on a tight crop its depth is not metric (see ``make_view``), so
+the placement columns of this baseline are blanked in the scoreboard and
+only pose (MPJPE, PA-MPJPE, PVE) is compared. Of the humans the
 model finds, the one whose 2D pelvis is nearest the crop centre is taken;
 the SMPL-X mesh is mapped to SMPL with the checkout's ``smplx2smpl``
 matrix. Crops without a detection are skipped (counted in the meta).
@@ -77,7 +79,7 @@ def make_view(
 ) -> dict[str, Any]:
     """One view dict as Human3R's evaluation builds it (single frame)."""
     import torch
-    from dust3r.utils.geometry import resize_camera_intrinsics
+    from dust3r.utils.geometry import get_camera_parameters
     from dust3r.utils.image import ImgNorm, pad_image
     from PIL import Image
 
@@ -100,7 +102,11 @@ def make_view(
         "idx": 0,
         "instance": "0",
         "img_mhmr": pad_image(img, res),
-        "K_mhmr": resize_camera_intrinsics(kt, INPUT, INPUT, res),
+        # the released checkpoint predicts depth for a 60 deg pseudo camera
+        # (the demo's convention); on a tight crop that depth is not
+        # metric (0.5x the true depth on Waymo, 0.07x with the true K), so
+        # only the pose columns of this method are meaningful
+        "K_mhmr": get_camera_parameters(res, fov=60, device="cpu"),
     }
 
 
@@ -143,16 +149,15 @@ def run(args: argparse.Namespace) -> None:
                     pred["smpl_rotmat"][0][j]
                 ).cuda()
                 expr = pred.get("smpl_expression", [None])[0]
+                expr_j = None if expr is None else expr[j].unsqueeze(0).cuda()
                 out = layer(
                     rotvec.unsqueeze(0),
                     pred["smpl_shape"][0][j].unsqueeze(0).cuda(),
                     pred["smpl_transl"][0][j].unsqueeze(0).cuda(),
                     None,
                     None,
-                    K=view["camera_intrinsics"].cuda(),
-                    expression=None
-                    if expr is None
-                    else expr[j].unsqueeze(0).cuda(),
+                    K=view["K_mhmr"].cuda(),
+                    expression=expr_j,
                 )
                 verts = (x2s @ out["smpl_v3d"][0]).double().cpu().numpy()
             torch.cuda.synchronize()

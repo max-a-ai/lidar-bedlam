@@ -70,6 +70,8 @@ class PredictionTable:
     ) -> tuple[dict[str, torch.Tensor], list[int]]:
         """Model-style prediction dict for the keys found (and their rows)."""
         rows = [i for i, k in enumerate(keys) if k in self.index]
+        if not rows:
+            return {}, rows
         idx = [self.index[keys[i]] for i in rows]
         verts = self.vertices[idx].astype(np.float64)
         regressor = np.asarray(

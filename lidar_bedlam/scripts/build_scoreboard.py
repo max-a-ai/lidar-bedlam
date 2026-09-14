@@ -32,11 +32,17 @@ STATIC_ROWS = [
     ("hmr2-full", "HMR2.0 (4D Humans)", "image only"),
     ("tokenhmr-tight", "TokenHMR", "image only, tight crop"),
     ("camerahmr-full", "CameraHMR", "image only, GT intrinsics"),
-    ("lidar-hmr", "LiDAR-HMR", "LiDAR only, Waymo weights"),
+    (
+        "lidar-hmr-mirror",
+        "LiDAR-HMR (mirrored input)",
+        "LiDAR only, Waymo release weights; input mirrored left/right, since "
+        "the weights may have seen Waymo val (unmirrored: see the mirror test)",
+    ),
     (
         "human3r",
-        "Human3R",
-        "image only, single frame, metric camera; crops without a detection skipped",
+        "Human3R (pose only)",
+        "image only, single frame on the crop; depth not metric on crops, "
+        "placement columns blanked; crops without a detection skipped",
     ),
 ]
 
@@ -147,6 +153,9 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
         ],
     ),
 ]
+
+# methods whose placement is not meaningful on our crops
+PLACEMENT_BLANKED = {"human3r"}
 
 # numbers reported by other papers on their own protocol (no code or
 # weights to run on our records): SLOPER4D paper, Table 4a, LiDARCap
@@ -270,14 +279,27 @@ def group_rows(root: Path, spec: list[tuple[str, list[str]]]) -> list[Row]:
 
 
 def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
-    """Rows from a score_baselines results file."""
+    """Rows from a score_baselines results file (its siblings fill gaps)."""
     if not path.exists():
         return []
     res = json.loads(path.read_text())
+    for sibling in sorted(path.parent.glob("results_*.json")):
+        if sibling != path:
+            for k, v in json.loads(sibling.read_text()).items():
+                res.setdefault(k, v)
     rows = []
     for key, label, note in spec:
         if key in res:
-            rows.append(Row(label, note, "static", _from_results(res[key])))
+            values = _from_results(res[key])
+            if key in PLACEMENT_BLANKED:
+                for k in values:
+                    if k.split("_", 1)[1] in (
+                        "abs_mpjpe",
+                        "transl_err_m",
+                        "map",
+                    ):
+                        values[k] = None
+            rows.append(Row(label, note, "static", values))
     return rows
 
 
