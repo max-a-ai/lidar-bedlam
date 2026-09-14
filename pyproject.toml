@@ -81,6 +81,8 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 # notebook cell sources embedded as strings are not subject to the 79-col rule
 "lidar_bedlam/scripts/build_debug_notebook.py" = ["E501"]
+# the page template (CSS, prose) is embedded as strings
+"lidar_bedlam/scripts/build_scoreboard.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
