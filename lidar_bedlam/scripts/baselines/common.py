@@ -155,6 +155,42 @@ class Predictions:
         np.savez(path, **arrays)
 
 
+def smpl_mirror_map(v_template: NDArray[np.floating]) -> NDArray[np.int64]:
+    """``sym[j]`` = the template vertex mirror-symmetric to vertex ``j``.
+
+    SMPL's template is left/right symmetric up to a millimetre, so the
+    nearest template vertex of the x-reflected template is the partner.
+    """
+    from scipy.spatial import cKDTree
+
+    mirrored = np.asarray(v_template, dtype=np.float64).copy()
+    mirrored[:, 0] *= -1.0
+    _, idx = cKDTree(np.asarray(v_template, dtype=np.float64)).query(mirrored)
+    return np.asarray(idx, dtype=np.int64)
+
+
+def mirror_back(
+    vertices: FloatArray,
+    transl: FloatArray,
+    global_orient: FloatArray,
+    sym: NDArray[np.int64],
+) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Undo a left/right mirrored input on predictions (camera frame).
+
+    Reflects x, then relabels vertices with the symmetry map so the
+    predicted left side lands on the true left side again; the axis-angle
+    orientation of a reflected rotation is (rx, -ry, -rz).
+    """
+    v = np.asarray(vertices, dtype=np.float64).copy()
+    v[..., 0] *= -1.0
+    v = v[:, sym]
+    t = np.asarray(transl, dtype=np.float64).copy()
+    t[:, 0] *= -1.0
+    aa = np.asarray(global_orient, dtype=np.float64).copy()
+    aa[:, 1:] *= -1.0
+    return v, t, aa
+
+
 class Timer:
     """Wall-clock seconds spent inside the model, and samples seen."""
 

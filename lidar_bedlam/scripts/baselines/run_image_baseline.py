@@ -41,7 +41,9 @@ from lidar_bedlam.scripts.baselines.common import (  # noqa: E402
     keypoint_box,
     list_shards,
     load_shard,
+    mirror_back,
     normalise,
+    smpl_mirror_map,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -189,10 +191,15 @@ def run(args: argparse.Namespace) -> None:
         raise SystemExit(msg)
     predict = LOADERS[args.method](REPOS[args.method])
     smpl = smplx.SMPLLayer(model_path=str(SMPL_NEUTRAL), num_betas=10).cuda()
+    sym = smpl_mirror_map(smpl.v_template.double().cpu().numpy())
     preds = Predictions()
     timer = Timer()
     for shard in shards:
         data = load_shard(shard)
+        if args.mirror:  # flip the crop, its joints and the principal point
+            data["image"] = np.ascontiguousarray(data["image"][:, :, ::-1])
+            data["kp2d"][:, :, 0] = CROP - data["kp2d"][:, :, 0]
+            data["intrinsics"][:, 0, 2] = CROP - data["intrinsics"][:, 0, 2]
         n = len(data["key"])
         for start in range(0, n, args.batch_size):
             sl = slice(start, min(n, start + args.batch_size))
@@ -230,6 +237,8 @@ def run(args: argparse.Namespace) -> None:
             aa = Rotation.from_matrix(
                 go.double().cpu().numpy().reshape(-1, 3, 3)
             ).as_rotvec()
+            if args.mirror:
+                v, transl, aa = mirror_back(v, transl, aa, sym)
             preds.add(
                 data["key"][sl],
                 v,
@@ -248,6 +257,7 @@ def run(args: argparse.Namespace) -> None:
         args.out,
         method=args.method,
         crop=args.crop,
+        mirror=int(args.mirror),
         seconds=timer.seconds,
         samples=timer.samples,
     )
@@ -266,6 +276,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--pattern", required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--batch-size", type=int, default=32)
+    ap.add_argument(
+        "--mirror",
+        action="store_true",
+        help="left/right mirror the crop and un-mirror the mesh",
+    )
     args = ap.parse_args(argv)
     args.shards = args.shards.resolve()
     args.out = args.out.resolve()

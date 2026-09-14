@@ -35,6 +35,8 @@ from lidar_bedlam.scripts.baselines.common import (  # noqa: E402
     Timer,
     list_shards,
     load_shard,
+    mirror_back,
+    smpl_mirror_map,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -140,6 +142,7 @@ def run(args: argparse.Namespace) -> None:
         str(SMPL_DIR), model_type="smpl", gender="neutral", num_betas=10
     ).cuda()
     regressor = smpl.J_regressor.double().cpu().numpy()
+    sym = smpl_mirror_map(smpl.v_template.double().cpu().numpy())
     v_template = smpl.v_template.double().cpu().numpy()
     shapedirs = smpl.shapedirs.double().cpu().numpy()[:, :, :10]
     rng = np.random.default_rng(args.seed)
@@ -154,7 +157,10 @@ def run(args: argparse.Namespace) -> None:
             rows = keep[start : start + args.batch_size]
             roots, clouds = [], []
             for i in rows:
-                p = data["points"][i].astype(np.float64) @ CAM_TO_ZUP.T
+                p = data["points"][i].astype(np.float64)
+                if args.mirror:  # left/right mirror in the camera frame
+                    p = p * np.array([-1.0, 1.0, 1.0])
+                p = p @ CAM_TO_ZUP.T
                 root = (p.max(0) + p.min(0)) / 2.0
                 roots.append(root)
                 clouds.append(fix_points(p - root, rng))
@@ -173,6 +179,9 @@ def run(args: argparse.Namespace) -> None:
             r_zup = Rotation.from_rotvec(theta[:, 0]).as_matrix()
             r_cam = CAM_TO_ZUP.T @ r_zup
             aa = Rotation.from_matrix(r_cam).as_rotvec()
+            if args.mirror:
+                zeros = np.zeros((len(rows), 3))
+                verts, _, aa = mirror_back(verts, zeros, aa, sym)
             # rest pelvis of the predicted shape: regressor on the shaped
             # template (transl = posed root joint - rest pelvis)
             v_shaped = v_template + np.einsum("bl,vkl->bvk", betas, shapedirs)
@@ -194,6 +203,7 @@ def run(args: argparse.Namespace) -> None:
     preds.save(
         args.out,
         method="lidar-hmr",
+        mirror=int(args.mirror),
         seconds=timer.seconds,
         samples=timer.samples,
         skipped_no_points=skipped,
@@ -213,6 +223,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--batch-size", type=int, default=16)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--mirror",
+        action="store_true",
+        help="left/right mirror the input points and un-mirror the mesh",
+    )
     args = ap.parse_args(argv)
     args.shards = args.shards.resolve()
     args.out = args.out.resolve()
