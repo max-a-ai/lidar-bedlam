@@ -230,6 +230,27 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — final runs, intermediate table after ~11 h (steps 92k-140k of 150k)
+
+Latest validation line per run (Waymo val 894, SLOPER4D test full 9,904):
+
+| run | step | W MPJPE | W PA | W transl | W mAP | S MPJPE | S PA | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|---|
+| full-synth-only | 98k | 86.3 | 64.5 | 1.62 m | 0.18 | 59.9 | 47.3 | 0.287 m | 0.32 |
+| full-real-only | 106k | 87.8 | 69.0 | 0.78 m | 0.21 | 75.6 | 52.2 | 0.254 m | 0.34 |
+| full-main-mixed | 96k | 81.0 | 64.2 | 0.60 m | 0.38 | 52.2 | 44.2 | 0.080 m | 0.79 |
+| full-mix80 | 92k | 85.8 | 69.5 | 0.54 m | 0.46 | 47.1 | 41.0 | 0.072 m | 0.80 |
+| full-pseudo-waymo | 140k | 87.5 | 65.5 | 1.28 m | 0.19 | 45.9 | 39.5 | 0.080 m | 0.79 |
+| full-3dpw | 98k | 80.8 | 63.7 | 0.61 m | 0.38 | 51.6 | 43.0 | 0.079 m | 0.75 |
+
+Waymo metrics have been flat since ~hour 5; the runs are ahead of the
+20 h estimate (pseudo-waymo at 140k). Against the baselines: mixed runs
+beat every image method on placement and mAP on both datasets and beat
+CameraHMR on SLOPER4D pose (47.1 / 45.9 vs 51.6 mm); on Waymo pose
+CameraHMR (76.9) still leads our best (80.8), and LiDAR-HMR's Waymo
+placement (0.38 m) beats ours (0.54). The pseudo-Waymo run again loses
+Waymo placement (1.28 m) while winning SLOPER4D pose.
+
 ### 2026-09-14 — image baselines scored with our protocol (TokenHMR, HMR2, CameraHMR)
 
 Runners in `lidar_bedlam/scripts/baselines/` execute each published model
