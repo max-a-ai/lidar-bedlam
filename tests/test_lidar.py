@@ -101,3 +101,51 @@ def test_occlude_keeps_minimum_and_removes_something() -> None:
     assert cfg.min_points <= keep.sum() < 500
     tiny = occlude(pts[:5], cfg, rng)
     assert tiny.all()
+
+
+def _cylinder(
+    radius: float = 0.3, z0: float = 4.0
+) -> tuple[np.ndarray, np.ndarray]:
+    """Depth map of a vertical cylinder (a person) in front of a far wall."""
+    cam = PinholeCamera(900.0, 900.0, 640.0, 360.0, 1280, 720)
+    u, v = np.meshgrid(np.arange(cam.width), np.arange(cam.height))
+    dx, dy = (u - cam.cx) / cam.fx, (v - cam.cy) / cam.fy
+    a, b, c = dx**2 + 1, -2 * z0, z0**2 - radius**2
+    disc = b * b - 4 * a * c
+    zc = np.where(
+        disc > 0, (-b - np.sqrt(np.maximum(disc, 0))) / (2 * a), np.nan
+    )
+    mask = (disc > 0) & (np.abs(zc * dy) < 0.9)
+    depth = np.full((cam.height, cam.width), 20.0)
+    depth[mask] = zc[mask]
+    return depth, mask
+
+
+def _cylinder_returns(offset_x: float) -> np.ndarray:
+    depth, mask = _cylinder()
+    cam = PinholeCamera(900.0, 900.0, 640.0, 360.0, 1280, 720)
+    spec = LidarSpec("test-128", 128, -22.5, 22.5, 1024, range_noise_std_m=0.0)
+    pose = sensor_pose(np.array([offset_x, 0.0, 0.0]))
+    scan = select_mask(
+        simulate(depth, cam, spec, pose, np.random.default_rng(0)), mask
+    )
+    return np.asarray(scan.points, dtype=np.float64)
+
+
+def test_offset_sensor_still_reaches_the_person() -> None:
+    # 5 m to the right the person sits at -51 deg azimuth: the ray window
+    # must follow the sensor, not the camera
+    assert len(_cylinder_returns(5.0)) > 300
+
+
+def test_returns_lie_on_the_surface_and_face_the_sensor() -> None:
+    for offset in (0.0, 1.0, 10.0):
+        pts = _cylinder_returns(offset)
+        radius = np.hypot(pts[:, 0], pts[:, 2] - 4.0)
+        assert np.all(np.abs(radius - 0.3) < 0.005), offset  # no wall points
+        # surface patches turned away from the sensor never return
+        normal = np.stack([pts[:, 0], np.zeros(len(pts)), pts[:, 2] - 4.0], -1)
+        to_sensor = np.array([offset, 0.0, 0.0]) - pts
+        assert np.all(np.sum(normal * to_sensor, -1) > 0), offset
+    # from 10 m to the right only the right-facing half returns
+    assert np.all(_cylinder_returns(10.0)[:, 0] > 0)

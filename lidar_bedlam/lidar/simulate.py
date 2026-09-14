@@ -3,10 +3,12 @@
 The depth map (planar z, metres) of a pinhole camera is the only scene
 geometry we have. Every LiDAR channel is a ray from the sensor origin; we
 march along it, look up the rendered depth at the projected pixel, and
-take the first crossing of the ray with the depth surface. This is exact
-for a sensor at the camera origin and a good approximation for a sensor
-offset by up to a few decimetres (the depth surface only knows what the
-camera saw, so surfaces hidden from the camera stay unknown).
+take the first crossing of the ray with a part of the depth surface that
+faces the sensor (depth-map normals, back-facing patches never return).
+This is exact for a sensor at the camera origin and an approximation for
+an offset sensor: the depth surface only knows what the camera saw, so
+surfaces hidden from the camera (a person's side) stay unknown and return
+nothing rather than something wrong.
 
 Everything is expressed in the OpenCV camera frame (x right, y down,
 z forward); the sensor's own frame has the same axes rotated/translated
@@ -177,9 +179,119 @@ def azimuth_window(
         else np.asarray(camera_from_sensor)
     )
     hfov = camera_hfov_deg(camera)
-    yaw = float(np.rad2deg(np.arctan2(pose[0, 2], pose[2, 2])))
     columns = int(round(hfov / 360.0 * spec.horizontal_steps))
-    return AzimuthWindow(hfov, -hfov / 2 - yaw, hfov / 2 - yaw, columns)
+    # azimuths (sensor frame) of the image frustum's side edges over the
+    # sensor's range: a translated sensor sees the image window under a
+    # wider, shifted range of azimuths than the camera does
+    xs = np.array(
+        [(0 - camera.cx) / camera.fx, (camera.width - camera.cx) / camera.fx]
+    )
+    ys = np.array(
+        [(0 - camera.cy) / camera.fy, (camera.height - camera.cy) / camera.fy]
+    )
+    zs = np.geomspace(max(spec.min_range_m, 0.1), spec.max_range_m, 32)
+    x, y, z = np.meshgrid(xs, ys, zs, indexing="ij")
+    p_cam = np.stack([x * z, y * z, z], -1).reshape(-1, 3)
+    p_sen = (p_cam - pose[:3, 3]) @ pose[:3, :3]  # R^T (p - t)
+    az = np.rad2deg(np.arctan2(p_sen[:, 0], p_sen[:, 2]))
+    return AzimuthWindow(hfov, float(az.min()), float(az.max()), columns)
+
+
+WALL_JUMP_M = 0.5  # larger depth steps between neighbours are silhouettes
+
+
+def surface_normals(
+    depth: FloatArray, camera: PinholeCamera, wall_m: float = WALL_JUMP_M
+) -> FloatArray:
+    """Unit normals (H, W, 3) of the depth surface, facing the camera.
+
+    Central differences of the back-projected points; at a silhouette the
+    difference is taken on the continuous side, and pixels whose both
+    sides jump by more than ``wall_m`` get a nan normal (no surface there).
+    """
+    h, w = depth.shape
+    u, v = np.meshgrid(np.arange(w), np.arange(h))
+    p = np.stack(
+        [
+            depth * (u - camera.cx) / camera.fx,
+            depth * (v - camera.cy) / camera.fy,
+            depth,
+        ],
+        -1,
+    )
+
+    def diff(axis: int) -> FloatArray:
+        fwd = np.roll(p, -1, axis) - p
+        bwd = p - np.roll(p, 1, axis)
+        jf = np.abs(np.roll(depth, -1, axis) - depth)
+        jb = np.abs(depth - np.roll(depth, 1, axis))
+        use_f = jf <= jb
+        d = np.where(use_f[..., None], fwd, bwd)
+        bad = np.minimum(jf, jb) > wall_m
+        return np.asarray(np.where(bad[..., None], np.nan, d))
+
+    n = np.cross(diff(1), diff(0))
+    norm = np.linalg.norm(n, axis=-1, keepdims=True)
+    n = n / np.where(norm > 0, norm, np.nan)
+    # every depth-map surface faces the camera: orient n against the view ray
+    flip = np.sum(n * p, -1, keepdims=True) > 0
+    return np.asarray(np.where(flip, -n, n), dtype=np.float64)
+
+
+def _gap_at(
+    origin: FloatArray,
+    dirs: FloatArray,
+    depth: FloatArray,
+    camera: PinholeCamera,
+    t: FloatArray,
+) -> tuple[FloatArray, FloatArray]:
+    """Signed distance behind the depth surface and that surface's depth."""
+    h, w = depth.shape
+    p = origin + t[:, None] * dirs
+    z = np.where(p[:, 2] > 0, p[:, 2], np.nan)
+    u = np.rint(camera.fx * p[:, 0] / z + camera.cx)
+    v = np.rint(camera.fy * p[:, 1] / z + camera.cy)
+    inside = np.isfinite(z) & (u >= 0) & (u < w) & (v >= 0) & (v < h)
+    idx = np.where(inside, np.nan_to_num(v * w + u), 0).astype(np.int64)
+    surf = np.where(inside, depth.reshape(-1)[idx], np.nan)
+    return np.asarray(p[:, 2] - surf), np.asarray(surf)
+
+
+def _refine(
+    origin: FloatArray,
+    dirs: FloatArray,
+    depth: FloatArray,
+    camera: PinholeCamera,
+    t_lo: FloatArray,
+    t_hi: float,
+    gap_lo: FloatArray,
+    gap_hi: FloatArray,
+    active: NDArray[np.bool_],
+    iterations: int = 6,
+) -> tuple[FloatArray, NDArray[np.bool_]]:
+    """Bisect the crossing between ``t_lo`` (in front) and ``t_hi`` (behind).
+
+    Returns the crossing parameter and a wall flag: True where the two
+    ends of the final interval look at surface depths more than
+    ``WALL_JUMP_M`` apart, i.e. the ray crossed a silhouette.
+    """
+    lo = t_lo.copy()
+    hi = np.full(len(dirs), float(t_hi))
+    g_lo, g_hi = gap_lo.copy(), gap_hi.copy()
+    for _ in range(iterations):
+        mid = 0.5 * (lo + hi)
+        g_mid, _ = _gap_at(origin, dirs, depth, camera, mid)
+        behind = g_mid > 0
+        hi = np.where(behind, mid, hi)
+        g_hi = np.where(behind, g_mid, g_hi)
+        lo = np.where(behind, lo, mid)
+        g_lo = np.where(behind, g_lo, g_mid)
+    _, s_lo = _gap_at(origin, dirs, depth, camera, lo)
+    _, s_hi = _gap_at(origin, dirs, depth, camera, hi)
+    frac = -g_lo / np.maximum(g_hi - g_lo, 1e-9)
+    t_est = lo + np.clip(frac, 0.0, 1.0) * (hi - lo)
+    wall = active & ~(np.abs(s_hi - s_lo) <= WALL_JUMP_M)
+    return np.asarray(t_est), np.asarray(wall)
 
 
 def _march(
@@ -189,11 +301,15 @@ def _march(
     camera: PinholeCamera,
     spec: LidarSpec,
     steps: int,
+    normals: FloatArray | None = None,
 ) -> tuple[FloatArray, NDArray[np.bool_], NDArray[np.int64]]:
-    """First crossing of each ray with the depth surface.
+    """First crossing of each ray with a surface facing the sensor.
 
     Returns the ray parameter ``t`` (metres along the unit direction), a hit
-    mask, and the hit pixel index (row-major) for each ray.
+    mask, and the hit pixel index (row-major) for each ray. With
+    ``normals`` a crossing counts only where the surface faces the ray
+    (dot(direction, normal) < 0): a sensor away from the camera cannot see
+    surfaces that face away from it, even if the camera did.
     """
     h, w = depth.shape
     ts = np.geomspace(spec.min_range_m, spec.max_range_m, steps)
@@ -203,7 +319,6 @@ def _march(
     pix = np.zeros(n, dtype=np.int64)
     prev_gap = np.full(n, np.nan)
     prev_t = np.full(n, np.nan)
-    prev_pix = np.zeros(n, dtype=np.int64)
     for t in ts:
         p = origin + t * dirs
         z = p[:, 2]
@@ -222,14 +337,34 @@ def _march(
         crossing = (
             ~hit & inside & (gap > 0) & np.isfinite(prev_gap) & (prev_gap <= 0)
         )
-        frac = -prev_gap / np.maximum(gap - prev_gap, 1e-9)
-        t_est = prev_t + frac * (t - prev_t)
+        # refine the crossing by bisection on the depth surface; a
+        # crossing whose refined interval still spans a depth jump larger
+        # than a body's thickness went through a silhouette wall
+        t_est, wall = _refine(
+            origin, dirs, depth, camera, prev_t, t, prev_gap, gap, crossing
+        )
+        crossing &= ~wall
+        # pixel of the crossing point itself (not of the previous sample)
+        p_hit = origin + t_est[:, None] * dirs
+        zh = np.where(p_hit[:, 2] > 0, p_hit[:, 2], np.nan)
+        uh = np.clip(
+            np.rint(camera.fx * p_hit[:, 0] / zh + camera.cx), 0, w - 1
+        )
+        vh = np.clip(
+            np.rint(camera.fy * p_hit[:, 1] / zh + camera.cy), 0, h - 1
+        )
+        pix_hit = np.where(crossing, np.nan_to_num(vh * w + uh), 0).astype(
+            np.int64
+        )
+        if normals is not None:
+            n_hit = normals.reshape(-1, 3)[pix_hit]
+            facing = np.sum(n_hit * dirs, -1) < 0  # nan normals never face
+            crossing &= facing
         t_hit[crossing] = t_est[crossing]
-        pix[crossing] = prev_pix[crossing]
+        pix[crossing] = pix_hit[crossing]
         hit |= crossing
         prev_gap = np.where(inside, gap, np.nan)
         prev_t = np.full(n, t)
-        prev_pix = idx
     return t_hit, hit, pix
 
 
@@ -256,7 +391,8 @@ def simulate(
     dirs = dirs_s @ pose[:3, :3].T
     origin = pose[:3, 3]
     depth = np.asarray(depth_m, dtype=np.float64)
-    t_hit, hit, pix = _march(origin, dirs, depth, camera, spec, steps)
+    normals = surface_normals(depth, camera)
+    t_hit, hit, pix = _march(origin, dirs, depth, camera, spec, steps, normals)
     if spec.dropout > 0:
         hit &= rng.random(len(hit)) >= spec.dropout
     t = t_hit[hit]

@@ -227,7 +227,16 @@ for s, scan, ppl in zip(samples, scans, persons):
 """)
 
 md("""
-## 5. Resolution and viewpoint: OS1 with 32 / 64 / 128 / 256 channels (1024 steps/rev), sensor 10 cm above the camera, and 1 m to the right
+## 5. Resolution and viewpoint: OS1 with 32 / 64 / 128 / 256 channels (1024 steps/rev), sensor 10 cm above the camera, 1 m, 5 m and 10 m to the right
+
+The simulator marches every beam through the camera's depth map and keeps
+the first crossing with a surface that faces the beam (depth-map normals:
+dot(beam, normal) < 0). From the camera's own position every visible
+surface faces the beams and the whole front of the person returns; the
+farther the sensor moves to the right, the more of the person's left-facing
+surface turns away from it and returns nothing, while the right-facing
+surface (and only that) keeps returning. The depth map does not know the
+person's right side, so a far-offset sensor sees fewer, not wrong, points.
 """)
 
 code("""
@@ -236,11 +245,13 @@ person_mask = np.zeros(s.mask.shape, bool)
 for p in ppl:
     person_mask |= p.mask
 viewpoints = {"10 cm above camera": sensor_pose(np.array([0.0, -0.10, 0.0])),
-              "1 m right of camera": sensor_pose(np.array([1.0, 0.0, 0.0]))}
+              "1 m right of camera": sensor_pose(np.array([1.0, 0.0, 0.0])),
+              "5 m right of camera": sensor_pose(np.array([5.0, 0.0, 0.0])),
+              "10 m right of camera": sensor_pose(np.array([10.0, 0.0, 0.0]))}
 beams = ["OS1-32", "OS1-64", "OS1-128", "OS1-256"]
 x0, y0, x1, y1 = s.bbox_xyxy
 pad = 60
-fig, axes = plt.subplots(len(beams), len(viewpoints), figsize=(14, 22))
+fig, axes = plt.subplots(len(beams), len(viewpoints), figsize=(26, 22))
 grid_scans = {}
 for r, name in enumerate(beams):
     for c, (vname, pose) in enumerate(viewpoints.items()):
