@@ -42,6 +42,7 @@ BASELINES = {
     "TokenHMR": "tokenhmr-tight",
     "CameraHMR": "camerahmr-full",
     "LiDAR-HMR": "lidar-hmr",
+    "Human3R": "human3r",
 }
 COLORS = {
     "GT": "limegreen",
@@ -50,6 +51,7 @@ COLORS = {
     "CameraHMR": "royalblue",
     "TokenHMR": "mediumorchid",
     "HMR2.0": "teal",
+    "Human3R": "goldenrod",
 }
 
 

@@ -33,6 +33,11 @@ STATIC_ROWS = [
     ("tokenhmr-tight", "TokenHMR", "image only, tight crop"),
     ("camerahmr-full", "CameraHMR", "image only, GT intrinsics"),
     ("lidar-hmr", "LiDAR-HMR", "LiDAR only, Waymo weights"),
+    (
+        "human3r",
+        "Human3R",
+        "image only, single frame, metric camera; crops without a detection skipped",
+    ),
 ]
 
 # group title, description, [(label, [run names to average])]
@@ -52,7 +57,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ("ours · gate hard (fixed priors)", ["full-gate-hard-000"]),
             ("ours · image only", ["full-image-only-000"]),
             ("ours · LiDAR only", ["full-lidar-only-000"]),
-            ("ours · gate none + 3DPW mesh-LiDAR", ["full-gate-none-3dpw-000"]),
+            (
+                "ours · gate none + 3DPW mesh-LiDAR",
+                ["full-gate-none-3dpw-000"],
+            ),
             ("ours · gate none, mix80", ["full-gate-none-mix80-000"]),
             (
                 "ours · LiDAR at the SLOPER4D rig pose",
