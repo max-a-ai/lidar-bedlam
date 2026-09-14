@@ -230,6 +230,68 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-14 — placement metric bug, absolute MPJPE, mirror test, comparison runs
+
+**Which run is the main experiment.** The headline run is `full-main-mixed`
+(`configs/full_main_mixed.yaml`: 50/40/10 synthetic / Waymo / SLOPER4D,
+learned gates, random main scan variant, batch 2048, 150k steps). Every
+ablation is cut from its one-third-schedule twin `abl-mixed-short`
+(`configs/ablation_mixed_short.yaml`, 17 epochs = 3,468 steps, seeds 0 and
+1): the fusion axis changes `gate_mode`, the synthesis axis changes the
+synthetic scan `variant`, the label axis adds pseudo-GT Waymo or 3DPW rows,
+the data axis caps the synthetic pool at fixed 3,468 steps.
+
+**Bug (all Waymo placement numbers so far).** 39 of the 894 Waymo val
+records have no labelled hip; unlabelled joints carry garbage coordinates
+(z of -1 m), and the hip-centre placement error used them anyway, so those
+39 records contributed errors of up to 12 m to every mean. LiDAR-HMR:
+0.376 m over all, 0.081 m over the 855 records with labelled hips.
+`metrics/protocol.py` now gives those records no placement error (nan,
+skipped by the mean); mAP, MPJPE and PA were never affected (the GT box is
+Waymo's own, joints use the validity mask). Every Waymo placement figure
+logged before this entry is inflated, ours included (0.5-0.6 m in the
+final runs will drop); the re-evaluation job below rewrites them.
+
+**Absolute MPJPE** (`abs_mpjpe`: joints as predicted, no centring, valid
+joints) added to the protocol, trainer log, eval script and scorer. It
+separates the modalities at a glance: image-only 723-1044 mm on Waymo and
+170-232 mm on SLOPER4D, LiDAR-HMR 114 / 121 mm.
+
+Static baseline numbers (final; `outputs/baselines/results_static.json`):
+
+| method | W MPJPE | W PA | W abs | W transl | W mAP | S MPJPE | S PA | S abs | S transl | S mAP |
+|---|---|---|---|---|---|---|---|---|---|---|
+| HMR2.0 | 104.4 | 69.8 | 1044 | 1.048 m | 0.016 | 91.3 | 70.8 | 170 | 0.121 m | 0.40 |
+| TokenHMR | 98.5 | 66.3 | 854 | 0.859 m | 0.024 | 74.5 | 54.8 | 232 | 0.204 m | 0.26 |
+| CameraHMR | 76.9 | 60.0 | 723 | 0.731 m | 0.029 | 51.6 | 44.4 | 197 | 0.196 m | 0.40 |
+| LiDAR-HMR | 84.7 | 62.9 | 114 | 0.081 m | 0.207 | 100.2 | 65.8 | 121 | 0.089 m | 0.76 |
+
+**Mirror test (was LiDAR-HMR trained on the validation data?).** Inputs
+mirrored left/right (points x -> -x; image flipped with the principal
+point), predictions mirrored back through the SMPL left/right vertex map
+(`--mirror` in both runners, `smpl_mirror_map` in `baselines/common.py`).
+LiDAR-HMR: Waymo 84.7 -> 86.4 mm MPJPE, placement 0.081 -> 0.083 m;
+SLOPER4D 100.2 -> 98.0 mm. CameraHMR (never saw either set): 76.9 -> 77.6
+and 51.6 -> 51.8 mm. A memorised set would collapse under mirroring; a 2 %
+change is generalisation. No evidence that LiDAR-HMR saw Waymo val; its
+strong Waymo placement is simply LiDAR seeing the person.
+
+**Comparison runs submitted on Helma** (jobs 853642-853649, all from the
+repo root with `train.sbatch`): `abl-rig-sloper4d` seeds 0/1 (synthetic
+LiDAR at the SLOPER4D rig pose, `configs/ablation_rig_sloper4d.yaml`);
+`abl-scale-long-2x` / `-full` (data axis at 3x the steps, 10,404, to test
+the "longer schedule may separate the pools" caveat); `full-gate-none`,
+`full-gate-hard`, `full-image-only`, `full-lidar-only` (fusion axis at the
+150k headline schedule: decides whether the two-stream design is leveraged
+or a new query design is needed). Re-evaluation job 853665
+(`lidar_bedlam/slurm/eval_runs.sbatch`) rescores every finished run's
+`best.pt` and `last.pt` on the full sets with the corrected protocol and
+the abs column into `outputs/eval/<run>-<ckpt>.json`;
+`lidar_bedlam/scripts/pull_helma_results.sh` fetches them and
+`lidar_bedlam/scripts/build_scoreboard.py` renders the one-page comparison
+(published pipelines static, finals, fusion / synthesis / data / label
+axes, mirror test; ranks per column within each table).
+
 ### 2026-09-14 — final runs, intermediate table after ~11 h (steps 92k-140k of 150k)
 
 Latest validation line per run (Waymo val 894, SLOPER4D test full 9,904):
