@@ -183,7 +183,7 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
 ]
 
 # methods whose placement is not meaningful on our crops
-PLACEMENT_BLANKED = {"human3r"}
+PLACEMENT_BLANKED: set[str] = set()
 
 # manual display overrides requested for the intermediate table; the row
 # note names the measured value so the page never passes them off as data
@@ -218,6 +218,25 @@ class Row:
     note: str
     kind: str  # static | ours
     values: dict[str, float | None] = field(default_factory=dict)
+    footnote: str | None = None
+
+
+FOOTNOTES = {
+    "camerahmr-full": (
+        "CameraHMR is given the crop's ground-truth intrinsics instead of "
+        "estimating them, which is the only way its weak-perspective camera "
+        "becomes metric; its own focal estimate is meant for full frames."
+    ),
+    "human3r": (
+        "Human3R runs single-frame on the 256 px crop (no scene context) with "
+        "the demo's 60 deg pseudo camera; its depth is not metric there "
+        "(0.5x the true depth on Waymo, 0.07x with the true intrinsics, and "
+        "the focal-normalised path needs a checkpoint we do not have), so the "
+        "placement, abs and mAP columns show what the crop gives, not the "
+        "method's capability on full frames. Crops without a detection are "
+        "skipped: 631 of 894 on Waymo, 9,889 of 9,904 on SLOPER4D."
+    ),
+}
 
 
 def _from_results(res: dict[str, Any]) -> dict[str, float | None]:
@@ -332,7 +351,7 @@ def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
                 measured = values.get(k)
                 note = f"{note}; {k.split('_', 1)[1]} shown as {v} by request (measured {measured:.1f})"
                 values[k] = v
-            rows.append(Row(label, note, "static", values))
+            rows.append(Row(label, note, "static", values, FOOTNOTES.get(key)))
     return rows
 
 
@@ -374,8 +393,12 @@ def table_html(rows: list[Row]) -> str:
     prev = None
     for i, r in enumerate(rows):
         div = " divider" if prev == "static" and r.kind == "ours" else ""
+        mark = ""
+        if r.footnote:
+            n = 1 + sum(1 for x in rows[:i] if x.footnote)
+            mark = f"<sup>{n}</sup>"
         h.append(
-            f'<tr class="{r.kind}{div}"><td class="name">{r.label}'
+            f'<tr class="{r.kind}{div}"><td class="name">{r.label}{mark}'
             f"<small>{r.note}</small></td>"
         )
         for k in keys:
@@ -385,6 +408,12 @@ def table_html(rows: list[Row]) -> str:
         h.append("</tr>")
         prev = r.kind
     h.append("</tbody></table></div>")
+    notes = [(i, r.footnote) for i, r in enumerate(rows) if r.footnote]
+    if notes:
+        h.append('<ol class="fn">')
+        for _, text in notes:
+            h.append(f"<li>{text}</li>")
+        h.append("</ol>")
     return "".join(h)
 
 
@@ -418,6 +447,7 @@ tr:last-child td{border-bottom:none}tr.ours td{background:var(--ours)}tr.divider
 td.g{background:var(--g-bg)!important;color:var(--g-ink);font-weight:500}
 td.y{background:var(--y-bg)!important;color:var(--y-ink);font-weight:500}
 td.r{background:var(--r-bg)!important;color:var(--r-ink);font-weight:500}
+ol.fn{margin:8px 0 0;padding-left:20px;font-size:.8rem;color:var(--muted);max-width:90ch}ol.fn li{margin-bottom:4px}
 .notes{display:grid;gap:8px;font-size:.88rem;color:var(--muted);max-width:80ch}.notes b{color:var(--ink);font-weight:600}
 @media (max-width:600px){body{padding-inline:16px}h1{font-size:1.6rem}}
 """
