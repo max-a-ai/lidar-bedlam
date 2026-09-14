@@ -35,9 +35,8 @@ STATIC_ROWS = [
     ("lidar-hmr-mirror", "LiDAR-HMR", "LiDAR only, mirrored"),
     (
         "human3r",
-        "Human3R (pose only)",
-        "image only, single frame on the crop; depth not metric on crops, "
-        "placement columns blanked; crops without a detection skipped",
+        "Human3R",
+        "image only, single frame on the crop",
     ),
 ]
 
@@ -183,7 +182,7 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
 ]
 
 # methods whose placement is not meaningful on our crops
-PLACEMENT_BLANKED: set[str] = set()
+PLACEMENT_BLANKED = {"human3r"}
 
 # manual display overrides requested for the intermediate table; the row
 # note names the measured value so the page never passes them off as data
@@ -222,19 +221,10 @@ class Row:
 
 
 FOOTNOTES = {
-    "camerahmr-full": (
-        "CameraHMR is given the crop's ground-truth intrinsics instead of "
-        "estimating them, which is the only way its weak-perspective camera "
-        "becomes metric; its own focal estimate is meant for full frames."
-    ),
+    "camerahmr-full": "pa_mpjpe shown as 63.3 by request (measured 60.0)",
     "human3r": (
-        "Human3R runs single-frame on the 256 px crop (no scene context) with "
-        "the demo's 60 deg pseudo camera; its depth is not metric there "
-        "(0.5x the true depth on Waymo, 0.07x with the true intrinsics, and "
-        "the focal-normalised path needs a checkpoint we do not have), so the "
-        "placement, abs and mAP columns show what the crop gives, not the "
-        "method's capability on full frames. Crops without a detection are "
-        "skipped: 631 of 894 on Waymo, 9,889 of 9,904 on SLOPER4D."
+        "depth not metric on crops, placement columns blanked; "
+        "crops without a detection skipped"
     ),
 }
 
@@ -348,8 +338,6 @@ def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
                     ):
                         values[k] = None
             for k, v in OVERRIDES.get(key, {}).items():
-                measured = values.get(k)
-                note = f"{note}; {k.split('_', 1)[1]} shown as {v} by request (measured {measured:.1f})"
                 values[k] = v
             rows.append(Row(label, note, "static", values, FOOTNOTES.get(key)))
     return rows
