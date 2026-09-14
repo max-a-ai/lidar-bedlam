@@ -63,6 +63,19 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
         ],
     ),
     (
+        "Synthesis axis at the final schedule (150k steps or early stop)",
+        "How the LiDAR is simulated on the synthetic records; the main run "
+        "draws the sensor inside a 1 m ball and sweeps 12 resolutions.",
+        [
+            ("ball 1 m, 12 resolutions (main-mixed)", ["full-main-mixed-000"]),
+            ("ball 1 m, 12 resolutions, seed 1", ["full-main-mixed-s1"]),
+            ("LiDAR at the SLOPER4D rig pose", ["full-rig-sloper4d-000"]),
+            ("LiDAR at the Waymo rig pose", ["full-rig-waymo-000"]),
+            ("ball 0.25 m", ["full-ball025-000"]),
+            ("Waymo resolution only", ["full-target-waymo-000"]),
+        ],
+    ),
+    (
         "Fusion axis (1/3 schedule, 17 epochs, mean of 2 seeds)",
         "Reference abl-mixed-short: learned gates. Everything below is the "
         "same mixture and schedule with the gate changed.",
