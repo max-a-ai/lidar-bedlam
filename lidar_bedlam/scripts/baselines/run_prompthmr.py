@@ -4,12 +4,15 @@ camera-frame SMPL meshes.
 The model is promptable: it takes the whole image, a person box and the
 camera intrinsics, and regresses SMPL-X pose, shape and a metric
 translation. We hand over our 256 px crop as the image and one box
-covering it. The crop's true principal point lies far outside the crop
-(the crop is a window of the full frame), which the model never saw in
-training, so it gets the true focal length with the principal point at
-the crop centre, and the prediction is rotated back into the true camera
-afterwards (the pseudo camera is the true camera turned towards the crop
-centre; an exact rotation, as for the weak-perspective rows). SMPL-X
+covering it. The crop's true intrinsics (principal point hundreds of pixels
+outside the crop, a 9 degree field of view) are nothing the model saw in
+training and give poor depths, so it sees the crop as a default camera
+(focal = crop size, principal point at the centre). Its depth is then
+rescaled by the ratio of the true to the default focal length, which keeps
+every pixel where it is (the weak-perspective route of the other image
+rows), and the prediction is rotated into the true camera (the default
+camera is the true camera turned towards the crop centre; an exact
+rotation). SMPL-X
 vertices are mapped to SMPL with the ``smplx2smpl.pkl`` matrix that ships
 with the method.
 
@@ -90,9 +93,16 @@ def run(args: argparse.Namespace) -> None:
         for start in range(0, n, args.batch_size):
             sl = slice(start, min(n, start + args.batch_size))
             ks = data["intrinsics"][sl].astype(np.float64)
-            pseudo = ks.copy()
-            pseudo[:, 0, 2] = CROP / 2.0
-            pseudo[:, 1, 2] = CROP / 2.0
+            pseudo = np.tile(
+                np.array(
+                    [
+                        [CROP, 0.0, CROP / 2.0],
+                        [0.0, CROP, CROP / 2.0],
+                        [0, 0, 1.0],
+                    ]
+                ),
+                (len(ks), 1, 1),
+            )
             inputs = [
                 {
                     "image_cv": np.ascontiguousarray(data["image"][i]),
@@ -124,7 +134,13 @@ def run(args: argparse.Namespace) -> None:
                 [o["betas"][0].float().cpu().numpy() for o in outputs]
             ).astype(np.float64)
             v = np.einsum("sv,nvk->nsk", to_smpl, vx)
-            # pseudo camera -> true camera: rotate e_z onto the ray through
+            # default focal -> true focal: the depth scales, the pixel stays
+            scale = ks[:, 0, 0] / CROP
+            new_t = transl.copy()
+            new_t[:, 2] *= scale
+            v = v - transl[:, None, :] + new_t[:, None, :]
+            transl = new_t
+            # default camera -> true camera: rotate e_z onto the ray through
             # the crop centre (true camera frame)
             aa = np.zeros((len(v), 3))
             for j in range(len(v)):
@@ -158,7 +174,7 @@ def run(args: argparse.Namespace) -> None:
         method="prompthmr",
         crop="full",
         mirror=0,
-        camera="crop-centred principal point, rotated back",
+        camera="default focal, depth rescaled, rotated back",
         img_size=args.img_size,
         seconds=timer.seconds,
         samples=timer.samples,
