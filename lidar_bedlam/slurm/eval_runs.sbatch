@@ -36,6 +36,7 @@ config_of() {
   name=${name%-[0-9][0-9][0-9]}  # -000
   name=${name%-s[0-9]}           # -s1
   name=${name/#abl-/ablation-}
+  name=${name/#a-abl-/a-ablation-}  # point-anchored copies (a- prefix)
   echo "configs/${name//-/_}.yaml"
 }
 

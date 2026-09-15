@@ -337,10 +337,14 @@ def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
     if not path.exists():
         return []
     res = json.loads(path.read_text())
+    # siblings fill missing methods and missing splits of known methods
+    # (a method's Waymo/SLOPER4D scores and its 3DPW scores may come from
+    # different scoring runs); the first file to provide a split wins
     for sibling in sorted(path.parent.glob("results_*.json")):
         if sibling != path:
             for k, v in json.loads(sibling.read_text()).items():
-                res.setdefault(k, v)
+                for split, scores in v.items():
+                    res.setdefault(k, {}).setdefault(split, scores)
     rows = []
     for key, label, note in spec:
         if key in res:
