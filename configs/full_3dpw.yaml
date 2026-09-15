@@ -37,5 +37,5 @@ optim:
   patience_evals: 5  # 5 evals x 2000 steps without a new best MPJPE on any source
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 2000
+  eval_every_steps: 1000  # ~68 s per eval incl. figures and checkpoint, vs ~6.5 min of training
   checkpoint_every_steps: 1000

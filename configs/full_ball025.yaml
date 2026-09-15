@@ -37,5 +37,5 @@ optim:
   # compute (10,200 steps x 2048 = mix80-001's 50 epochs) is the fair schedule
   grad_clip: 1.0
   amp: true
-  eval_every_steps: 2000
+  eval_every_steps: 1000  # ~68 s per eval incl. figures and checkpoint, vs ~6.5 min of training
   checkpoint_every_steps: 1000
