@@ -426,9 +426,11 @@ def load_run(
     if ev.exists():
         payload = json.loads(ev.read_text())
         step = payload.get("step", -1)
+        done = (root / "runs" / run / "DONE").exists()
+        state = "final" if done else "running, full-set eval at"
         return _from_results(
             payload["results"]
-        ), f"final, step {step // 1000}k"
+        ), f"{state} step {step // 1000}k"
     metrics = root / "runs" / run / "metrics.jsonl"
     if not metrics.exists():
         return None
