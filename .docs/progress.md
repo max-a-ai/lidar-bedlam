@@ -257,6 +257,13 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 12:40 — anchor runs under the protocol, first 3DPW column
+Forced re-evaluation of abl-anchor-points (2 seeds, `last.pt`): Waymo val
+73.6 / 61.3 / abs 101.1 mm, 0.076 m, mAP 0.66; full SLOPER4D test 45.8 /
+39.8 / PVE 52.1, 0.030 m, mAP 0.94; 3DPW test (6,617, first numbers of
+that column) 60.2 / 50.4 / PVE 90.8, 0.068 m, mAP 0.79. The training-time
+numbers were confirmed. Eval job 856989 (all runs, FORCE) still running.
+
 ### 2026-09-15 12:10 — interactive misplacement figure, PromptHMR camera fix
 `showcase.comparison_figure_interactive` (plotly): image with labels and
 the projected meshes, bird's-eye and side views; every method, the LiDAR
