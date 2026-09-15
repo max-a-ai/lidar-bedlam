@@ -257,6 +257,30 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 22:40 — pose prior on the unobserved joints (rule 2) and frozen joints in the fit (rule 1)
+Neither had been applied since the proposal. Now: `scripts/pose_prior_stats.py`
+computes per-joint chordal mean rotations and the geodesic spread of the
+BEDLAM poses (10,732 poses of synth/v1; hands have zero spread in BEDLAM,
+floored at 3 deg); `losses/pose_prior.py` turns them into a per-joint
+Gaussian energy on the geodesic angle for ankles, feet, head, wrists and
+hands (joints 7, 8, 10, 11, 15, 20-23: no Waymo keypoint on the child
+segment); `FusionLoss` applies it (`loss.pose_prior`, weight 0.05) to rows
+without a mesh label; `pseudo_smpl.py` keeps those joints at their
+initialisation during the fit (`FROZEN_JOINTS`). Test
+`test_pose_prior_is_zero_at_the_mean_and_masked`. Runs:
+a-abl-mixed-short-prior (2 seeds) and a-full-mix80-prior (860461-860463),
+rows in the fusion axis and the headline table.
+
+Open: scoring the local predictions of a-full-mix80's best.pt through
+`run_model` + `score_baselines` gives Waymo 78.0 / 66.5 mm and mAP 0.44
+while the trainer's own validation says 70.7 / 59.9 and 0.67; placement
+matches (0.074 m). The mAP part is expected (the scorer builds boxes from
+the mesh extent, the trainer scores the predicted box); the pose gap is
+not understood yet. A cluster-side protocol evaluation of the same
+checkpoint is queued to see which path is off. Figures for the run in
+`outputs/figures/a-full-mix80/` (curves, crossing frame, placement by
+distance).
+
 ### 2026-09-15 21:30 — anchored gate axis at the short schedule; first anchor run stopped at 80k
 Fusion axis with the point anchor (2 seeds, 3,468 steps, training-time
 validation; protocol evaluation queued): learned gates 76.6 / 64.9 mm,

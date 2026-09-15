@@ -69,6 +69,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ),
             ("ours · anchor · main-mixed", ["a-full-main-mixed-000"]),
             ("ours · anchor · mix80", ["a-full-mix80-000"]),
+            (
+                "ours · anchor · mix80 + pose prior",
+                ["a-full-mix80-prior-000"],
+            ),
             ("ours · anchor · synth-only", ["a-full-synth-only-000"]),
             ("ours · anchor · real-only", ["a-full-real-only-000"]),
             ("ours · anchor · gate none", ["a-full-gate-none-000"]),
@@ -147,6 +151,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             (
                 "anchor · LiDAR only",
                 ["a-abl-lidar-only-000", "a-abl-lidar-only-s1"],
+            ),
+            (
+                "anchor · learned gates + pose prior (unobserved joints)",
+                ["a-abl-mixed-short-prior-000", "a-abl-mixed-short-prior-s1"],
             ),
             (
                 "gate none (plain sum)",
