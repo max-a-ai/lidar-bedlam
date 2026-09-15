@@ -257,6 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 17:40 — SAM 3D Body over the three splits (running)
+`scripts/baselines/run_sam3d_body.py` (env `sam_3d_body`, 3.1 crops/s on the
+4090: whole crop as the box, true crop intrinsics, MHR vertices + camera
+translation per split) and `scripts/baselines/convert_sam3d_to_smpl.py`
+(env `mhr_lod`, CPU: the MHR conversion tool in centimetres with the
+camera translation added, 3.6 crops/s at batch 64) write the common npz.
+64-crop smoke on Waymo val: 78.4 / 61.0 mm, placement 0.724 m, mAP 0.20,
+CameraHMR territory. Chain `sam3d_full.sh` runs stage 1 over the three
+splits with stage 2 pipelined behind it (~2 h), then scores into
+`results_sam3d.json`; static row "SAM 3D Body (DINOv3-H+)" with a
+footnote on the conversion.
+
 ### 2026-09-15 17:10 — main pipeline v2 = anchor on mix80 plus 3DPW
 The anchored runs at 8k steps put mix80 (80/10/10) marginally ahead of the
 50/40/10 mixture on every placement column (Waymo abs 98.0 vs 100.2 mm,
