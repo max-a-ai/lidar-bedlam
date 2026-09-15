@@ -257,6 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 10:40 — PromptHMR as a compared pipeline (in progress)
+`third_party/PromptHMR` (submodule, Wang et al. CVPR 2025: promptable
+SMPL-X regressor taking the whole image, boxes and intrinsics, metric
+translation). Env `phmr_pt2.6` from its `scripts/install.sh`
+(python 3.12, torch 2.6 cu126), checkpoints and the `smplx2smpl.pkl`
+mapping from its fetch scripts (Google Drive), SMPL-X neutral copied from
+the Human3R checkout, our SMPL files. Runner
+`scripts/baselines/run_prompthmr.py`: crop as the image, one box over
+the crop, our crop intrinsics as `cam_int`, SMPL-X vertices mapped to
+SMPL, npz in the common format; static row `prompthmr` in the scoreboard.
+`prompt_hmr` added to the mypy overrides.
+
 ### 2026-09-15 10:10 — SAM 3D Body to SMPL: the MHR conversion works
 `third_party/MHR` (submodule) ships `tools/mhr_smpl_conversion` (optimisation
 fit through a barycentric MHR-to-SMPL surface mapping). Test on 12 real

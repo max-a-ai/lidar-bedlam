@@ -19,3 +19,6 @@
 [submodule "third_party/MHR"]
 	path = third_party/MHR
 	url = https://github.com/facebookresearch/MHR
+[submodule "third_party/PromptHMR"]
+	path = third_party/PromptHMR
+	url = https://github.com/yufu-wang/PromptHMR

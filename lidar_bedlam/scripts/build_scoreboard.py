@@ -33,6 +33,7 @@ STATIC_ROWS = [
     ("hmr2-full", "HMR2.0 (4D Humans)", "image only"),
     ("tokenhmr-tight", "TokenHMR", "image only, tight crop"),
     ("camerahmr-full", "CameraHMR", "image only, GT intrinsics"),
+    ("prompthmr", "PromptHMR", "image only, box prompt, GT intrinsics"),
     ("lidar-hmr-mirror", "LiDAR-HMR", "LiDAR only, mirrored"),
     (
         "lidar-hmr-mirror-centroid",
