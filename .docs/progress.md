@@ -257,6 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 13:20 — PromptHMR scored on the three splits
+`run_prompthmr.py` over Waymo val, SLOPER4D test, 3DPW test (~17 crops/s on
+the 4090; the crop as a 320 px window on a neutral 896 px canvas, box
+around it, default camera, depth rescaled by the true focal, rotated into
+the true camera; SMPL-X mapped to SMPL). `results_prompthmr.json`, static
+row "PromptHMR, image only, box prompt, GT intrinsics": Waymo 82.4 / 64.8,
+abs 1068.5, 1.040 m, mAP 0.03; SLOPER4D 58.4 / 49.7 / PVE 67.2, 0.228 m,
+mAP 0.59; 3DPW 61.7 / 47.8 / PVE 87.1, 0.348 m, mAP 0.24. On pose it sits
+between CameraHMR and HMR2 on Waymo and behind CameraHMR on SLOPER4D; its
+metric depth is close to CameraHMR on SLOPER4D (0.23 vs 0.20 m) but not on
+Waymo (1.04 m at 10-25 m). First compared pipeline with a 3DPW row.
+
 ### 2026-09-15 12:40 — anchor runs under the protocol, first 3DPW column
 Forced re-evaluation of abl-anchor-points (2 seeds, `last.pt`): Waymo val
 73.6 / 61.3 / abs 101.1 mm, 0.076 m, mAP 0.66; full SLOPER4D test 45.8 /
