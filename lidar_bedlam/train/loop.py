@@ -476,9 +476,11 @@ class Trainer:
         (self.run_dir / f"val_{self.step:07d}.json").write_text(
             json.dumps({k: asdict(v) for k, v in results.items()}, indent=1)
         )
-        primary = self.cfg.data.val[0].name
-        # best.pt = highest box mAP on the primary set (the headline metric)
-        score = -results[primary].map if primary in results else math.inf
+        # best.pt = lowest mean root-relative MPJPE over the validation
+        # sources (box mAP is flat from the first evaluation with the point
+        # anchor, so it no longer separates checkpoints)
+        mpjpes = [r.mpjpe for r in results.values() if math.isfinite(r.mpjpe)]
+        score = sum(mpjpes) / len(mpjpes) if mpjpes else math.inf
         if score < self.best:
             self.best = score
             self.save("best")

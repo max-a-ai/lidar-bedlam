@@ -257,6 +257,20 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 23:30 — scoring discrepancy resolved: best.pt was chosen by box mAP
+`best.pt` was the checkpoint with the highest Waymo box mAP. With the
+point anchor the mAP is flat from the first evaluation (0.685 at step 3k
+for a-full-mix80, never exceeded), so best.pt stayed at step 3,000 while
+the pose kept improving; the local figures and scoring used that file.
+The cluster-side protocol evaluation of the same run gives best (3k)
+78.0 / 66.5 mm and last (54k) 70.2 / 56.8 mm, 0.075 m, mAP 0.66, in
+line with the training-time validation: both paths agree, the checkpoint
+was the difference. `train/loop.py` now selects best.pt by the mean
+root-relative MPJPE over the validation sources (deployed; applies to
+runs that start from now, i.e. the prior runs). The scoreboard reads
+`-last.json`, unaffected. The mix80 figures are being redone from
+last.pt.
+
 ### 2026-09-15 23:00 — main v2 with the pose prior submitted
 `configs/a_full_main_v2_prior.yaml` (a-full-main-v2-prior, job 860568):
 the v2 recipe (point anchor, 75/10/10/5) plus the BEDLAM pose prior on
