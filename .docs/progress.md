@@ -257,6 +257,19 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 10:50 — point anchor: Waymo placement 0.222 -> 0.076 m at the short schedule
+abl-anchor-points, two seeds, 3,468 steps (0.28 s/step with the new
+loader defaults), training-time validation on the full Waymo val:
+MPJPE 73.6, PA 61.3, abs 101.2 mm, placement 0.076 m, mAP 0.66 against
+the learned-gate reference 108.4 / 90.3 / 244.9 / 0.222 / 0.47 and
+LiDAR-HMR's 86.4 / 64.8 / 117.4 / 0.083 / 0.48. SLOPER4D subset: 42.3 /
+37.7 / 51.2 mm, 0.027 m, mAP 0.96 (reference 81.9 / 58.6 / 155.5, 0.125,
+0.66). Every column moves, pose included: with the placement solved by
+the scan the queries stop spending capacity on depth. Full re-evaluation
+queued (857100); full-anchor-points at 3k of 150k steps. 3DPW column was
+NaN in training because `meshlidar/v1` was not in `STAGE_DIRS` (fixed,
+a9084f4); the forced eval reads the workspace and is unaffected.
+
 ### 2026-09-15 10:40 — PromptHMR as a compared pipeline (in progress)
 `third_party/PromptHMR` (submodule, Wang et al. CVPR 2025: promptable
 SMPL-X regressor taking the whole image, boxes and intrinsics, metric
