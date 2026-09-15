@@ -276,6 +276,7 @@ def _from_metrics_line(line: dict[str, Any]) -> dict[str, float | None]:
     keys = {
         "mpjpe": "mpjpe",
         "pa_mpjpe": "pa_mpjpe",
+        "pve": "pve",
         "abs_mpjpe": "abs_mpjpe",
         "transl_err_m": "transl_err",
         "map": "map",
