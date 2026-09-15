@@ -32,6 +32,7 @@ from lidar_bedlam.body.smpl import SmplModel
 from lidar_bedlam.data.shards import ShardDataset, ShardDatasetConfig
 from lidar_bedlam.data.torch_dataset import Item
 from lidar_bedlam.lidar.augment import PointAugmentConfig
+from lidar_bedlam.losses.pose_prior import PosePrior
 from lidar_bedlam.losses.smpl import FusionLoss, LossWeights
 from lidar_bedlam.metrics.protocol import (
     MetricSummary,
@@ -169,8 +170,16 @@ class Trainer:
             if self.model.smpl is not None
             else None
         )
+        prior = (
+            PosePrior(Path(cfg.body_models) / "pose_prior_bedlam.npz")
+            if cfg.loss.pose_prior > 0
+            else None
+        )
         self.loss_fn = FusionLoss(
-            LossWeights(**asdict(cfg.loss)), smpl=self.model.smpl, faces=faces
+            LossWeights(**asdict(cfg.loss)),
+            smpl=self.model.smpl,
+            faces=faces,
+            prior=prior,
         )
         self.smpl_eval = SmplModel(Path(cfg.body_models))
         self.step = 0

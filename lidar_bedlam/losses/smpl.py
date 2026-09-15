@@ -20,6 +20,7 @@ import torch
 from torch import Tensor
 
 from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
+from lidar_bedlam.losses.pose_prior import PosePrior
 
 
 def rodrigues(aa: Tensor) -> Tensor:
@@ -177,6 +178,7 @@ class LossWeights:
     vertex: float = 0.0
     normal: float = 0.0
     edge: float = 0.0
+    pose_prior: float = 0.0  # unobserved joints of unlabelled-mesh rows
     crop_size: int = 256
     extra: dict[str, float] = field(default_factory=dict)
 
@@ -193,10 +195,12 @@ class FusionLoss:
         weights: LossWeights | None = None,
         smpl: Any = None,
         faces: Tensor | None = None,
+        prior: PosePrior | None = None,
     ) -> None:
         self.w = weights or LossWeights()
         self.smpl = smpl
         self.faces = faces
+        self.prior = prior
 
     def __call__(
         self, pred: dict[str, Tensor], batch: dict[str, Tensor]
@@ -213,6 +217,12 @@ class FusionLoss:
             )
         parts.update(self._surface_terms(pred, batch))
         parts.update(self._mesh_terms(pred, batch))
+        if self.prior is not None and self.w.pose_prior > 0:
+            # rows with a full SMPL label are covered by the rotation loss
+            energy = self.prior(as_rotmats(pred["body_pose"], 23))
+            parts["pose_prior"] = _masked_mean(
+                energy, ~batch["has_smpl"].bool()
+            )
         total = torch.zeros(
             (), dtype=pred["betas"].dtype, device=pred["betas"].device
         )

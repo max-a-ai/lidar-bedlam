@@ -32,6 +32,10 @@ from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
 from lidar_bedlam.models.fusion import SelectiveFusionModel, project
 from lidar_bedlam.models.rotation import matrix_to_rot6d, rot6d_to_matrix
 
+# SMPL joints without a Waymo keypoint on the child segment (rot6d index =
+# joint index, 0 is the global orientation): ankles, feet, head, wrists, hands
+FROZEN_JOINTS = [7, 8, 10, 11, 15, 20, 21, 22, 23]
+
 
 @dataclass(frozen=True)
 class PseudoFitConfig:
@@ -160,6 +164,8 @@ class PseudoSmplFitter:
             loss = loss + cfg.w_betas * (betas**2).mean()
             loss.backward()  # type: ignore[no-untyped-call]
             opt.step()
+            with torch.no_grad():  # joints no keypoint observes stay at init
+                rot6d[:, FROZEN_JOINTS] = rot_init[:, FROZEN_JOINTS]
         with torch.no_grad():
             _, coco = self._mesh(rot6d, betas, transl)
             err = self._keypoint_error(coco, batch)

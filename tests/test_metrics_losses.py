@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from lidar_bedlam.losses.smpl import FusionLoss, rodrigues
+from lidar_bedlam.losses.smpl import FusionLoss, as_rotmats, rodrigues
 from lidar_bedlam.metrics.detection import (
     average_precision,
     box_detection_metrics,
@@ -171,3 +171,28 @@ def test_place_at_centroid_moves_pelvis_onto_valid_points() -> None:
     assert torch.allclose(out["transl"], delta)
     assert torch.allclose(out["box3d"][:, :3], delta)
     assert torch.allclose(out["vertices"][:, 0], delta)
+
+
+def test_pose_prior_is_zero_at_the_mean_and_masked(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from lidar_bedlam.losses.pose_prior import PosePrior
+    from lidar_bedlam.losses.smpl import LossWeights
+
+    mean = np.tile(np.eye(3), (23, 1, 1))
+    mean[19] = rodrigues(torch.tensor([[0.5, 0.0, 0.0]])).numpy()[0]
+    stats = tmp_path / "prior.npz"
+    np.savez(stats, mean_rot=mean, sigma=np.full(23, 0.2), count=np.array(1))
+    prior = PosePrior(stats, joints=(20, 21))  # wrists
+    at_mean = torch.from_numpy(mean).float()[None].repeat(2, 1, 1, 1)
+    assert torch.allclose(prior(at_mean), torch.zeros(2), atol=1e-4)
+    off = at_mean.clone()
+    off[1, 19] = torch.eye(3)  # 0.5 rad away from the mean: (0.5/0.2)^2 / 2
+    e = prior(off)
+    assert abs(float(e[0])) < 1e-4 and abs(float(e[1]) - 3.125) < 1e-2
+    # in the fusion loss only rows without a mesh label pay for it
+    pred = {"body_pose": off, "betas": torch.zeros(2, 10)}
+    batch = {"has_smpl": torch.tensor([False, True])}
+    loss = FusionLoss(LossWeights(pose_prior=1.0), prior=prior)
+    energy = loss.prior(as_rotmats(pred["body_pose"], 23))
+    from lidar_bedlam.losses.smpl import _masked_mean
+
+    assert float(_masked_mean(energy, ~batch["has_smpl"])) < 1e-4

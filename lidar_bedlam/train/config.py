@@ -94,6 +94,7 @@ class LossSection:
     vertex: float = 0.0
     normal: float = 0.0
     edge: float = 0.0
+    pose_prior: float = 0.0  # unobserved joints of rows without a mesh label
 
 
 @dataclass
