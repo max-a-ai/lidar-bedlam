@@ -257,6 +257,20 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 11:30 — header figure: a whole Waymo sweep with our meshes
+Frame 1557886649947221 (val, camera 2, segment 15224741240438106736_960_000_980_000)
+has six pedestrians with 3D labels in view (the most in the val set).
+`outputs/figures/waymo_header/waymo_sweep_dump_np.py` reads the v2 parquet
+(pyarrow only) and ports the official range-image conversion to numpy
+(azimuth from the column index with the extrinsic yaw correction, beam
+inclinations reversed, per-pixel pose of the top laser, world-to-vehicle);
+the waymo_open_dataset toolkit itself is unusable here (protobuf clash with
+TensorFlow). Validation: every labelled keypoint is 3-5 cm from a return
+and the six people coincide with our records. `waymo_header.py` runs
+`abl-anchor-points-000/best.pt` on the six crops (pelvis 10-16 cm from the
+labelled hip centres at 9-18 m) and draws the image overlay, the 3D sweep
+view and a bird's-eye view. Notebook section 18 shows the first two.
+
 ### 2026-09-15 10:50 — point anchor: Waymo placement 0.222 -> 0.076 m at the short schedule
 abl-anchor-points, two seeds, 3,468 steps (0.28 s/step with the new
 loader defaults), training-time validation on the full Waymo val:

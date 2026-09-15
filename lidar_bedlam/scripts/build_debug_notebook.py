@@ -897,6 +897,28 @@ fig.tight_layout()
 plt.show()
 """)
 
+md("""## 18. In the wild: a whole Waymo sweep with our meshes
+
+Waymo val frame 1557886649947221 (segment 15224741240438106736_960_000_980_000,
+camera 2): six pedestrians with 3D keypoint labels are in the camera's
+view. The full sweep of all five lasers (169,518 points, numpy port of the
+official range-image conversion incl. the top laser's per-pixel pose; the
+labelled keypoints lie 3-5 cm from the nearest return, which validates the
+port) is transformed into the camera frame exactly as the training records
+are. The six crops go through the point-anchored model (short schedule,
+`abl-anchor-points-000/best.pt`); the predicted pelvises land 10-16 cm from
+the labelled hip centres at 9-18 m. Left: camera image with the sweep
+(colour = depth) and the meshes projected. Right: the sweep around the
+crossing in 3D with the meshes on the road returns; the two unlabelled
+pedestrians stay raw points. Scripts and the frame dump are in
+`outputs/figures/waymo_header/`.""")
+
+code("""
+from IPython.display import Image, display
+for name in ("header_image.png", "header_sweep.png"):
+    display(Image(filename=str(ROOT / "outputs" / "figures" / "waymo_header" / name), width=1400))
+""")
+
 
 def main() -> int:
     """Write the notebook."""
