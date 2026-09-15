@@ -257,6 +257,14 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 23:00 — main v2 with the pose prior submitted
+`configs/a_full_main_v2_prior.yaml` (a-full-main-v2-prior, job 860568):
+the v2 recipe (point anchor, 75/10/10/5) plus the BEDLAM pose prior on
+the unobserved joints of Waymo rows. The running v2 without the prior
+stays as the control; the short prior runs (2 seeds) decide within the
+hour whether the prior costs anything on the metrics, the renders decide
+whether it fixes the hands and feet. Headline row "main v2 + pose prior".
+
 ### 2026-09-15 22:40 — pose prior on the unobserved joints (rule 2) and frozen joints in the fit (rule 1)
 Neither had been applied since the proposal. Now: `scripts/pose_prior_stats.py`
 computes per-joint chordal mean rotations and the geodesic spread of the

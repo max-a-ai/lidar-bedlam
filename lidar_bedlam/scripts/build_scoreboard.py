@@ -67,6 +67,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 "synth/Waymo/SLOPER4D/3DPW)",
                 ["a-full-main-v2-000"],
             ),
+            (
+                "ours · main v2 + pose prior",
+                ["a-full-main-v2-prior-000"],
+            ),
             ("ours · anchor · main-mixed", ["a-full-main-mixed-000"]),
             ("ours · anchor · mix80", ["a-full-mix80-000"]),
             (
