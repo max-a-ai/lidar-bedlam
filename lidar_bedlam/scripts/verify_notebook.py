@@ -1,12 +1,15 @@
-"""Execute ``notebooks/capabilities.ipynb``; fail on cell or widget errors.
+"""Execute a notebook; fail on cell or widget errors.
 
 Widget cells (ipywidgets ``Output``) make nbclient wait for its per-cell
 timeout after the work is done, so the timeout is kept short; every cell's
 real work finishes in well under a minute.
 
-Usage::
+The executed copy is written next to the source as
+``<name>.executed.ipynb`` (git-ignored). Usage::
 
     uv run python lidar_bedlam/scripts/verify_notebook.py [--timeout 120]
+    uv run python lidar_bedlam/scripts/verify_notebook.py \\
+        --notebook notebooks/waymo_pseudo_gt.ipynb
 """
 
 from __future__ import annotations
@@ -20,8 +23,7 @@ from typing import Any
 import nbformat
 from nbclient import NotebookClient
 
-SRC = Path("notebooks/capabilities.ipynb")
-DST = Path("notebooks/capabilities.executed.ipynb")
+DEFAULT = Path("notebooks/capabilities.ipynb")
 
 
 def widget_errors(nb: Any) -> list[str]:
@@ -42,18 +44,21 @@ def main(argv: list[str] | None = None) -> int:
     """CLI."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--timeout", type=int, default=120)
+    ap.add_argument("--notebook", type=Path, default=DEFAULT)
     args = ap.parse_args(argv)
-    nb = nbformat.read(SRC, as_version=4)
+    src: Path = args.notebook
+    dst = src.with_suffix(".executed.ipynb")
+    nb = nbformat.read(src, as_version=4)
     client = NotebookClient(
         nb,
         timeout=args.timeout,
         kernel_name="python3",
         allow_errors=True,
-        resources={"metadata": {"path": str(SRC.parent)}},
+        resources={"metadata": {"path": str(src.parent)}},
     )
     t0 = time.time()
     client.execute()
-    nbformat.write(nb, DST)
+    nbformat.write(nb, dst)
     errors = [
         f"cell {i}: {o['ename']}: {o['evalue'][:200]}"
         for i, c in enumerate(nb.cells)
@@ -65,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(e + "\n")
     sys.stdout.write(
         f"{len(nb.cells)} cells in {time.time() - t0:.0f} s, "
-        f"{len(errors)} errors, wrote {DST}\n"
+        f"{len(errors)} errors, wrote {dst}\n"
     )
     return 1 if errors else 0
 

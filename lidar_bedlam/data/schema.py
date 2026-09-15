@@ -87,3 +87,9 @@ JOINT_CONVENTIONS = ("smpl24", "waymo15")
 WAYMO15_TO_COCO17 = np.array(
     [0, 5, 7, 9, 11, 13, 15, 6, 8, 10, 12, 14, 16, -1, -1]
 )
+
+# LiDAR-HMR's published Waymo pseudo-GT uses 14 keypoints of its own;
+# index -> coco17 index (-1: no counterpart, their 0 and 13 are head joints)
+LIDARHMR14_TO_COCO17 = np.array(
+    [-1, 5, 7, 9, 11, 13, 15, 6, 8, 10, 12, 14, 16, -1]
+)

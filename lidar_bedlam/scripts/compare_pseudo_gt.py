@@ -23,7 +23,10 @@ from numpy.typing import NDArray
 from scipy.spatial import cKDTree
 
 from lidar_bedlam.body.smpl import SmplModel, SmplParams
-from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
+from lidar_bedlam.data.schema import (
+    LIDARHMR14_TO_COCO17,
+    WAYMO15_TO_COCO17,
+)
 from lidar_bedlam.generate.records import Shard
 
 FloatArray = NDArray[np.float64]
@@ -32,18 +35,7 @@ FloatArray = NDArray[np.float64]
 LIMBS = frozenset({5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16})
 # LiDAR-HMR's 14-keypoint order -> COCO index (nose and head left out)
 THEIRS_TO_COCO = {
-    1: 5,
-    7: 6,
-    2: 7,
-    8: 8,
-    3: 9,
-    9: 10,
-    4: 11,
-    10: 12,
-    5: 13,
-    11: 14,
-    6: 15,
-    12: 16,
+    i: int(c) for i, c in enumerate(LIDARHMR14_TO_COCO17) if c >= 0
 }
 PERSON_RADIUS_M = 1.5
 
