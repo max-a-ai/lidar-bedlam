@@ -257,6 +257,21 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 00:20 — main v2 on LiDAR-HMR's pseudo-GT; v2 labels shortened
+The three-way notebook makes LiDAR-HMR's fits the cleanest of the three
+Waymo label sets (hands and feet intact; measures on par with ours).
+`scripts/make_lidarhmr_shards.py` copies the real/v1 Waymo training
+shards with their SMPL fields replaced by the matched LiDAR-HMR fit
+expressed in the record's camera frame (`transform_smpl_params` with the
+shaped rest pelvis), `has_smpl` set for the 4,586 matched of 4,591
+records, token sidecars linked: `real/v1_lidarhmr` (7.7 GB, on Helma;
+camera-frame label 31 mm mean from the Waymo keypoints on 72 checked
+records). `configs/a_full_main_v2_lhmr.yaml` (a-full-main-v2-lhmr) is v2
+with the Waymo source pointed at it; submitted with the folder staged.
+Scoreboard: the v2 rows are "ours · main v2", "ours · main v2 (pseudo-GT
+LiDAR-HMR)" and "ours · main v2 + pose prior"; the recipes moved into
+per-row footnotes (`ROW_FOOTNOTES`).
+
 ### 2026-09-15 23:30 — scoring discrepancy resolved: best.pt was chosen by box mAP
 `best.pt` was the checkpoint with the highest Waymo box mAP. With the
 point anchor the mAP is flat from the first evaluation (0.685 at step 3k

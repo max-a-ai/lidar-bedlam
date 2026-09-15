@@ -62,15 +62,12 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
         "the camera-frame translation on the 50/40/10 synthetic / Waymo / "
         "SLOPER4D mixture and change one thing each.",
         [
+            ("ours · main v2", ["a-full-main-v2-000"]),
             (
-                "ours · main v2: point anchor, mix80 + 3DPW (75/10/10/5 "
-                "synth/Waymo/SLOPER4D/3DPW)",
-                ["a-full-main-v2-000"],
+                "ours · main v2 (pseudo-GT LiDAR-HMR)",
+                ["a-full-main-v2-lhmr-000"],
             ),
-            (
-                "ours · main v2 + pose prior",
-                ["a-full-main-v2-prior-000"],
-            ),
+            ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
             ("ours · anchor · main-mixed", ["a-full-main-mixed-000"]),
             ("ours · anchor · mix80", ["a-full-mix80-000"]),
             (
@@ -282,6 +279,33 @@ class Row:
     footnote: str | None = None
 
 
+# rows shown as "queued" before their run has logged anything
+PLACEHOLDER_ROWS = {
+    "ours · main v2 (pseudo-GT LiDAR-HMR)",
+    "ours · main v2 + pose prior",
+}
+
+# footnotes of our rows, by label (the recipe stays out of the label)
+ROW_FOOTNOTES = {
+    "ours · main v2": (
+        "point-anchored translation, learned gates; every batch 75 % BEDLAM "
+        "(full synthetic pool, random main resolution), 10 % Waymo train "
+        "(13 keypoints, no mesh label), 10 % SLOPER4D train, 5 % 3DPW "
+        "mesh-LiDAR; full schedule with early stop"
+    ),
+    "ours · main v2 (pseudo-GT LiDAR-HMR)": (
+        "as main v2, but the Waymo training records carry LiDAR-HMR's "
+        "published SMPL fits as mesh labels (matched per frame by mesh "
+        "centre, median 8 cm; 4,586 of 4,591 records), expressed in the "
+        "record's camera frame; has_smpl is set, so the full-mesh losses "
+        "apply to Waymo rows"
+    ),
+    "ours · main v2 + pose prior": (
+        "as main v2, plus the BEDLAM pose prior on the ankles, feet, head, "
+        "wrists and hands of rows without a mesh label (weight 0.05)"
+    ),
+}
+
 FOOTNOTES = {
     "camerahmr-full": "pa_mpjpe shown as 63.3 by request (measured 60.0)",
     "human3r": (
@@ -372,6 +396,10 @@ def group_rows(root: Path, spec: list[tuple[str, list[str]]]) -> list[Row]:
         loaded = [(r, load_run(root, r)) for r in runs]
         found = [(r, x) for r, x in loaded if x is not None]
         if not found:
+            if label in PLACEHOLDER_ROWS:
+                rows.append(
+                    Row(label, "queued", "ours", {}, ROW_FOOTNOTES.get(label))
+                )
             continue
         values = average([x[0] for _, x in found])
         notes = sorted({x[1] for _, x in found})
@@ -380,7 +408,7 @@ def group_rows(root: Path, spec: list[tuple[str, list[str]]]) -> list[Row]:
             note = f"mean of {len(found)} seeds; " + note
         if len(found) < len(runs):
             note += f" ({len(runs) - len(found)} seed pending)"
-        rows.append(Row(label, note, "ours", values))
+        rows.append(Row(label, note, "ours", values, ROW_FOOTNOTES.get(label)))
     return rows
 
 
