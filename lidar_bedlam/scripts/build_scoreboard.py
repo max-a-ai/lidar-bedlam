@@ -35,6 +35,11 @@ STATIC_ROWS = [
     ("tokenhmr-tight", "TokenHMR", "image only, tight crop"),
     ("camerahmr-full", "CameraHMR", "image only, GT intrinsics"),
     ("prompthmr", "PromptHMR", "image only, box prompt, GT intrinsics"),
+    (
+        "sam3d-body",
+        "SAM 3D Body (DINOv3-H+)",
+        "image only, GT intrinsics, MHR mesh fitted to SMPL",
+    ),
     ("lidar-hmr-mirror", "LiDAR-HMR", "LiDAR only, mirrored"),
     (
         "lidar-hmr-mirror-centroid",
@@ -258,6 +263,11 @@ FOOTNOTES = {
     "human3r": (
         "depth not metric on crops, placement columns blanked; "
         "crops without a detection skipped"
+    ),
+    "sam3d-body": (
+        "predicts the MHR body model; SMPL fitted to the MHR mesh with the "
+        "conversion tool of the MHR repository (0.65 cm mean vertex "
+        "distance on a 12-crop check), then scored like every SMPL row"
     ),
 }
 
