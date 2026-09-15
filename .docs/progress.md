@@ -248,7 +248,8 @@ rows in the fusion axis and the headline table. Test
 moved onto the centroid of the record's input points (what a LiDAR method
 gets from the scan alone). LiDAR-HMR mirrored on Waymo val: placement
 0.106 m, abs 140.6 mm, mAP 0.45 (learned: 0.083 m, 117.4 mm, 0.48). The
-scan alone gives 10 cm; their learned offset adds 2 cm. Static row
+scan alone gives 10 cm; their learned offset adds 2 cm. SLOPER4D test:
+0.112 m, abs 140.3 mm, mAP 0.73 (learned 0.084 m, 117.3 mm, 0.76). Static row
 `lidar-hmr-mirror-centroid` (`results_centroid.json`). Test
 `test_place_at_centroid_moves_pelvis_onto_valid_points`.
 
