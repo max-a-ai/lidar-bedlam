@@ -4,7 +4,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=128
 #SBATCH --time=24:00:00
 #SBATCH --signal=B:USR1@900
 #SBATCH --output=outputs/slurm-%x-%j.out
@@ -24,7 +24,9 @@
 #   MAX_RESUBMITS safety cap on chain length (default 20)
 #   EXTRA_SET     extra "section.key=value" overrides
 #   NPROC         processes (GPUs) per node for torchrun (default 4)
-#   OMP_THREADS   OMP_NUM_THREADS for the trainer and its workers (default 8)
+#   OMP_THREADS   OMP_NUM_THREADS for the trainer and its workers (default 2)
+#   WORKERS       loader workers per rank (default 32; loader tests 2026-09-15:
+#                 128 CPUs + 32 workers 0.22 s/step vs 0.42 with 64 CPUs + 16)
 #
 # Notes for Helma (see docs/cluster.md): only $HOME, /hnvme/workspace and
 # node-local /tmp are visible on compute nodes ($WORK on /home/atuin and
@@ -47,7 +49,8 @@ cd "$REPO"
 # the venv lives in $HOME: workspace filesystems are inode-limited
 export UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT:-$HOME/venvs/lidar-bedlam}
 export WANDB_MODE=disabled  # metrics.jsonl is mirrored to wandb from the login node
-export OMP_NUM_THREADS=${OMP_THREADS:-8}
+export OMP_NUM_THREADS=${OMP_THREADS:-2}
+EXTRA_SET="data.num_workers=${WORKERS:-32} $EXTRA_SET"
 
 if [ -z "${RUN_NAME:-}" ]; then
   RUN_NAME=$(uv run python lidar_bedlam/scripts/next_run_name.py --config "$CONFIG")
