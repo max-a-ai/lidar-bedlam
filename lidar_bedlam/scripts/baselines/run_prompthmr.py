@@ -3,10 +3,15 @@ camera-frame SMPL meshes.
 
 The model is promptable: it takes the whole image, a person box and the
 camera intrinsics, and regresses SMPL-X pose, shape and a metric
-translation. We hand over our 256 px crop as the image, one box covering
-it and the crop's true intrinsics, so placement is comparable with the
-other image rows. SMPL-X vertices are mapped to SMPL with the
-``smplx2smpl.pkl`` matrix that ships with the method.
+translation. We hand over our 256 px crop as the image and one box
+covering it. The crop's true principal point lies far outside the crop
+(the crop is a window of the full frame), which the model never saw in
+training, so it gets the true focal length with the principal point at
+the crop centre, and the prediction is rotated back into the true camera
+afterwards (the pseudo camera is the true camera turned towards the crop
+centre; an exact rotation, as for the weak-perspective rows). SMPL-X
+vertices are mapped to SMPL with the ``smplx2smpl.pkl`` matrix that ships
+with the method.
 
 Runs in the ``phmr_pt2.6`` conda environment created by the method's
 ``scripts/install.sh``; the checkout is ``third_party/PromptHMR`` and is
@@ -75,6 +80,7 @@ def run(args: argparse.Namespace) -> None:
     )
 
     box = torch.tensor([[0.0, 0.0, CROP - 1.0, CROP - 1.0]])
+    e_z = np.array([0.0, 0.0, 1.0])
     preds = Predictions()
     timer = Timer()
     done = 0
@@ -83,12 +89,16 @@ def run(args: argparse.Namespace) -> None:
         n = len(data["key"])
         for start in range(0, n, args.batch_size):
             sl = slice(start, min(n, start + args.batch_size))
+            ks = data["intrinsics"][sl].astype(np.float64)
+            pseudo = ks.copy()
+            pseudo[:, 0, 2] = CROP / 2.0
+            pseudo[:, 1, 2] = CROP / 2.0
             inputs = [
                 {
                     "image_cv": np.ascontiguousarray(data["image"][i]),
                     "boxes": box,
                     "cam_int": torch.from_numpy(
-                        data["intrinsics"][i].astype(np.float32)
+                        pseudo[i - sl.start].astype(np.float32)
                     )[None],
                     "text": None,
                     "masks": None,
@@ -114,13 +124,26 @@ def run(args: argparse.Namespace) -> None:
                 [o["betas"][0].float().cpu().numpy() for o in outputs]
             ).astype(np.float64)
             v = np.einsum("sv,nvk->nsk", to_smpl, vx)
-            preds.add(
-                data["key"][sl],
-                v,
-                transl,
-                Rotation.from_matrix(rot).as_rotvec(),
-                betas,
-            )
+            # pseudo camera -> true camera: rotate e_z onto the ray through
+            # the crop centre (true camera frame)
+            aa = np.zeros((len(v), 3))
+            for j in range(len(v)):
+                k = ks[j]
+                ray = np.array(
+                    [
+                        (CROP / 2.0 - k[0, 2]) / k[0, 0],
+                        (CROP / 2.0 - k[1, 2]) / k[1, 1],
+                        1.0,
+                    ]
+                )
+                r_fix, _ = Rotation.align_vectors(
+                    [ray / np.linalg.norm(ray)], [e_z]
+                )
+                m = r_fix.as_matrix()
+                v[j] = v[j] @ m.T
+                transl[j] = m @ transl[j]
+                aa[j] = Rotation.from_matrix(m @ rot[j]).as_rotvec()
+            preds.add(data["key"][sl], v, transl, aa, betas)
             done += sl.stop - sl.start
             if args.limit and done >= args.limit:
                 break
@@ -135,6 +158,7 @@ def run(args: argparse.Namespace) -> None:
         method="prompthmr",
         crop="full",
         mirror=0,
+        camera="crop-centred principal point, rotated back",
         img_size=args.img_size,
         seconds=timer.seconds,
         samples=timer.samples,

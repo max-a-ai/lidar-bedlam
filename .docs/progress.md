@@ -257,6 +257,26 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 12:10 — interactive misplacement figure, PromptHMR camera fix
+`showcase.comparison_figure_interactive` (plotly): image with labels and
+the projected meshes, bird's-eye and side views; every method, the LiDAR
+returns, the GT joints and mesh and the GT box footprint (new
+`box_footprint`, `ValIndex.row` now carries `box3d`) are legend entries
+that toggle in any combination. Notebook section 14 uses it (executed copy
+spliced with the plotly outputs). The red dots on the crop are every 8th
+vertex of our own mesh projected with the crop intrinsics; on the far
+Waymo pick the mesh sits at the right depth (21.4-22.1 m vs 21.9 m
+labelled) and is 1.72 m tall, the cloud only looks wide because vertices
+of the arms and the outline are drawn as dots over a crowded crop.
+
+PromptHMR: our crop intrinsics put the principal point hundreds of pixels
+outside the crop, which the model never saw (first smoke: 3.6 m
+placement). The runner now passes the true focal length with the
+principal point at the crop centre and rotates the prediction back into
+the true camera (exact rotation of e_z onto the ray through the crop
+centre). A shadowed loop variable in the runner emptied the second batch;
+fixed.
+
 ### 2026-09-15 11:30 — header figure: a whole Waymo sweep with our meshes
 Frame 1557886649947221 (val, camera 2, segment 15224741240438106736_960_000_980_000)
 has six pedestrians with 3D labels in view (the most in the val set).

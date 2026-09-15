@@ -788,10 +788,13 @@ for split in ["waymo_val", "sloper4d_test"]:
 """)
 
 code("""
+# interactive: click legend entries to show any combination of the LiDAR
+# returns, the labels, the GT box footprint (bird's-eye view) and each
+# method's mesh; double-click isolates one entry
 for split, (tables, per_record, index, picks) in showcase.items():
     for p in picks:
-        fig = sc.comparison_figure(index.row(p.key), tables, per_record, smpl_eval, title=f"{split}: {p.reason}")
-        plt.show()
+        fig = sc.comparison_figure_interactive(index.row(p.key), tables, per_record, smpl_eval, title=f"{split}: {p.reason}")
+        fig.show()
 """)
 
 code("""

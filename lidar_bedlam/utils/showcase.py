@@ -140,6 +140,7 @@ class ValIndex:
             "joint_convention": str(sh.array("joint_convention")[i]),
             "has_smpl": bool(sh.array("has_smpl")[i]),
             "kp2d": sh.row("kp2d", i).astype(np.float64),
+            "box3d": sh.row("box3d", i).astype(np.float64),
         }
         if out["has_smpl"]:
             out["smpl"] = SmplParams(
@@ -396,6 +397,200 @@ def comparison_figure(
     if title:
         fig.suptitle(title, fontsize=10)
     fig.tight_layout()
+    return fig
+
+
+def box_footprint(box: FloatArray) -> FloatArray:
+    """Corners (5, 2) of the 3D box's footprint on the ground (x, z), closed.
+
+    Box convention (metrics.detection): centre, size (length along the
+    heading, height along up, width across), yaw about the camera's up axis.
+    """
+    cx, cz = box[0], box[2]
+    length, width, yaw = box[3], box[5], box[6]
+    c, s = np.cos(yaw), np.sin(yaw)
+    hl, hw = length / 2, width / 2
+    corners = np.array(
+        [[-hl, -hw], [hl, -hw], [hl, hw], [-hl, hw], [-hl, -hw]]
+    )
+    rot = np.array([[c, -s], [s, c]])
+    return np.asarray(corners @ rot.T + np.array([cx, cz]), dtype=np.float64)
+
+
+def comparison_figure_interactive(
+    rec: dict[str, Any],
+    tables: dict[str, PredictionTable],
+    metrics: dict[str, dict[str, SampleMetrics]],
+    smpl: SmplModel,
+    title: str = "",
+) -> Any:
+    """Plotly version of ``comparison_figure``: every method, the LiDAR
+    returns, the labels and the ground-truth box footprint are separate
+    legend entries that can be switched on and off in any combination."""
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+    key = rec["key"]
+    fig = make_subplots(
+        rows=1,
+        cols=3,
+        column_widths=[0.28, 0.36, 0.36],
+        subplot_titles=(
+            f"{rec['dataset']}  {key.split('/')[-1][:24]}",
+            "bird's-eye view (x right, z depth)",
+            "side view (z depth, y down)",
+        ),
+        horizontal_spacing=0.06,
+    )
+    fig.add_trace(go.Image(z=rec["image"], hoverinfo="skip"), row=1, col=1)
+    kp = rec["kp2d"]
+    ok = kp[:, 2] > 0
+    fig.add_trace(
+        go.Scatter(
+            x=kp[ok, 0],
+            y=kp[ok, 1],
+            mode="markers",
+            marker={"size": 7, "color": COLORS["GT"]},
+            name="GT joints (2D)",
+            legendgroup="gt",
+            showlegend=False,
+        ),  # fmt: skip
+        row=1,
+        col=1,
+    )
+    meshes: dict[str, FloatArray] = {}
+    for name, t in tables.items():
+        if key in t.index:
+            meshes[name] = t.vertices[t.index[key]].astype(np.float64)
+    pts = rec["points"]
+    gt = rec["joints3d"][rec["joints3d_valid"]]
+    gt_verts = smpl.forward(rec["smpl"])[0] if rec["has_smpl"] else None
+    foot = box_footprint(rec["box3d"])
+    views = [(2, 0, 2), (3, 2, 1)]  # column, horizontal axis, vertical axis
+    for name, v in meshes.items():
+        m = metrics.get(name, {}).get(key)
+        tag = (
+            f"{name}: {m.mpjpe:.0f} mm, {m.transl_err_m:.2f} m" if m else name
+        )
+        uv = _project(rec["intrinsics"], v[::6])
+        fig.add_trace(
+            go.Scatter(
+                x=uv[:, 0],
+                y=uv[:, 1],
+                mode="markers",
+                marker={
+                    "size": 2,
+                    "color": COLORS.get(name, "black"),
+                    "opacity": 0.45,
+                },
+                name=tag,
+                legendgroup=name,
+                showlegend=False,
+                visible=True if name == "ours" else "legendonly",
+            ),  # fmt: skip
+            row=1,
+            col=1,
+        )
+        for col, a, b in views:
+            fig.add_trace(
+                go.Scatter(
+                    x=v[::4, a],
+                    y=v[::4, b],
+                    mode="markers",
+                    marker={
+                        "size": 2,
+                        "color": COLORS.get(name, "black"),
+                        "opacity": 0.6,
+                    },
+                    name=tag,
+                    legendgroup=name,
+                    showlegend=col == 2,
+                ),  # fmt: skip
+                row=1,
+                col=col,
+            )
+    for col, a, b in views:
+        fig.add_trace(
+            go.Scatter(
+                x=pts[:, a],
+                y=pts[:, b],
+                mode="markers",
+                marker={"size": 3, "color": "#8a8f93"},
+                name="LiDAR returns",
+                legendgroup="lidar",
+                showlegend=col == 2,
+            ),  # fmt: skip
+            row=1,
+            col=col,
+        )
+        if gt_verts is not None:
+            fig.add_trace(
+                go.Scatter(
+                    x=gt_verts[::4, a],
+                    y=gt_verts[::4, b],
+                    mode="markers",
+                    marker={"size": 2, "color": COLORS["GT"], "opacity": 0.5},
+                    name="GT mesh",
+                    legendgroup="gtmesh",
+                    showlegend=col == 2,
+                ),  # fmt: skip
+                row=1,
+                col=col,
+            )
+        fig.add_trace(
+            go.Scatter(
+                x=gt[:, a],
+                y=gt[:, b],
+                mode="markers",
+                marker={"size": 9, "color": COLORS["GT"], "symbol": "x"},
+                name="GT joints",
+                legendgroup="gt",
+                showlegend=col == 2,
+            ),  # fmt: skip
+            row=1,
+            col=col,
+        )
+    fig.add_trace(
+        go.Scatter(
+            x=foot[:, 0],
+            y=foot[:, 1],
+            mode="lines",
+            line={"color": COLORS["GT"], "width": 2, "dash": "dash"},
+            name="GT box footprint",
+            legendgroup="box",
+        ),  # fmt: skip
+        row=1,
+        col=2,
+    )
+    allv = np.concatenate([gt] + list(meshes.values()) + [pts])
+    lo, hi = allv[:, 2].min() - 0.5, allv[:, 2].max() + 0.5
+    half = max((hi - lo) / 2.0, 1.5)
+    c = gt.mean(0) if len(gt) else pts.mean(0)
+    fig.update_xaxes(range=[0, 256], showticklabels=False, row=1, col=1)
+    fig.update_yaxes(
+        range=[256, 0], showticklabels=False, scaleanchor="x", row=1, col=1
+    )
+    fig.update_xaxes(
+        title_text="x [m]", range=[c[0] - half, c[0] + half], row=1, col=2
+    )
+    fig.update_yaxes(
+        title_text="z [m]", range=[lo, hi], scaleanchor="x2", row=1, col=2
+    )
+    fig.update_xaxes(title_text="z [m]", range=[lo, hi], row=1, col=3)
+    fig.update_yaxes(
+        title_text="y [m]",
+        range=[c[1] + half, c[1] - half],
+        scaleanchor="x3",
+        row=1,
+        col=3,
+    )
+    fig.update_layout(
+        title=title,
+        height=520,
+        width=1500,
+        margin={"l": 40, "r": 20, "t": 70, "b": 40},
+        legend={"itemsizing": "constant", "font": {"size": 10}},
+    )
     return fig
 
 
