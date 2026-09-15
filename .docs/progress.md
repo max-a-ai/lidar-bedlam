@@ -257,6 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 16:50 — main pipeline v2 submitted
+`configs/a_full_main_v2.yaml` (a-full-main-v2): point-anchored translation,
+every batch 50 % BEDLAM (full pool, random main resolution), 25 % Waymo
+train (4,591 records), 15 % SLOPER4D train (21,062), 10 % 3DPW mesh-LiDAR
+train (4,468); full schedule with early stop; validation on all three
+splits. Waymo and 3DPW are small, so their whole sets are seen many times
+over; SLOPER4D at 15 % sees each record ~220 times. Scoreboard: main v2
+and the six anchored core runs at the top of the headline table, the
+anchored short reference in the fusion axis. Scaling the synthetic pool
+(data axis, 2x-32x at fixed steps) stayed flat within noise, so the v2 run
+keeps the full pool and changes the real-data mix instead.
+
 ### 2026-09-15 16:20 — LiDAR-HMR on 3DPW; anchored short reference; BEDLAM 2 images down
 LiDAR-HMR mirrored on the 3DPW test crops (simulated main_0 scan):
 117.6 / 80.7 / PVE 156.6, 0.131 m, mAP 0.47; pelvis on the centroid: 0.196 m,

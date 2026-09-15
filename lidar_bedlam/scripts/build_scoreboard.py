@@ -52,9 +52,22 @@ STATIC_ROWS = [
 GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
     (
         "Headline: final schedule (150k steps) against the published pipelines",
-        "Our runs use the 50/40/10 synthetic / Waymo / SLOPER4D mixture; "
-        "full-main-mixed is the headline run, the others change one thing.",
+        "Rows marked anchor use the point-anchored translation (the model "
+        "since 2026-09-15); main v2 is the headline run. The older rows use "
+        "the camera-frame translation on the 50/40/10 synthetic / Waymo / "
+        "SLOPER4D mixture and change one thing each.",
         [
+            (
+                "ours · main v2: point anchor, 50/25/15/10 synth/Waymo/"
+                "SLOPER4D/3DPW",
+                ["a-full-main-v2-000"],
+            ),
+            ("ours · anchor · main-mixed", ["a-full-main-mixed-000"]),
+            ("ours · anchor · mix80", ["a-full-mix80-000"]),
+            ("ours · anchor · synth-only", ["a-full-synth-only-000"]),
+            ("ours · anchor · real-only", ["a-full-real-only-000"]),
+            ("ours · anchor · gate none", ["a-full-gate-none-000"]),
+            ("ours · anchor · LiDAR only", ["a-full-lidar-only-000"]),
             ("ours · main-mixed", ["full-main-mixed-000"]),
             ("ours · mix80 (80/10/10)", ["full-mix80-000"]),
             ("ours · synth-only", ["full-synth-only-000"]),
@@ -113,6 +126,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             (
                 "learned gates (reference)",
                 ["abl-mixed-short-001", "abl-mixed-short-s1"],
+            ),
+            (
+                "anchor · learned gates (reference)",
+                ["a-abl-mixed-short-000", "a-abl-mixed-short-s1"],
             ),
             (
                 "gate none (plain sum)",
