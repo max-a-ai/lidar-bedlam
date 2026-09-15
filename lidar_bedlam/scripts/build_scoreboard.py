@@ -10,7 +10,8 @@ Published pipelines come from ``outputs/baselines/results_static.json`` and
 never change; the mirror test from ``results_mirror.json`` when present.
 Rows of one group are ranked per column (green / yellow / red = best /
 second / third; lower is better except mAP). In the headline table a value of
-ours that beats every compared pipeline is blue.
+ours that beats every compared pipeline is blue, unless it is also the
+column's best, which stays green.
 """
 
 from __future__ import annotations
@@ -433,8 +434,8 @@ def table_html(rows: list[Row]) -> str:
         for k in keys:
             rk = rank_by_key[k].get(i)
             c = f" {cls[rk]}" if rk is not None else ""
-            if i in blue_by_key[k]:
-                c = " b"  # beats every compared pipeline: blue wins
+            if i in blue_by_key[k] and rk != 0:
+                c = " b"  # beats every compared pipeline; green stays for the best
             h.append(f'<td class="num{c}">{fmt(k, r.values.get(k))}</td>')
         h.append("</tr>")
         prev = r.kind
@@ -537,7 +538,7 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 </header>
 <section><div class="legend"><span>Per column, within each table:</span>
 <span class="chip g">best</span><span class="chip y">second</span><span class="chip r">third</span>
-<span class="chip b">beats every compared pipeline</span>
+<span class="chip b">beats every compared pipeline (not the column's best)</span>
 <span>· lower is better except mAP · shaded rows are our runs · the published pipelines are static</span></div></section>
 {body}
 <section class="notes">
