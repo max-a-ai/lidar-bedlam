@@ -6,13 +6,16 @@ camera intrinsics, and regresses SMPL-X pose, shape and a metric
 translation. We hand over our 256 px crop as the image and one box
 covering it. The crop's true intrinsics (principal point hundreds of pixels
 outside the crop, a 9 degree field of view) are nothing the model saw in
-training and give poor depths, so it sees the crop as a default camera
-(focal = crop size, principal point at the centre). Its depth is then
-rescaled by the ratio of the true to the default focal length, which keeps
-every pixel where it is (the weak-perspective route of the other image
-rows), and the prediction is rotated into the true camera (the default
-camera is the true camera turned towards the crop centre; an exact
-rotation). SMPL-X
+training and give poor depths, and a crop stretched to fill the whole
+896 px input is a framing the model never saw either (145 vs 108 mm
+root-relative on a 12-record check). So the crop is placed as a
+``CANVAS_SIDE`` px window in the middle of a neutral 896 px canvas with the
+box around it, under a default camera (focal = canvas size, principal
+point at the centre). The depth is then rescaled by the ratio of the true
+focal length (in canvas pixels) to the default one, which keeps every
+pixel where it is (the weak-perspective route of the other image rows),
+and the prediction is rotated into the true camera (the default camera is
+the true camera turned towards the crop centre; an exact rotation). SMPL-X
 vertices are mapped to SMPL with the ``smplx2smpl.pkl`` matrix that ships
 with the method.
 
@@ -50,6 +53,8 @@ from lidar_bedlam.scripts.baselines.common import (  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PHMR = REPO_ROOT / "third_party/PromptHMR"
 MODEL_DIR = "data/pretrain/phmr"
+CANVAS = 896  # the model's input size
+CANVAS_SIDE = 320  # the crop's size on the canvas
 SMPLX2SMPL = "data/body_models/smplx2smpl.pkl"
 
 
@@ -78,12 +83,36 @@ def run(args: argparse.Namespace) -> None:
         msg = f"no shards for {args.pattern} in {args.shards}"
         raise SystemExit(msg)
     model, to_smpl = load_model()
+    from PIL import Image
     from prompt_hmr.models.inference import (
         prepare_batch,
     )
 
-    box = torch.tensor([[0.0, 0.0, CROP - 1.0, CROP - 1.0]])
+    x0 = (CANVAS - CANVAS_SIDE) // 2
+    box = torch.tensor(
+        [[x0, x0, x0 + CANVAS_SIDE - 1.0, x0 + CANVAS_SIDE - 1.0]],
+        dtype=torch.float32,
+    )
+    k0 = np.array(
+        [
+            [CANVAS, 0.0, CANVAS / 2.0],
+            [0.0, CANVAS, CANVAS / 2.0],
+            [0, 0, 1.0],
+        ],
+        dtype=np.float32,
+    )
     e_z = np.array([0.0, 0.0, 1.0])
+
+    def on_canvas(img: Any) -> Any:
+        small = np.array(
+            Image.fromarray(np.ascontiguousarray(img)).resize(
+                (CANVAS_SIDE, CANVAS_SIDE), Image.Resampling.BILINEAR
+            )
+        )
+        can = np.full((CANVAS, CANVAS, 3), 128, np.uint8)
+        can[x0 : x0 + CANVAS_SIDE, x0 : x0 + CANVAS_SIDE] = small
+        return can
+
     preds = Predictions()
     timer = Timer()
     done = 0
@@ -93,23 +122,11 @@ def run(args: argparse.Namespace) -> None:
         for start in range(0, n, args.batch_size):
             sl = slice(start, min(n, start + args.batch_size))
             ks = data["intrinsics"][sl].astype(np.float64)
-            pseudo = np.tile(
-                np.array(
-                    [
-                        [CROP, 0.0, CROP / 2.0],
-                        [0.0, CROP, CROP / 2.0],
-                        [0, 0, 1.0],
-                    ]
-                ),
-                (len(ks), 1, 1),
-            )
             inputs = [
                 {
-                    "image_cv": np.ascontiguousarray(data["image"][i]),
+                    "image_cv": on_canvas(data["image"][i]),
                     "boxes": box,
-                    "cam_int": torch.from_numpy(
-                        pseudo[i - sl.start].astype(np.float32)
-                    )[None],
+                    "cam_int": torch.from_numpy(k0)[None],
                     "text": None,
                     "masks": None,
                 }
@@ -134,8 +151,9 @@ def run(args: argparse.Namespace) -> None:
                 [o["betas"][0].float().cpu().numpy() for o in outputs]
             ).astype(np.float64)
             v = np.einsum("sv,nvk->nsk", to_smpl, vx)
-            # default focal -> true focal: the depth scales, the pixel stays
-            scale = ks[:, 0, 0] / CROP
+            # default focal -> true focal (in canvas pixels): the depth
+            # scales, the pixel stays
+            scale = ks[:, 0, 0] * (CANVAS_SIDE / CROP) / CANVAS
             new_t = transl.copy()
             new_t[:, 2] *= scale
             v = v - transl[:, None, :] + new_t[:, None, :]
@@ -174,7 +192,7 @@ def run(args: argparse.Namespace) -> None:
         method="prompthmr",
         crop="full",
         mirror=0,
-        camera="default focal, depth rescaled, rotated back",
+        camera="crop on a canvas, default focal, depth rescaled, rotated back",
         img_size=args.img_size,
         seconds=timer.seconds,
         samples=timer.samples,
