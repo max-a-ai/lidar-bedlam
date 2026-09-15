@@ -272,7 +272,9 @@ nearest vertex, both directions), same extents; on the 6 SLOPER4D frames
 the converted SMPL scores 32.1 mm MPJPE, 23.1 PA, placement 0.025 m
 against the labels (one sequence at 2.3 m, not a benchmark). Scripts,
 raw outputs and the overlay figure in `outputs/baselines/sam3d-body/smoke/`.
-Next: `scripts/baselines/run_sam3d_body.py` over the three splits.
+Notebook section 17 draws the overlay from the saved vertices (executed
+copy spliced). Next: `scripts/baselines/run_sam3d_body.py` over the three
+splits.
 
 ### 2026-09-15 09:20 — point-anchored translation head; TikZ architecture; LiDAR-HMR placed by the centroid alone
 Why LiDAR-HMR places at 0.083 m: its loader subtracts the centroid of the

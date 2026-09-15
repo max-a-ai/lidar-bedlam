@@ -854,6 +854,49 @@ for split, path in ours_paths.items():
     plt.show()
 """)
 
+md("""## 17. SAM 3D Body as a compared pipeline: MHR mesh to SMPL
+
+SAM 3D Body predicts the MHR body model, not SMPL. The MHR repository ships
+an optimisation-based conversion (barycentric surface mapping, then a fit
+of SMPL pose, shape and translation), which we run in its own environment
+after inference. The check below overlays the MHR mesh and the converted
+SMPL for 12 real crops (6 Waymo val, 6 SLOPER4D test; the inference used
+the whole crop as the person box and our crop intrinsics). The two meshes
+are 0.65 / 0.61 cm apart (mean nearest-vertex distance, both directions)
+with identical extents, so the converted SMPL can be scored with the same
+protocol as every other row. On the six SLOPER4D frames the converted SMPL
+scores 32 mm MPJPE, 23 mm PA-MPJPE and 2.5 cm placement against the
+labels (one sequence at 2.3 m, a smoke test, not a benchmark). The vertices
+come from `outputs/baselines/sam3d-body/smoke/mhr_vs_smpl.npz`; pitfalls
+and the two-stage scripts are recorded in progress.md (2026-09-15).""")
+
+code("""
+import numpy as np
+from scipy.spatial import cKDTree
+
+z = np.load(ROOT / "outputs" / "baselines" / "sam3d-body" / "smoke" / "mhr_vs_smpl.npz")
+keys, mhr, smpl = [str(k) for k in z["keys"]], z["mhr_vertices"].astype(np.float64), z["smpl_vertices"]
+d_ms = [cKDTree(s).query(m)[0].mean() for m, s in zip(mhr, smpl)]
+d_sm = [cKDTree(m).query(s)[0].mean() for m, s in zip(mhr, smpl)]
+print(f"{len(keys)} crops: MHR -> SMPL {np.mean(d_ms) * 100:.2f} cm, SMPL -> MHR {np.mean(d_sm) * 100:.2f} cm (mean nearest vertex)")
+pick = [0, 1, len(keys) - 1]
+fig = plt.figure(figsize=(12, 8))
+for c, i in enumerate(pick):
+    m, s = mhr[i], smpl[i]
+    for r, (a, b, view) in enumerate(((0, 1, "front (x, -y)"), (2, 1, "side (z, -y)"))):
+        ax = fig.add_subplot(2, 3, r * 3 + c + 1)
+        ax.scatter(m[:, a], -m[:, b], s=0.4, c="0.55", label="MHR (SAM 3D Body)")
+        ax.scatter(s[:, a], -s[:, b], s=0.4, c="#0E6B64", label="SMPL (converted)")
+        ax.set_aspect("equal")
+        ax.set_title(f"{keys[i].split('/')[0]} #{i}, {view}", fontsize=9)
+        ax.tick_params(labelsize=7)
+        if r == 0 and c == 0:
+            ax.legend(markerscale=12, fontsize=8, loc="lower right")
+fig.suptitle("SAM 3D Body MHR mesh vs SMPL fitted with the MHR conversion tool (camera frame, metres)")
+fig.tight_layout()
+plt.show()
+""")
+
 
 def main() -> int:
     """Write the notebook."""
