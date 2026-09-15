@@ -257,6 +257,21 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 21:30 — anchored gate axis at the short schedule; first anchor run stopped at 80k
+Fusion axis with the point anchor (2 seeds, 3,468 steps, training-time
+validation; protocol evaluation queued): learned gates 76.6 / 64.9 mm,
+0.075 m, mAP 0.66 on Waymo; gate none (plain sum) 71.8 / 59.5, 0.075 m,
+0.67; gate hard (fixed priors) 73.6 / 61.3, 0.074 m, 0.67; LiDAR only
+97.6 / 78.0, 0.079 m, 0.68. SLOPER4D: 45.7 / 43.6 / 42.1 / 54.5 mm at
+0.027-0.030 m; 3DPW 59.5 / 58.5 / 59.7 / 95.9 mm. Placement is now
+identical across the gate modes (the anchor sets it), and the learned
+gate is the worst of the three fused variants on pose, plain sum the
+best: the query-only gate adds nothing, as the gate-value analysis
+predicted. full-anchor-points-000 (camera-anchor era config with the
+anchor, 50/40/10) stopped at the 80k gate: 77.6 mm, 0.087 m, mAP 0.64
+training-time; evaluation queued (859939) together with
+a-abl-lidar-only-s1.
+
 ### 2026-09-15 19:40 — SAM 3D Body scored on the three splits
 `results_sam3d.json` (stage 1 on the 4090, stage 2 on the CPU, ~2 h):
 Waymo val 76.6 / 59.5, abs 633.4, 0.626 m, mAP 0.10; SLOPER4D 54.5 / 45.0 /
