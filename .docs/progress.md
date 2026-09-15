@@ -257,6 +257,17 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 03:00 — first pose-prior run (short schedule) finished
+a-abl-mixed-short-prior-000 (anchored 50/40/10, 3,468 steps, prior weight
+0.05), training-time validation: Waymo 84.1 / 72.1 mm, 0.075 m; SLOPER4D
+41.8 / 38.0 mm, 0.025 m; 3DPW 59.8 / 50.0 mm, 0.065 m. Against the
+anchored reference at the same schedule (76.6 / 64.9, 45.7, 59.5) the
+prior costs 7 mm on Waymo and gains 4 mm on SLOPER4D; one seed, s1 and
+the full-schedule prior runs still training. Crossing frame rendered
+from its checkpoint (`outputs/figures/a-abl-mixed-short-prior/`): hands
+open and feet flat where the mix80 render had them crunched, arms of the
+near person still raised. Protocol evaluation queued (861577).
+
 ### 2026-09-16 02:30 — val plot on the wandb board
 `utils/eval_vis.render_val_plot`: per validation source a 3 x 2 figure,
 three records spread over the source beneath each other; left the crop
