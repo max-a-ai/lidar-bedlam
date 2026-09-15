@@ -257,6 +257,15 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 01:10 — pool-size axis rerun on the v2 recipe
+The old axis stopped at 3,468 steps (only 2x and 16x ran the final
+schedule). `configs/v2_scale_{2x,4x,8x,16x,32x,full}.yaml`: main v2
+mixture and point anchor, synthetic pool capped at 18/36/73/145/291
+shards or unlimited, 60k to 80k steps with the early-stop rule (five
+evaluations without a new best MPJPE on any source). Jobs 861003 to
+861008; scoreboard ablation 7 shows them, the old rows moved to the
+archive block.
+
 ### 2026-09-16 00:40 — scoreboard split into headline + ablation tables; v2 ablations at 15k steps
 Headline: published pipelines plus the five main trainings (main v2, v2 on
 LiDAR-HMR pseudo-GT, v2 + prior, anchor mix80, anchor mix80 + prior).

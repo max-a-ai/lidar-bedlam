@@ -202,23 +202,20 @@ GROUPS: list[Group] = [
         ],
     ),
     Group(
-        "Ablation 7: synthetic pool size (fixed 3,468 steps)",
-        "Synthetic pool capped at k x the Waymo train count; the reference "
-        "is the full pool (85x). Camera-frame translation, 50/40/10.",
+        "Ablation 7: synthetic pool size",
+        "Synthetic pool capped at k x the Waymo train count, main v2 mixture "
+        "(75/10/10/5) and point anchor; 60k to 80k steps, stopping early "
+        "once no validation source improves for five evaluations.",
         [
-            ("2x (9k records)", ["abl-scale-2x-001"]),
-            ("4x", ["abl-scale-4x-001"]),
-            ("8x", ["abl-scale-8x-001"]),
-            ("16x", ["abl-scale-16x-001"]),
-            ("32x", ["abl-scale-32x-001"]),
-            (
-                "full pool (reference)",
-                ["abl-mixed-short-001", "abl-mixed-short-s1"],
-            ),
-            ("2x, final schedule", ["full-scale-2x-000"]),
-            ("16x, final schedule", ["full-scale-16x-000"]),
+            ("2x (18 shards)", ["v2-scale-2x-000"]),
+            ("4x (36 shards)", ["v2-scale-4x-000"]),
+            ("8x (73 shards)", ["v2-scale-8x-000"]),
+            ("16x (145 shards)", ["v2-scale-16x-000"]),
+            ("32x (291 shards)", ["v2-scale-32x-000"]),
+            ("full pool, 85x (reference)", ["v2-scale-full-000"]),
             (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
+        pending=True,
     ),
     Group(
         "Other final-schedule runs (camera-frame translation, 50/40/10)",
@@ -284,6 +281,24 @@ GROUPS: list[Group] = [
                 "translation anchored to the point centroid",
                 ["abl-anchor-points-000", "abl-anchor-points-s1"],
             ),
+        ],
+        archive=True,
+    ),
+    Group(
+        "Earlier pool-size axis (fixed 3,468 steps, 50/40/10)",
+        "Camera-frame translation; 2x and 16x also at the final schedule.",
+        [
+            ("2x (9k records)", ["abl-scale-2x-001"]),
+            ("4x", ["abl-scale-4x-001"]),
+            ("8x", ["abl-scale-8x-001"]),
+            ("16x", ["abl-scale-16x-001"]),
+            ("32x", ["abl-scale-32x-001"]),
+            (
+                "full pool (reference)",
+                ["abl-mixed-short-001", "abl-mixed-short-s1"],
+            ),
+            ("2x, final schedule", ["full-scale-2x-000"]),
+            ("16x, final schedule", ["full-scale-16x-000"]),
         ],
         archive=True,
     ),
@@ -699,7 +714,7 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 <section class="notes">
 <p><b>Image baselines</b> get our 256 px crop and the crop's true intrinsics; the weak-perspective camera is converted to metric translation with the real principal point. CameraHMR is given the ground-truth intrinsics instead of estimating them.</p>
 <p><b>LiDAR-HMR</b> runs the Waymo release weights on 1,024 points centred on the box centre in a z-up frame; SLOPER4D is out of its training domain.</p>
-<p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablations 3 to 5 train 15k steps on the main v2 mixture; every ablation table ends with the main run at its final schedule for reference. The collapsed block at the end holds the runs of the earlier recipe (camera-frame translation, 50/40/10 mixture, one-third schedule = 3,468 steps).</p>
+<p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablations 3 to 5 train 15k steps on the main v2 mixture, ablation 7 trains 60k to 80k steps on it; every ablation table ends with the main run at its final schedule for reference. The collapsed block at the end holds the runs of the earlier recipe (camera-frame translation, 50/40/10 mixture, one-third schedule = 3,468 steps).</p>
 </section>
 </main>
 """
