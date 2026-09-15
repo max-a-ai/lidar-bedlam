@@ -137,6 +137,18 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ["a-abl-mixed-short-000", "a-abl-mixed-short-s1"],
             ),
             (
+                "anchor · gate none (plain sum)",
+                ["a-abl-gate-none-000", "a-abl-gate-none-s1"],
+            ),
+            (
+                "anchor · gate hard (fixed priors)",
+                ["a-abl-gate-hard-000", "a-abl-gate-hard-s1"],
+            ),
+            (
+                "anchor · LiDAR only",
+                ["a-abl-lidar-only-000", "a-abl-lidar-only-s1"],
+            ),
+            (
                 "gate none (plain sum)",
                 ["abl-gate-none-000", "abl-gate-none-s1"],
             ),

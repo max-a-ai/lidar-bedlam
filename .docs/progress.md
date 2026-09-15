@@ -257,6 +257,22 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 18:20 — what the gates do in the anchored model; anchored gate ablation queued
+Gate values (weight of the image stream) of abl-anchor-points-000 over 512
+records per validation set, last decoder layer: the semantic groups
+(head, arms, hands, legs, feet) sit at 0.94-0.96 against a prior of 0.88,
+i.e. nearly image-only; the 3D groups (root, torso, shape) sit at
+0.31-0.41 against a prior of 0.12, i.e. the LiDAR stream carries ~65 %
+of them, less than the prior asked for. Spread across records is small
+(std 0.01 semantic, 0.02-0.08 3D groups), so the routing is a per-group
+constant with little dependence on the input, as expected from a gate
+computed from the query alone. Both "anchor · learned gates (reference)"
+and "translation anchored to the point centroid" are that recipe
+(learned gates, anchor, 50/40/10, short schedule); its full-schedule
+version is a-full-main-mixed. Anchored gate ablation submitted:
+a-abl-gate-none, a-abl-gate-hard, a-abl-lidar-only, 2 seeds each (jobs
+858959-858965); rows in the fusion axis.
+
 ### 2026-09-15 17:40 — SAM 3D Body over the three splits (running)
 `scripts/baselines/run_sam3d_body.py` (env `sam_3d_body`, 3.1 crops/s on the
 4090: whole crop as the box, true crop intrinsics, MHR vertices + camera
