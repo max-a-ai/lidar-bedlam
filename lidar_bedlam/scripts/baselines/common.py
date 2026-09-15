@@ -47,8 +47,18 @@ def load_shard(path: Path, points: bool = False) -> dict[str, Any]:
             "kp2d": z["kp2d"].astype(np.float64),
         }
         if points:
-            count = z["scan/real/count"]
-            pts = z["scan/real/points"]
+            # real scans where recorded; simulated shards (3DPW mesh-LiDAR)
+            # carry main_0 / main_1 at the target resolutions: take main_0
+            variant = "real"
+            if "scan/real/count" not in z.files:
+                mains = sorted(
+                    v for v in z["scan_variants"] if str(v).startswith("main_")
+                )
+                variant = (
+                    str(mains[0]) if mains else str(z["scan_variants"][0])
+                )
+            count = z[f"scan/{variant}/count"]
+            pts = z[f"scan/{variant}/points"]
             out["points"] = [
                 pts[i, : int(count[i])].astype(np.float32)
                 for i in range(len(count))

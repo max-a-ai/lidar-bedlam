@@ -257,6 +257,19 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 15:25 — compared pipelines on 3DPW test
+`results_threedpw.json` (4090 chain): HMR2 77.9 / 58.6 / PVE 95.5, 0.175 m,
+mAP 0.39; TokenHMR 65.8 / 50.2 / 89.9, 0.185 m, 0.39; CameraHMR 58.0 /
+46.3 / 82.2, 0.154 m, 0.48; Human3R 86.0 / 58.7 / 109.9 (placement
+blanked, 225 crops without detection). PromptHMR from before: 61.7 / 47.8
+/ 87.1, 0.348 m. Our short anchor runs: 60.2 / 50.4 / 90.8, 0.068 m,
+0.79. On 3DPW the image methods place at 15-19 cm because the crops are
+close (pedestrian at a few metres, true intrinsics); CameraHMR wins pose.
+LiDAR-HMR failed: the 3DPW shards carry only simulated scan variants
+(main_0, main_1, rigs); `baselines/common.load_shard` now falls back to
+`main_0` when there is no `real` scan (our evaluation draws main_0 or
+main_1 per shard). LiDAR-HMR rerun queued with the centroid variant.
+
 ### 2026-09-15 14:30 — point anchor becomes the model; 3DPW baselines; BEDLAM 2 street subset
 Decision (user): the point-anchored translation is mandatory. Existing
 configs stay untouched so finished runs re-evaluate with the camera
