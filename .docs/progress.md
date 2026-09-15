@@ -230,6 +230,32 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 08:45 — cluster2 as a second training host; pseudo-GT fit quality
+cluster2 (ivlcluster02, `ssh cluster2`): 7x RTX 4090 24 GB, 96 CPUs, 251 GB
+RAM, single-node Slurm (partition `rtx4090`, no time limit), internet
+(wandb online, `~/.netrc`), NAS at `/mnt/nas` (74 TB free, 277 MB/s reads),
+local disk nearly full (21 GB). Layout: repo `~/lidar-bedlam` (rsync, as
+Helma), venv `~/venvs/lidar-bedlam` (uv 0.12, cache on the NAS at
+`/mnt/nas/methods/max/uv-cache`), `resources/data` and `outputs` symlinked
+to `/mnt/nas/methods/max/lidar-bedlam/{data,outputs}`. Shards copied from
+the workstation at ~200 MB/s: real/v1, synth/v1, meshlidar/v1, body models
+(~100 GB), then the full pool (v1_groups02-11, v1_group12, v1_pseudo,
+~690 GB) chained behind it. NFS refuses chmod/chown: rsync with
+`-rlt --no-perms --no-owner --no-group`. `lidar_bedlam/slurm/train_cluster2.sbatch`
+(1 GPU default, `NPROC`/`--gres` for more, no staging, no resubmit chain).
+Speed tests `c2-speed-{1,2,4}gpu` on `configs/loadertest.yaml` (512 per
+GPU, 300 steps) submitted once the copy finished. cluster1 (6x A6000, 2
+free, /mnt/md0 6.5 TB free, no NAS) kept as an option.
+
+`scripts/compare_pseudo_gt.py`: LiDAR-HMR's published Waymo pseudo-GT
+against ours, same measures (COCO limb joints regressed from the fitted
+mesh vs the Waymo keypoints; median nearest-vertex distance of the
+person's returns): theirs 27.0 / 27.1 mm and 3.2 / 3.1 cm (test / 2,000
+train records), ours 22.1 mm and 2.7 cm (2,046 records), flat over the
+distance bands for both. Ours is the tighter fit; the far-range placement
+failure of `full-pseudo-waymo` (4.5 m at 20-30 m) is therefore not a
+label-quality issue and stays open.
+
 ### 2026-09-15 08:30 — 3DPW test split in every val list, loader tests, LiDAR-HMR pseudo-GT
 3DPW test shards generated (`meshlidar/v1/threedpw_test_w*`, 6,617 records,
 16 shards); tokens being precomputed locally; every config with the
