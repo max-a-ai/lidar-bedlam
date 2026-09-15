@@ -230,6 +230,33 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 08:30 — 3DPW test split in every val list, loader tests, LiDAR-HMR pseudo-GT
+3DPW test shards generated (`meshlidar/v1/threedpw_test_w*`, 6,617 records,
+16 shards); tokens being precomputed locally; every config with the
+SLOPER4D val set (50) now also lists `threedpw_test`, so `eval_runs.sbatch`
+(FORCE=1) scores all runs on it once the shards are on Helma; scoreboard
+has a third column group (`SPLITS` P). Loader tests (`configs/loadertest.yaml`,
+`train.sbatch` gained `NPROC` and `OMP_THREADS`): one GPU with 16 workers
+runs 512/step at 0.26–0.33 s (1,600–2,000 samples/s), the 4-GPU jobs get
+0.40–0.44 s per step for the same per-GPU batch, i.e. the ranks contend
+for the 64 CPUs (64 workers x 8 OMP threads). Slurm caps CPUs at 32 per
+GPU. Submitted 4-GPU tests `lt4-c128-w32-omp8`, `lt4-c128-w16-omp8`,
+`lt4-c64-w16-omp1` (856791–856793). The single-GPU w32/w48 tests shared a
+node and are not usable.
+
+LiDAR-HMR published its Waymo pseudo-GT (Tsinghua cloud, `save_data/waymov2/
+{train,test}.pkl`, 2.4 GB + 545 MB, downloaded to
+`resources/data/external/lidar_hmr_waymov2/`): per record 14 keypoints,
+a VPoser-regularised SMPL fit (betas, global_orient, transl, body_pose 63),
+vertices, the person's points and segment/timestamp/object id, all in the
+Waymo vehicle frame (z up). test.pkl: 1,873 records of the validation
+split, 80 segments, 550 ids, median distance 13.7 m. Our own pseudo-GT
+(`real/v1_pseudo`) has transl 13 cm from the hip centre (pelvis offset,
+consistent); the full-pseudo-waymo run places well up to 10 m (0.21 m) but
+4.5 m off at 20–30 m, so its far-range fits need a look before an overfit
+test. LiDAR-only places better than main-mixed at every distance
+(0.17/0.24/0.31 m vs 0.23/0.31/0.77 m): the image path hurts placement.
+
 ### 2026-09-15 08:10 — scoreboard: blue for values that beat every compared pipeline; batch-size headroom
 `build_scoreboard.py` marks, in the headline table, every value of our runs
 that beats the best static row of that column (baselines re-scored by us and

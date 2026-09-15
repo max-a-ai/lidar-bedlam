@@ -24,7 +24,7 @@ from typing import Any
 
 import numpy as np
 
-SPLITS = (("W", "waymo_val"), ("S", "sloper4d_test"))
+SPLITS = (("W", "waymo_val"), ("S", "sloper4d_test"), ("P", "threedpw_test"))
 METRICS = ("mpjpe", "pa_mpjpe", "pve", "abs_mpjpe", "transl_err_m", "map")
 LABELS = ("MPJPE", "PA", "PVE", "abs", "transl", "mAP")
 HIGHER_IS_BETTER = {"map"}
@@ -400,7 +400,8 @@ def table_html(rows: list[Row]) -> str:
     h = [
         '<div class="wrap"><table><thead><tr><th></th>'
         '<th class="group" colspan="6">Waymo val · 894</th>'
-        '<th class="group" colspan="6">SLOPER4D test · 9,904</th></tr><tr><th>method</th>'
+        '<th class="group" colspan="6">SLOPER4D test · 9,904</th>'
+        '<th class="group" colspan="6">3DPW test · 6,617</th></tr><tr><th>method</th>'
     ]
     h.append("".join(f"<th>{lbl}</th>" for _ in SPLITS for lbl in LABELS))
     h.append("</tr></thead><tbody>")
@@ -452,7 +453,7 @@ p{margin:0;max-width:72ch}
 .chip{display:inline-block;padding:2px 10px;border-radius:999px;font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:500}
 .chip.g{background:var(--g-bg);color:var(--g-ink)}.chip.y{background:var(--y-bg);color:var(--y-ink)}.chip.r{background:var(--r-bg);color:var(--r-ink)}.chip.b{background:var(--b-bg);color:var(--b-ink)}
 .wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--panel)}
-table{border-collapse:collapse;width:100%;min-width:900px;font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;min-width:1300px;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
 th{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--panel)}
 th.group{text-align:center;border-bottom:none;padding-bottom:2px;color:var(--ink);letter-spacing:.14em}
@@ -518,7 +519,7 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 <header>
   <div class="eyebrow">{stamp}</div>
   <h1>Placement, box and pose against the published pipelines</h1>
-  <p class="lede">Every row is scored on the same records with the same protocol: Waymo val (894 crops, 13 COCO joints, hip-centre placement) and the full SLOPER4D test split (9,904 crops, 24 SMPL joints, SMPL translation). MPJPE, PA-MPJPE and PVE (per-vertex, SMPL labels only) in mm are root-relative; abs is the mean joint error as predicted, pose and placement together, which exposes the depth ambiguity of image-only methods; placement in metres; mAP over 3D box IoU 0.25/0.5/0.7 (mesh-only methods get a box from the mesh extent, scaled to Waymo's padded box convention).</p>
+  <p class="lede">Every row is scored on the same records with the same protocol: Waymo val (894 crops, 13 COCO joints, hip-centre placement), the full SLOPER4D test split (9,904 crops, 24 SMPL joints, SMPL translation) and the 3DPW test split (6,617 crops, real image and SMPL label, LiDAR simulated on the labelled mesh; 24 SMPL joints). MPJPE, PA-MPJPE and PVE (per-vertex, SMPL labels only) in mm are root-relative; abs is the mean joint error as predicted, pose and placement together, which exposes the depth ambiguity of image-only methods; placement in metres; mAP over 3D box IoU 0.25/0.5/0.7 (mesh-only methods get a box from the mesh extent, scaled to Waymo's padded box convention).</p>
 </header>
 <section><div class="legend"><span>Per column, within each table:</span>
 <span class="chip g">best</span><span class="chip y">second</span><span class="chip r">third</span>

@@ -8,6 +8,7 @@ data:
     - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 1.0, max_shards: 4}
   val:
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz", max_shards: 1}
+    - {name: threedpw_test, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_test_*.npz"}
   n_points: 1024
   num_workers: 4
   val_max_samples: 256

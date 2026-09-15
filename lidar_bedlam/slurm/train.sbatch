@@ -23,6 +23,8 @@
 #   STAGE_DIRS    sub-directories of DATA_ROOT to stage (default: all shard dirs)
 #   MAX_RESUBMITS safety cap on chain length (default 20)
 #   EXTRA_SET     extra "section.key=value" overrides
+#   NPROC         processes (GPUs) per node for torchrun (default 4)
+#   OMP_THREADS   OMP_NUM_THREADS for the trainer and its workers (default 8)
 #
 # Notes for Helma (see docs/cluster.md): only $HOME, /hnvme/workspace and
 # node-local /tmp are visible on compute nodes ($WORK on /home/atuin and
@@ -39,12 +41,13 @@ MAX_RESUBMITS=${MAX_RESUBMITS:-20}
 RESUBMIT_COUNT=${RESUBMIT_COUNT:-0}
 EXTRA_SET=${EXTRA_SET:-}
 WANDB_PROJECT=${WANDB_PROJECT:-lidar-bedlam}
+NPROC=${NPROC:-4}
 
 cd "$REPO"
 # the venv lives in $HOME: workspace filesystems are inode-limited
 export UV_PROJECT_ENVIRONMENT=${UV_PROJECT_ENVIRONMENT:-$HOME/venvs/lidar-bedlam}
 export WANDB_MODE=disabled  # metrics.jsonl is mirrored to wandb from the login node
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS=${OMP_THREADS:-8}
 
 if [ -z "${RUN_NAME:-}" ]; then
   RUN_NAME=$(uv run python lidar_bedlam/scripts/next_run_name.py --config "$CONFIG")
@@ -94,7 +97,7 @@ forward_usr1() {
 trap forward_usr1 USR1
 
 # shellcheck disable=SC2086
-uv run torchrun --standalone --nproc_per_node 4 lidar_bedlam/scripts/lidar-bedlam-main.py \
+uv run torchrun --standalone --nproc_per_node "$NPROC" lidar_bedlam/scripts/lidar-bedlam-main.py \
   --config "$CONFIG" \
   --wandb-project "$WANDB_PROJECT" --wandb-name "$RUN_NAME" \
   --wandb-mode disabled \

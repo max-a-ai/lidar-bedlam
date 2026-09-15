@@ -9,6 +9,7 @@ data:
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
+    - {name: threedpw_test, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_test_*.npz"}
   n_points: 1024
   use_augmented_image: 0.5
   point_augment: true
