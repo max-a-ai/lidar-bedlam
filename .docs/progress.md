@@ -18,28 +18,43 @@ gantt
     section Data
     BEDLAM audit, loaders, simulator      :done,    d1, 2026-09-08, 2026-09-10
     Labels, generator, real shards, tokens:done,    d2, 2026-09-10, 2026-09-12
-    Group 12, tokens, sync to Helma       :active,  d3, 2026-09-12, 2026-09-13
-    Dataset statistics                    :         d4, 2026-09-14, 2026-09-16
+    Pool on Helma, pseudo-GT, 3DPW shards :done,    d3, 2026-09-12, 2026-09-15
+    Simulator fix, synth v2 regeneration  :         d4, 2026-09-16, 2026-09-19
+    Backbone tokens S/B/L                 :         d5, 2026-09-18, 2026-09-21
     section Model
-    Fusion model, gate modes              :done,    m1, 2026-09-09, 2026-09-10
-    Trainer, configs, Slurm chain         :done,    m2, 2026-09-10, 2026-09-11
-    Main run on Helma                     :         m3, 2026-09-13, 2026-09-16
+    Fusion model, trainer, Slurm chain    :done,    m1, 2026-09-09, 2026-09-11
+    Surface and mesh losses, early stop   :done,    m2, 2026-09-14, 2026-09-15
+    Localisation: point anchor, fusion    :active,  m3, 2026-09-15, 2026-09-19
+    Backbone ladder, inference benchmark  :         m4, 2026-09-19, 2026-09-24
     section Experiments
-    Real-only, synth-only                 :         e1, 2026-09-14, 2026-09-17
-    Model-axis ablations                  :         e2, 2026-09-16, 2026-09-20
-    Synthesis-axis + scaling ablations    :         e3, 2026-09-18, 2026-09-24
-    Baseline runners                      :         e4, 2026-09-15, 2026-09-19
+    Finals, fusion, synthesis, scaling    :done,    e1, 2026-09-13, 2026-09-15
+    Baselines scored with our protocol    :done,    e2, 2026-09-14, 2026-09-15
+    Loss and anchor ablations, 3DPW eval  :active,  e3, 2026-09-15, 2026-09-18
+    SAM 3D Body, 3DPW in the mixture      :         e4, 2026-09-18, 2026-09-24
     section Paper
     Skeleton, story, related work         :done,    p1, 2026-09-10, 2026-09-11
-    Data + method sections                :         p2, 2026-09-14, 2026-09-20
+    Metrics paragraph, architecture figure:done,    p2, 2026-09-14, 2026-09-15
+    Data + method sections                :         p3, 2026-09-16, 2026-09-21
     Abstract deadline                     :milestone, 2026-09-25, 0d
-    Results, ablations, final             :         p3, 2026-09-21, 2026-10-01
+    Results, ablations, final             :         p4, 2026-09-21, 2026-10-01
     Paper deadline                        :milestone, 2026-10-01, 0d
 ```
 
 # Log
 
 ## Data
+
+### 2026-09-15 — 3DPW test split, tokens, LiDAR-HMR pseudo-GT
+`threedpw_test` shards (6,617 records, 16 shards) with ViT-H tokens, on
+Helma, listed as a validation source in all 50 configs. LiDAR-HMR's Waymo
+pseudo-GT downloaded (`resources/data/external/lidar_hmr_waymov2`, vehicle
+frame); ours fits tighter (22 vs 27 mm keypoints, 2.7 vs 3.1 cm points).
+Short-run shard set (~100 GB) copied to the NAS for cluster2.
+
+### 2026-09-14 — simulator fix
+Offset sensors were clipped by the frustum window and there was no facing
+test (`lidar/simulate.py`); shards in use predate the fix, `synth/v2` not
+regenerated yet. Details under Experiments, 2026-09-14.
 
 ### 2026-09-13 — 3DPW shards final, both new ablations queued
 3,444 frames -> 4,468 records in 12 shards (`meshlidar/v1`), tokens
@@ -151,6 +166,18 @@ tests. BEDLAM v1 verified complete (390 archives, 6.54 TB, planar z-depth
 in cm); BEDLAM 2.0 skipped.
 
 ## Model
+
+### 2026-09-15 — point-anchored translation, surface and mesh losses
+`model.transl_anchor: points`: pelvis = centroid of the valid input points
++ learned offset (LiDAR-HMR places this way; the scan alone gives 0.11 m
+on Waymo). Chamfer (learned clothing offset), ICP (stop-gradient target
+after a divergence) and Pose2Mesh vertex/normal/edge terms in `FusionLoss`.
+Trainer: early stop (80k min, patience 5 evals), non-finite guard, eval
+every 1k steps. Helma jobs: 128 CPUs, 32 workers (0.22 vs 0.42 s/step).
+
+### 2026-09-14 — protocol
+Placement NaN for unlabelled Waymo hips, absolute MPJPE, PVE, mesh-box
+scale for Waymo; mirror test for LiDAR-HMR. Details under Experiments.
 
 ### 2026-09-12 — Waymo keypoints were supervising the wrong joints
 `mix80-000` reached 57 mm MPJPE on SLOPER4D but 370 mm on Waymo while
@@ -847,6 +874,16 @@ shutter kept as a generation option only).
 
 ## Paper
 
+### 2026-09-15 — architecture figure in TikZ
+`.docs/figures/architecture.{tex,pdf,png}`, numbers from the code, both
+translation anchors; notebook section 12 shows the PNG.
+
+### 2026-09-14 — metrics paragraph
+Root-relative MPJPE/PA/PVE, absolute error and placement, box convention,
+quoted numbers (`main.tex`). Scoreboard HTML with rank colours and blue
+for values beating every compared pipeline; footnotes for CameraHMR
+(PA shown as 63.3 by request) and Human3R (placement blanked).
+
 ### 2026-09-11 13:38 — related work and bibliography (72af389, fc8943a, 0e3d746)
 39 bib entries with venue macros from `latex-draft/bib/bib-short.def`;
 related-work bullets; LIF-Net (IV 2026) and BikeActions (ICPR 2026)
@@ -858,6 +895,13 @@ and a `latexmkrc` (8445f2e).
 contribution bullets; 6.3 extrinsics questions.
 
 ## Housekeeping
+
+### 2026-09-15 — cluster2 as a second host
+7x RTX 4090, single-node Slurm, NAS-backed data; NFS memmaps are
+latency-bound, a sequential read into the page cache fixes it for sets
+that fit in RAM (100 GB set: 0.62 s/step at 512 per GPU, H100 0.26 s).
+`slurm/train_cluster2.sbatch`. Hourly Helma monitor rebuilds the
+scoreboard artifact.
 
 ### 2026-09-13 — Helma file quota hit by wandb run folders
 `rsync` to the workspace failed with "Disk quota exceeded": `outputs/`
@@ -893,37 +937,39 @@ dataset survey.
 
 # Todos
 
+Ordered by dependency: localisation first, the rest builds on a model
+whose placement is competitive.
+
 ## Data
 
-- [ ] Data on Helma: `/hnvme/workspace/v103fe17-lidar-bedlam/resources/data/generated` (all 12 groups + real, complete).
-- [ ] Dataset statistics for the paper (persons, frames, distance histogram, beams, occlusion levels) and the comparison table.
-- [ ] Run the official xxh128 validation on the NAS (`lidar_bedlam/scripts/validate_bedlam_on_nas.sh`).
-- [ ] Rolling shutter: apply `SpeedSetting` + `apply_rolling_shutter` in the generator (default speed 0 for v1).
-- [ ] Decide on additional rigs (heads-up list in `datasets.md`).
-- [ ] Waymo LiDAR-only samples (5,006) as `has_image=False` records (after the main run).
+- [ ] Regenerate `synth/v2` with the fixed simulator (window unwrap, facing test); rerun the comparison set on it.
+- [ ] Tokens per backbone next to each shard (`<shard>.tokens-{s,b,l}.npy`, ViT-H stays `.tokens.npy`) over real/v1, the synthetic pool, meshlidar/v1.
+- [ ] 3DPW in the main mixture (currently only `full_3dpw`, 10 %) once localisation is fixed, then rerun the comparison set so every row saw the same data.
+- [ ] Baselines on the 3DPW test split (crops exist; image baselines, LiDAR-HMR, Human3R).
+- [ ] Dataset statistics for the paper; official xxh128 validation on the NAS; rolling shutter (default off); Waymo LiDAR-only records.
+- [ ] cluster2: local disk or RAM-resident set; the full pool cannot be served over NFS.
 
 ## Model
 
-- [ ] Pending on Helma (AssocGrpGRES): six final-schedule runs (~20 h). All four baselines scored (see 2026-09-14); next the paper tables once the final runs land. (`sbatch --export=ALL,CONFIG=configs/main_mixed.yaml lidar_bedlam/slurm/train.sbatch`); verify the resume chain at the first wall-time hit; sync wandb from the login node.
-- [ ] SMPL mesh overlays in the BEDLAM cells of `notebooks/capabilities.ipynb`.
-- [ ] After hand-in: DINOv2 ViT-S distillation for the Jetson AGX Orin (bicycle rig), ONNX/TensorRT.
+- [ ] Localisation: read abl-anchor-points (2 seeds) and full-anchor-points; then decoupled heads (translation, orientation, shape from LiDAR; pose from the image), modality dropout, evidence-conditioned gate.
+- [ ] Far-range placement failure of full-pseudo-waymo (4.5 m at 20-30 m): labels are fine at range, find the cause in the model or loader.
+- [ ] Backbone ladder: `ViTConfig` presets S/B/L (384/12/6, 768/12/12, 1024/24/16; ViTPose weights, same class as ViT-H = TokenHMR), loader test per size; `full_backbone_{s,b,l}` + short versions with 2 seeds; scoreboard group "backbone axis". Optional extra point: DINOv3-B/16 (new backbone class: RoPE, registers).
+- [ ] Inference time on one RTX 4090: `scripts/bench_inference.py`, batch 1 and 8, fp16, end to end (backbone on the crop, tokenizer, decoder, SMPL, box), median of 200 iterations, ms and Hz per backbone, plus LiDAR-only and image-only.
+- [ ] Bike budget: target 10 Hz on the bike's compute (record platform, TDP, TensorRT); re-run the benchmark there or on the closest GPU; state which backbone meets 10 Hz and what it costs in accuracy.
+- [ ] LiDAR-HMR retraining (their code and pickles, then our pseudo-GT converted) only if the anchor runs leave the gap unexplained.
 
 ## Experiments
 
-- [ ] Main table: `synth_only`, `real_only`, `main_mixed` on Waymo val and SLOPER4D test.
-- [ ] Model axis: `ablation_image_only`, `ablation_gate_none`, `ablation_gate_hard`, `ablation_lidar_only` vs `ablation_mixed_short`.
-- [ ] Synthesis axis: `ablation_ball025`, `ablation_rig_waymo`, `ablation_target_waymo`; log validation curves for the convergence question.
-- [ ] Data curve: `ablation_scale_{2,4,8,16,32}x`.
-- [x] Baseline runners for TokenHMR, HMR2, CameraHMR (`lidar_bedlam/scripts/baselines/`, `score_baselines.py`).
-- [x] LiDAR-HMR baseline (`lidar-hmr` conda env, results 2026-09-14).
-- [ ] SAM 3D Body (MHR to joints) if time permits; baselines table in the paper once the final runs land.
+- [ ] Loss axis: read the combined ICP/mesh runs (restarted after the divergence fix) and the full chamfer/ICP/mesh runs; keep what helps Waymo placement, abs, mAP.
+- [ ] SAM 3D Body in the headline table: `scripts/baselines/run_sam3d_body.py` in its own env (checkpoints `facebook/sam-3d-body-dinov3`; DINOv3-H+ and ViT-H variants); MHR output mapped to our joints (or an SMPL fit), placement handled as for the image-only rows; footnote.
+- [ ] Forced re-evaluation with the 3DPW column (queued on Helma, 856799); scoreboard already has the columns.
 - [ ] After hand-in: realism ablations (no augmentation, no occlusion), LoRA on the backbone.
 
 ## Paper
 
 - [ ] Data section (BEDLAM inputs, LiDAR simulation, realism, statistics).
-- [ ] Method section (backbones, gates, outputs incl. translation through given intrinsics, losses).
-- [ ] Results and ablation tables from the runs; gate-map figure.
+- [ ] Method section (backbones, gates, translation anchors, losses); architecture figure is done.
+- [ ] Results and ablation tables from the scoreboard; gate-map figure; accuracy-versus-speed curve from the backbone ladder.
 - [ ] Anonymity pass: no rig, group or first-person names.
 
 ## Housekeeping
