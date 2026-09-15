@@ -6,8 +6,8 @@
 Sources, in order of preference per run: ``outputs/helma/eval/<run>-last.json``
 (re-evaluation on the full validation sets, has the absolute MPJPE), else
 the last validation line of ``outputs/helma/runs/<run>/metrics.jsonl``.
-Published pipelines come from ``outputs/baselines/results_static.json`` and
-never change; the mirror test from ``results_mirror.json`` when present.
+Published pipelines come from ``outputs/baselines/results_static.json``
+(its sibling result files fill the splits it lacks) and never change.
 Rows of one group are ranked per column (green / yellow / red = best /
 second / third; lower is better except mAP). In the headline table a value of
 ours that beats every compared pipeline is blue, unless it ranks in the
@@ -40,12 +40,7 @@ STATIC_ROWS = [
         "SAM 3D Body (DINOv3-H+)",
         "image only, GT intrinsics, MHR mesh fitted to SMPL",
     ),
-    ("lidar-hmr-mirror", "LiDAR-HMR", "LiDAR only, mirrored"),
-    (
-        "lidar-hmr-mirror-centroid",
-        "LiDAR-HMR",
-        "LiDAR only, mirrored, pelvis put on the point centroid",
-    ),
+    ("lidar-hmr", "LiDAR-HMR", "LiDAR only, Waymo release weights"),
     (
         "human3r",
         "Human3R",
@@ -53,14 +48,30 @@ STATIC_ROWS = [
     ),
 ]
 
-# group title, description, [(label, [run names to average])]
-GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
-    (
-        "Headline: final schedule (150k steps) against the published pipelines",
-        "Rows marked anchor use the point-anchored translation (the model "
-        "since 2026-09-15); main v2 is the headline run. The older rows use "
-        "the camera-frame translation on the 50/40/10 synthetic / Waymo / "
-        "SLOPER4D mixture and change one thing each.",
+MAIN = "ours · anchor · mix80"
+MAIN_RUN = ["a-full-mix80-000"]
+MAIN_NOTE = " (main, final schedule)"
+
+
+@dataclass
+class Group:
+    """One table: title, description, rows and how it is shown."""
+
+    title: str
+    desc: str
+    rows: list[tuple[str, list[str]]]
+    pending: bool = False  # rows without results are shown as queued
+    archive: bool = False  # collapsed at the end of the page
+
+
+V2_ABL = "15k steps on the main v2 mixture (75/10/10/5), point anchor"
+
+GROUPS: list[Group] = [
+    Group(
+        "Headline: our main trainings against the published pipelines",
+        "Final schedule (150k steps or early stop), evaluated on the full "
+        "sets. Recipes in the footnotes; every other run of ours is in the "
+        "ablation tables below.",
         [
             ("ours · main v2", ["a-full-main-v2-000"]),
             (
@@ -68,70 +79,172 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ["a-full-main-v2-lhmr-000"],
             ),
             ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
-            ("ours · anchor · main-mixed", ["a-full-main-mixed-000"]),
-            ("ours · anchor · mix80", ["a-full-mix80-000"]),
+            (MAIN, MAIN_RUN),
+            ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Main runs",
+        "Every full-schedule training of the main recipe: the mixture and "
+        "the translation head are what differ (anchor = point-anchored "
+        "translation, the model since 2026-09-15; the rows without it use "
+        "the camera-frame translation).",
+        [
+            ("ours · main v2", ["a-full-main-v2-000"]),
             (
-                "ours · anchor · mix80 + pose prior",
-                ["a-full-mix80-prior-000"],
+                "ours · main v2 (pseudo-GT LiDAR-HMR)",
+                ["a-full-main-v2-lhmr-000"],
             ),
-            ("ours · anchor · synth-only", ["a-full-synth-only-000"]),
-            ("ours · anchor · real-only", ["a-full-real-only-000"]),
-            ("ours · anchor · gate none", ["a-full-gate-none-000"]),
-            ("ours · anchor · LiDAR only", ["a-full-lidar-only-000"]),
-            ("ours · main-mixed", ["full-main-mixed-000"]),
+            ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
+            (MAIN, MAIN_RUN),
+            ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
+            (
+                "ours · anchor · main-mixed (50/40/10)",
+                ["a-full-main-mixed-000"],
+            ),
+            ("ours · main-mixed (50/40/10)", ["full-main-mixed-000"]),
+            ("ours · main-mixed (50/40/10), seed 1", ["full-main-mixed-s1"]),
             ("ours · mix80 (80/10/10)", ["full-mix80-000"]),
-            ("ours · synth-only", ["full-synth-only-000"]),
-            ("ours · real-only", ["full-real-only-000"]),
-            ("ours · + pseudo-GT Waymo", ["full-pseudo-waymo-000"]),
-            ("ours · + 3DPW mesh-LiDAR", ["full-3dpw-000"]),
-            ("ours · gate none (plain sum)", ["full-gate-none-000"]),
-            ("ours · gate hard (fixed priors)", ["full-gate-hard-000"]),
-            ("ours · image only", ["full-image-only-000"]),
-            ("ours · LiDAR only", ["full-lidar-only-000"]),
-            (
-                "ours · gate none + 3DPW mesh-LiDAR",
-                ["full-gate-none-3dpw-000"],
-            ),
-            ("ours · gate none, mix80", ["full-gate-none-mix80-000"]),
-            (
-                "ours · translation anchored to the point centroid",
-                ["full-anchor-points-000"],
-            ),
-            ("ours · + LiDAR chamfer term", ["full-chamfer-000"]),
-            ("ours · + LiDAR ICP term", ["full-icp-000"]),
-            (
-                "ours · + mesh terms (vertex, normal, edge)",
-                ["full-meshloss-000"],
-            ),
-            (
-                "ours · LiDAR at the SLOPER4D rig pose",
-                ["full-rig-sloper4d-000"],
-            ),
-            ("ours · LiDAR at the Waymo rig pose", ["full-rig-waymo-000"]),
-            ("ours · ball 0.25 m", ["full-ball025-000"]),
-            ("ours · synthetic pool 2x (9k records)", ["full-scale-2x-000"]),
-            ("ours · synthetic pool 16x", ["full-scale-16x-000"]),
-            ("ours · Waymo resolution only", ["full-target-waymo-000"]),
-            ("ours · main-mixed, seed 1", ["full-main-mixed-s1"]),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Ablation 1: input modality (final schedule)",
+        "One stream switched off at training and test time. Image only "
+        "keeps the camera-frame translation (no points to anchor to).",
+        [
+            ("image only", ["full-image-only-000"]),
+            ("LiDAR only", ["a-full-lidar-only-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
     ),
-    (
-        "Synthesis axis at the final schedule (150k steps or early stop)",
-        "How the LiDAR is simulated on the synthetic records; the main run "
-        "draws the sensor inside a 1 m ball and sweeps 12 resolutions.",
+    Group(
+        "Ablation 2: training data (final schedule)",
+        "What the batches are drawn from; point-anchored translation "
+        "throughout.",
         [
-            ("ball 1 m, 12 resolutions (main-mixed)", ["full-main-mixed-000"]),
+            ("synthetic only (BEDLAM)", ["a-full-synth-only-000"]),
+            ("real only (Waymo, SLOPER4D)", ["a-full-real-only-000"]),
+            ("mixed 50/40/10", ["a-full-main-mixed-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+    ),
+    Group(
+        "Ablation 3: fusion",
+        V2_ABL + ". Reference: learned gates; image only keeps the "
+        "camera-frame translation.",
+        [
+            ("learned gates (reference)", ["v2-abl-ref-000"]),
+            ("gate none (plain sum)", ["v2-abl-gate-none-000"]),
+            ("gate hard (fixed priors)", ["v2-abl-gate-hard-000"]),
+            ("LiDAR only", ["v2-abl-lidar-only-000"]),
+            ("image only", ["v2-abl-image-only-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Ablation 4: loss terms",
+        V2_ABL + ". Reference plus LiDAR-to-surface terms (chamfer with a "
+        "learned clothing offset, rigid ICP residual) and the Pose2Mesh mesh "
+        "terms (vertex L1, surface normal, edge length), alone and combined.",
+        [
+            ("reference", ["v2-abl-ref-000"]),
+            ("+ chamfer", ["v2-abl-loss-chamfer-000"]),
+            ("+ ICP", ["v2-abl-loss-icp-000"]),
+            ("+ mesh terms", ["v2-abl-loss-mesh-000"]),
+            ("+ chamfer + ICP", ["v2-abl-loss-chamfer-icp-000"]),
+            ("+ ICP + mesh terms", ["v2-abl-loss-icp-mesh-000"]),
+            (
+                "+ chamfer + ICP + mesh terms",
+                ["v2-abl-loss-chamfer-icp-mesh-000"],
+            ),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Ablation 5: Waymo label source",
+        V2_ABL + ". What supervises the Waymo slice: the 13 keypoints "
+        "(reference) or a pseudo-GT SMPL mesh on the matched records.",
+        [
+            ("reference: Waymo keypoints", ["v2-abl-ref-000"]),
+            (
+                "pseudo-GT SMPL, ours (keypoints + LiDAR fit)",
+                ["v2-abl-pseudo-waymo-000"],
+            ),
+            (
+                "pseudo-GT SMPL, pedestrian generation (1,489 records)",
+                ["v2-abl-pseudo-pedgen-000"],
+            ),
+            (
+                "pseudo-GT SMPL, LiDAR-HMR (4,586 records)",
+                ["v2-abl-pseudo-lhmr-000"],
+            ),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Ablation 6: LiDAR synthesis (final schedule)",
+        "How the LiDAR is simulated on the synthetic records; the reference "
+        "draws the sensor inside a 1 m ball and sweeps 12 resolutions. "
+        "Camera-frame translation rows (50/40/10), main at the bottom.",
+        [
+            ("ball 1 m, 12 resolutions (reference)", ["full-main-mixed-000"]),
             ("ball 1 m, 12 resolutions, seed 1", ["full-main-mixed-s1"]),
             ("LiDAR at the SLOPER4D rig pose", ["full-rig-sloper4d-000"]),
             ("LiDAR at the Waymo rig pose", ["full-rig-waymo-000"]),
             ("ball 0.25 m", ["full-ball025-000"]),
             ("Waymo resolution only", ["full-target-waymo-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
     ),
-    (
-        "Fusion axis (1/3 schedule, 17 epochs, mean of 2 seeds)",
-        "Reference abl-mixed-short: learned gates. Everything below is the "
-        "same mixture and schedule with the gate changed.",
+    Group(
+        "Ablation 7: synthetic pool size (fixed 3,468 steps)",
+        "Synthetic pool capped at k x the Waymo train count; the reference "
+        "is the full pool (85x). Camera-frame translation, 50/40/10.",
+        [
+            ("2x (9k records)", ["abl-scale-2x-001"]),
+            ("4x", ["abl-scale-4x-001"]),
+            ("8x", ["abl-scale-8x-001"]),
+            ("16x", ["abl-scale-16x-001"]),
+            ("32x", ["abl-scale-32x-001"]),
+            (
+                "full pool (reference)",
+                ["abl-mixed-short-001", "abl-mixed-short-s1"],
+            ),
+            ("2x, final schedule", ["full-scale-2x-000"]),
+            ("16x, final schedule", ["full-scale-16x-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+    ),
+    Group(
+        "Other final-schedule runs (camera-frame translation, 50/40/10)",
+        "Single-change runs of the earlier recipe, kept for reference.",
+        [
+            ("+ pseudo-GT Waymo", ["full-pseudo-waymo-000"]),
+            ("+ 3DPW mesh-LiDAR", ["full-3dpw-000"]),
+            ("gate none (plain sum)", ["full-gate-none-000"]),
+            ("anchor · gate none", ["a-full-gate-none-000"]),
+            ("gate hard (fixed priors)", ["full-gate-hard-000"]),
+            ("LiDAR only", ["full-lidar-only-000"]),
+            ("gate none + 3DPW mesh-LiDAR", ["full-gate-none-3dpw-000"]),
+            ("gate none, mix80", ["full-gate-none-mix80-000"]),
+            (
+                "translation anchored to the point centroid",
+                ["full-anchor-points-000"],
+            ),
+            ("+ LiDAR chamfer term", ["full-chamfer-000"]),
+            ("+ LiDAR ICP term", ["full-icp-000"]),
+            ("+ mesh terms (vertex, normal, edge)", ["full-meshloss-000"]),
+        ],
+        archive=True,
+    ),
+    Group(
+        "Earlier fusion axis (1/3 schedule, 50/40/10, mean of 2 seeds)",
+        "Camera-frame translation unless marked anchor.",
         [
             (
                 "learned gates (reference)",
@@ -154,7 +267,7 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ["a-abl-lidar-only-000", "a-abl-lidar-only-s1"],
             ),
             (
-                "anchor · learned gates + pose prior (unobserved joints)",
+                "anchor · learned gates + pose prior",
                 ["a-abl-mixed-short-prior-000", "a-abl-mixed-short-prior-s1"],
             ),
             (
@@ -172,12 +285,11 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ["abl-anchor-points-000", "abl-anchor-points-s1"],
             ),
         ],
+        archive=True,
     ),
-    (
-        "Loss axis (1/3 schedule, 17 epochs, mean of 2 seeds)",
-        "Reference abl-mixed-short plus LiDAR-to-surface terms (chamfer with "
-        "a learned clothing offset, rigid ICP residual) and the Pose2Mesh "
-        "mesh terms (vertex L1, surface normal, edge length), alone and combined.",
+    Group(
+        "Earlier loss axis (1/3 schedule, 50/40/10, mean of 2 seeds)",
+        "Camera-frame translation.",
         [
             ("reference", ["abl-mixed-short-001", "abl-mixed-short-s1"]),
             ("+ chamfer", ["abl-loss-chamfer-000", "abl-loss-chamfer-s1"]),
@@ -199,10 +311,11 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ],
             ),
         ],
+        archive=True,
     ),
-    (
-        "Synthesis axis (1/3 schedule)",
-        "How the LiDAR is simulated on the synthetic records.",
+    Group(
+        "Earlier synthesis and label axes (1/3 schedule, 50/40/10)",
+        "Camera-frame translation.",
         [
             (
                 "ball 1 m, 12 resolutions (reference)",
@@ -211,43 +324,15 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ("ball 0.25 m", ["abl-ball025-000"]),
             ("LiDAR at the Waymo rig pose", ["abl-rig-waymo-000"]),
             ("Waymo resolution only", ["abl-target-waymo-000"]),
-        ],
-    ),
-    (
-        "Data axis (fixed 3,468 steps)",
-        "Synthetic pool capped at k x the Waymo train count; the reference "
-        "is the full pool (85x).",
-        [
-            ("2x (9k records)", ["abl-scale-2x-001"]),
-            ("4x", ["abl-scale-4x-001"]),
-            ("8x", ["abl-scale-8x-001"]),
-            ("16x", ["abl-scale-16x-001"]),
-            ("32x", ["abl-scale-32x-001"]),
-            (
-                "full pool (reference)",
-                ["abl-mixed-short-001", "abl-mixed-short-s1"],
-            ),
-        ],
-    ),
-    (
-        "Label sources (1/3 schedule)",
-        "Extra supervision on top of the reference mixture.",
-        [
-            ("reference", ["abl-mixed-short-001", "abl-mixed-short-s1"]),
             ("+ pseudo-GT SMPL on Waymo", ["abl-pseudo-waymo-000"]),
             ("+ 3DPW mesh-LiDAR 10 %", ["abl-3dpw-000"]),
         ],
+        archive=True,
     ),
 ]
 
 # methods whose placement is not meaningful on our crops
 PLACEMENT_BLANKED = {"human3r"}
-
-# manual display overrides requested for the intermediate table; the row
-# note names the measured value so the page never passes them off as data
-OVERRIDES: dict[str, dict[str, float]] = {
-    "camerahmr-full": {"W_pa_mpjpe": 63.3}
-}
 
 # numbers reported by other papers on their own protocol (no code or
 # weights to run on our records): SLOPER4D paper, Table 4a, LiDARCap
@@ -258,13 +343,6 @@ REPORTED_ROWS = [
         "LiDAR only, reported in the SLOPER4D paper, own protocol",
         {"S_mpjpe": 86.1, "S_pa_mpjpe": 65.1},
     ),
-]
-
-MIRROR_ROWS = [
-    ("lidar-hmr", "LiDAR-HMR", "as is"),
-    ("lidar-hmr-mirror", "LiDAR-HMR", "mirrored input"),
-    ("camerahmr-full", "CameraHMR", "as is"),
-    ("camerahmr-mirror", "CameraHMR", "mirrored input"),
 ]
 
 
@@ -278,12 +356,6 @@ class Row:
     values: dict[str, float | None] = field(default_factory=dict)
     footnote: str | None = None
 
-
-# rows shown as "queued" before their run has logged anything
-PLACEHOLDER_ROWS = {
-    "ours · main v2 (pseudo-GT LiDAR-HMR)",
-    "ours · main v2 + pose prior",
-}
 
 # footnotes of our rows, by label (the recipe stays out of the label)
 ROW_FOOTNOTES = {
@@ -307,7 +379,6 @@ ROW_FOOTNOTES = {
 }
 
 FOOTNOTES = {
-    "camerahmr-full": "pa_mpjpe shown as 63.3 by request (measured 60.0)",
     "human3r": (
         "depth not metric on crops, placement columns blanked; "
         "crops without a detection skipped"
@@ -389,14 +460,17 @@ def average(parts: list[dict[str, float | None]]) -> dict[str, float | None]:
     return out
 
 
-def group_rows(root: Path, spec: list[tuple[str, list[str]]]) -> list[Row]:
-    """Rows of one group (runs without any result are left out)."""
+def group_rows(
+    root: Path, spec: list[tuple[str, list[str]]], pending: bool = False
+) -> list[Row]:
+    """Rows of one group; runs without any result are left out, or shown
+    as queued when ``pending``."""
     rows = []
     for label, runs in spec:
         loaded = [(r, load_run(root, r)) for r in runs]
         found = [(r, x) for r, x in loaded if x is not None]
         if not found:
-            if label in PLACEHOLDER_ROWS:
+            if pending:
                 rows.append(
                     Row(label, "queued", "ours", {}, ROW_FOOTNOTES.get(label))
                 )
@@ -437,8 +511,6 @@ def static_rows(path: Path, spec: list[tuple[str, str, str]]) -> list[Row]:
                         "map",
                     ):
                         values[k] = None
-            for k, v in OVERRIDES.get(key, {}).items():
-                values[k] = v
             rows.append(Row(label, note, "static", values, FOOTNOTES.get(key)))
     return rows
 
@@ -564,6 +636,7 @@ td.g{background:var(--g-bg)!important;color:var(--g-ink);font-weight:500}
 td.y{background:var(--y-bg)!important;color:var(--y-ink);font-weight:500}
 td.b{background:var(--b-bg)!important;color:var(--b-ink);font-weight:600}
 td.r{background:var(--r-bg)!important;color:var(--r-ink);font-weight:500}
+details{border-top:1px solid var(--rule);padding-top:16px}details>summary{cursor:pointer;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:1.1rem;color:var(--muted)}details>section{margin-top:28px}
 ol.fn{margin:8px 0 0;padding-left:20px;font-size:.8rem;color:var(--muted);max-width:90ch}ol.fn li{margin-bottom:4px}
 .notes{display:grid;gap:8px;font-size:.88rem;color:var(--muted);max-width:80ch}.notes b{color:var(--ink);font-weight:600}
 @media (max-width:600px){body{padding-inline:16px}h1{font-size:1.6rem}}
@@ -579,8 +652,9 @@ FONTS = (
 def build(root: Path, baselines: Path, stamp: str) -> str:
     """The whole page."""
     sections = []
-    for i, (title, desc, spec) in enumerate(GROUPS):
-        rows = group_rows(root, spec)
+    archived = []
+    for i, g in enumerate(GROUPS):
+        rows = group_rows(root, g.rows, g.pending)
         if i == 0:
             reported = [
                 Row(label, note, "static", dict.fromkeys(_keys()) | dict(vals))
@@ -593,22 +667,17 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
             )
         if not rows:
             continue
-        sections.append(
-            f"<section><h2>{title}</h2><p class='desc'>{desc}</p>{table_html(rows)}</section>"
+        html = (
+            f"<h2>{g.title}</h2><p class='desc'>{g.desc}</p>{table_html(rows)}"
         )
-    mirror = static_rows(baselines / "results_mirror.json", MIRROR_ROWS)
-    if mirror:
+        if g.archive:
+            archived.append(f"<section>{html}</section>")
+        else:
+            sections.append(f"<section>{html}</section>")
+    if archived:
         sections.append(
-            "<section><h2>Mirror test (memorisation check)</h2>"
-            "<p class='desc'>Inputs mirrored left/right (points x → −x, image "
-            "flipped with the principal point), predictions mirrored back with "
-            "the SMPL left/right vertex map. A model that memorised the "
-            "validation records loses far more than one that generalises; "
-            "CameraHMR, which never saw either set, is the control.</p>"
-            + table_html(
-                [Row(r.label, r.note, "static", r.values) for r in mirror]
-            )
-            + "</section>"
+            "<details><summary>Earlier runs (camera-frame translation, "
+            "50/40/10 mixture)</summary>" + "".join(archived) + "</details>"
         )
     body = "\n".join(sections)
     return f"""<title>LiDAR-BEDLAM Scoreboard</title>
@@ -628,7 +697,7 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 <section class="notes">
 <p><b>Image baselines</b> get our 256 px crop and the crop's true intrinsics; the weak-perspective camera is converted to metric translation with the real principal point. CameraHMR is given the ground-truth intrinsics instead of estimating them.</p>
 <p><b>LiDAR-HMR</b> runs the Waymo release weights on 1,024 points centred on the box centre in a z-up frame; SLOPER4D is out of its training domain.</p>
-<p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablation tables use the one-third schedule of the reference <code>abl-mixed-short</code> (17 epochs = 3,468 steps); the data axis fixes 3,468 steps on capped pools.</p>
+<p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablations 3 to 5 train 15k steps on the main v2 mixture; every ablation table ends with the main run at its final schedule for reference. The collapsed block at the end holds the runs of the earlier recipe (camera-frame translation, 50/40/10 mixture, one-third schedule = 3,468 steps).</p>
 </section>
 </main>
 """

@@ -257,6 +257,27 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 00:40 — scoreboard split into headline + ablation tables; v2 ablations at 15k steps
+Headline: published pipelines plus the five main trainings (main v2, v2 on
+LiDAR-HMR pseudo-GT, v2 + prior, anchor mix80, anchor mix80 + prior).
+Then a "Main runs" table and seven ablation tables, each ending with the
+main run (anchor mix80, final schedule): 1 input modality, 2 training data,
+3 fusion, 4 loss terms, 5 Waymo label source, 6 LiDAR synthesis, 7 pool
+size. Ablations 3 to 5 are new 15k-step runs on the v2 mixture
+(75/10/10/5, point anchor): `configs/v2_abl_*.yaml`, 14 jobs 860697 to
+860710 (`v2-abl-ref`, gate none/hard, LiDAR/image only, six loss
+combinations, pseudo-GT from ours / pedestrian generation / LiDAR-HMR).
+Everything of the earlier recipe (camera-frame translation, 50/40/10)
+sits in a collapsed block at the end. Mirror table, mirrored LiDAR-HMR
+rows and the CameraHMR PA override removed; LiDAR-HMR is shown as is
+(3DPW scored unmirrored: MPJPE 117.7, PA 80.0, placement 0.132 m,
+`results_threedpw_lidarhmr_plain.json`).
+`scripts/make_pedgen_shards.py` writes the colleague's fits (ego-relative,
+lifted along world up onto the keypoints as in the notebook) as SMPL
+parameters into `real/v1_pedgen` (1,489 of 4,591 records; the label sits
+157 mm from the keypoints on average because only the height is
+corrected). `make_lidarhmr_shards.relabel_shards` is the shared loop.
+
 ### 2026-09-16 00:20 — main v2 on LiDAR-HMR's pseudo-GT; v2 labels shortened
 The three-way notebook makes LiDAR-HMR's fits the cleanest of the three
 Waymo label sets (hands and feet intact; measures on par with ours).
