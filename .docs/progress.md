@@ -257,17 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
-### 2026-09-15 16:50 — main pipeline v2 submitted
-`configs/a_full_main_v2.yaml` (a-full-main-v2): point-anchored translation,
-every batch 50 % BEDLAM (full pool, random main resolution), 25 % Waymo
-train (4,591 records), 15 % SLOPER4D train (21,062), 10 % 3DPW mesh-LiDAR
-train (4,468); full schedule with early stop; validation on all three
-splits. Waymo and 3DPW are small, so their whole sets are seen many times
-over; SLOPER4D at 15 % sees each record ~220 times. Scoreboard: main v2
-and the six anchored core runs at the top of the headline table, the
-anchored short reference in the fusion axis. Scaling the synthetic pool
-(data axis, 2x-32x at fixed steps) stayed flat within noise, so the v2 run
-keeps the full pool and changes the real-data mix instead.
+### 2026-09-15 17:10 — main pipeline v2 = anchor on mix80 plus 3DPW
+The anchored runs at 8k steps put mix80 (80/10/10) marginally ahead of the
+50/40/10 mixture on every placement column (Waymo abs 98.0 vs 100.2 mm,
+mAP 0.67 vs 0.66; SLOPER4D mAP 0.97 vs 0.95; 3DPW 56.9 vs 58.7 mm), as it
+was at 150k with the camera anchor. User's call: mix80 is the base.
+`configs/a_full_main_v2.yaml` (a-full-main-v2): point-anchored
+translation, every batch 75 % BEDLAM (full pool), 10 % Waymo (4,591
+records), 10 % SLOPER4D (21,062), 5 % 3DPW mesh-LiDAR (4,468, from the
+synthetic share); full schedule with early stop, validated on the three
+splits. A first v2 job with 50/25/15/10 was cancelled after 15 min and
+its folder removed. Scaling the synthetic pool (data axis, 2x-32x at
+fixed steps) stayed flat within noise, so v2 keeps the full pool.
 
 ### 2026-09-15 16:20 — LiDAR-HMR on 3DPW; anchored short reference; BEDLAM 2 images down
 LiDAR-HMR mirrored on the 3DPW test crops (simulated main_0 scan):

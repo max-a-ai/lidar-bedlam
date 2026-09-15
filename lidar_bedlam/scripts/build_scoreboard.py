@@ -58,8 +58,8 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
         "SLOPER4D mixture and change one thing each.",
         [
             (
-                "ours · main v2: point anchor, 50/25/15/10 synth/Waymo/"
-                "SLOPER4D/3DPW",
+                "ours · main v2: point anchor, mix80 + 3DPW (75/10/10/5 "
+                "synth/Waymo/SLOPER4D/3DPW)",
                 ["a-full-main-v2-000"],
             ),
             ("ours · anchor · main-mixed", ["a-full-main-mixed-000"]),

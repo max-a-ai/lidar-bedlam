@@ -1,14 +1,14 @@
-# Main pipeline v2 (2026-09-15): point-anchored translation; BEDLAM 50 % of every batch, Waymo 25 %, SLOPER4D 15 %, 3DPW mesh-LiDAR 10 %; full schedule with early stop.
+# Main pipeline v2 (2026-09-15): point-anchored translation on the mix80 mixture plus 3DPW: BEDLAM 75 % of every batch, Waymo 10 %, SLOPER4D 10 %, 3DPW mesh-LiDAR 5 %; full schedule with early stop.
 experiment: a-full-main-v2
 seed: 0
 body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
 data:
   train:
-    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.25}
-    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.15}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.5, variant: random_main}
-    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.1, variant: random_main}
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_train_*.npz", weight: 0.10}
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.10}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.75, variant: random_main}
+    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.05, variant: random_main}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
