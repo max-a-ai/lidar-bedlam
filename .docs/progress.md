@@ -24,7 +24,7 @@ gantt
     section Model
     Fusion model, trainer, Slurm chain    :done,    m1, 2026-09-09, 2026-09-11
     Surface and mesh losses, early stop   :done,    m2, 2026-09-14, 2026-09-15
-    Localisation: point anchor, fusion    :active,  m3, 2026-09-15, 2026-09-19
+    Localisation, point anchor, fusion    :active,  m3, 2026-09-15, 2026-09-19
     Backbone ladder, inference benchmark  :         m4, 2026-09-19, 2026-09-24
     section Experiments
     Finals, fusion, synthesis, scaling    :done,    e1, 2026-09-13, 2026-09-15
