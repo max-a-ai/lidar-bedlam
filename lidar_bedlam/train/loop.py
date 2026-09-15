@@ -357,6 +357,15 @@ class Trainer:
                 pred = self.ddp(tensors_only(b))
             pred = {k: v.float() for k, v in pred.items()}
             total, parts = self.loss_fn(pred, tensors_only(b))
+            if not torch.isfinite(total):
+                bad = {
+                    k: float(v)
+                    for k, v in parts.items()
+                    if not torch.isfinite(v)
+                }
+                msg = f"non-finite loss at step {self.step}: {bad}"
+                self._log(msg)
+                raise RuntimeError(msg)
             self.optimizer.zero_grad(set_to_none=True)
             scaled: Tensor = self.scaler.scale(total)
             scaled.backward()  # type: ignore[no-untyped-call]

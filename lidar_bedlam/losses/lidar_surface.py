@@ -130,24 +130,28 @@ def icp_loss(
     """How far ICP has to move the mesh to meet the returns (metres).
 
     A few closest-point iterations align the facing vertices rigidly with
-    the returns; the loss is the mean displacement of those vertices under
-    the resulting transform, which is invariant to where the rotation
-    pivots (a rotation about the body's own centre counts only as much as
-    it moves the surface).
+    the returns. The transform is estimated without gradient and turned
+    into a fixed target position per vertex; the loss is the mean distance
+    of the vertices to those targets, so its value is the rigid
+    displacement and its gradient moves the body as a whole towards the
+    returns (a gradient through the SVD itself is unstable and diverged).
     """
     sub, valid, _, _ = _correspondences(verts, faces, origin, points, n_sub)
-    cur = sub
-    for _ in range(iterations):
-        d, idx = nearest_vertex(points, cur, valid)
-        ok = (points_valid & torch.isfinite(d)).to(verts.dtype)
-        matched = torch.gather(cur, 1, idx[..., None].expand(-1, -1, 3))
-        rot, t = _kabsch(matched, points, ok)
-        cur = torch.einsum("bij,bnj->bni", rot, cur) + t[:, None]
+    with torch.no_grad():
+        cur = sub.detach()
+        for _ in range(iterations):
+            d, idx = nearest_vertex(points, cur, valid)
+            ok = (points_valid & torch.isfinite(d)).to(verts.dtype)
+            matched = torch.gather(cur, 1, idx[..., None].expand(-1, -1, 3))
+            rot, t = _kabsch(matched, points, ok)
+            cur = torch.einsum("bij,bnj->bni", rot, cur) + t[:, None]
+        target = torch.nan_to_num(cur, nan=0.0, posinf=0.0, neginf=0.0)
+        bad = ~torch.isfinite(cur).all(-1)
     has = points_valid.any(1)
     if not has.any():
         return verts.sum() * 0.0
-    moved = (cur - sub).norm(dim=-1)
-    vw = valid.to(verts.dtype)
+    moved = (sub - target).norm(dim=-1)
+    vw = (valid & ~bad).to(verts.dtype)
     per_sample = (moved * vw).sum(1) / vw.sum(1).clamp_min(1)
     out: Tensor = per_sample[has].mean()
     return out

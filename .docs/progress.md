@@ -230,6 +230,25 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 — ICP term diverged; fixed as a stop-gradient target
+
+Every run with `lidar_icp` collapsed within the first evaluations
+(identical 908 mm MPJPE / 7.6 m rows on both sets): the gradient through
+the Kabsch SVD is unstable. The transform is now estimated under
+`no_grad` and turned into a fixed per-vertex target; the loss value is
+still the rigid displacement, its gradient pulls every facing vertex
+towards its target, i.e. moves the body as a whole. 15 optimisation steps
+on a Waymo batch: 0.21 -> 0.12 m, finite throughout. The trainer now
+raises on a non-finite loss instead of training on. Two earlier crashes
+at the first step were DDP refusing the unused clothing-offset parameter
+in runs without the chamfer term (`find_unused_parameters` now also
+when `lidar_chamfer` is 0) and strict checkpoint loading in the eval
+script (non-strict now). Diverged / crashed run folders were removed and
+the nine ICP runs, the six ICP/mesh runs and the evaluation resubmitted.
+Ten comparison runs reached the 80k gate and stopped (gate none 77.0 /
+60.6 mm Waymo, 0.294 m; SLOPER4D rig 46.1 / 38.7 mm on SLOPER4D).
+Short chamfer-only screen: 109.6 vs 108.4 mm reference on Waymo, no gain.
+
 ### 2026-09-15 — LiDAR-to-surface losses, Pose2Mesh mesh terms, Human3R, 3DPW test
 
 - **LiDAR-to-surface terms** (`losses/lidar_surface.py`). Correspondence
