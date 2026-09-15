@@ -257,6 +257,31 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 14:30 — point anchor becomes the model; 3DPW baselines; BEDLAM 2 street subset
+Decision (user): the point-anchored translation is mandatory. Existing
+configs stay untouched so finished runs re-evaluate with the camera
+anchor they were trained with; every comparison config got a copy with
+`transl_anchor: points` and the experiment prefixed `a-`
+(`configs/a_full_*.yaml`, `configs/a_ablation_*.yaml`, 41 files; image-only
+ones excluded because the anchor would leak the scan). `eval_runs.sbatch`
+maps `a-abl-*` names. Core set submitted on Helma: a-full-{main-mixed,
+mix80, real-only, synth-only, gate-none, lidar-only} and a-abl-mixed-short
+(2 seeds); the rest of the axes wait for the go.
+
+The five compared pipelines never ran on the 3DPW split (generated this
+morning): chain `baselines_3dpw.sh` on the 4090 (HMR2 full, TokenHMR
+tight, CameraHMR full, LiDAR-HMR mirrored, Human3R), scored into
+`results_threedpw.json`; `build_scoreboard.static_rows` now merges per
+split across the `results_*.json` files.
+
+BEDLAM 2 (HF, licence accepted on the user's account): images 11.3 TB in
+69 folders, depth 15.2 TB in 25 folders (two hdri folders alone 8.1 TB).
+Street subset with depth chosen: rome tracking, rome vcam x3, rome dollyz
+and dolly zoom, yakohama vcam-ego approach, middleeast vcam approach
+(0.92 TB images + 2.84 TB depth); orbits, upper-body, hdri backdrops and
+the chemical plant left out. Downloading on cluster2 straight to
+`/mnt/nas/publicdatasets/bedlam2/{images,depth}` (`~/bedlam2/download_street.py`).
+
 ### 2026-09-15 13:20 — PromptHMR scored on the three splits
 `run_prompthmr.py` over Waymo val, SLOPER4D test, 3DPW test (~17 crops/s on
 the 4090; the crop as a 320 px window on a neutral 896 px canvas, box
