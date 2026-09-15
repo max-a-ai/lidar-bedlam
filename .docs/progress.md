@@ -257,6 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 19:40 — SAM 3D Body scored on the three splits
+`results_sam3d.json` (stage 1 on the 4090, stage 2 on the CPU, ~2 h):
+Waymo val 76.6 / 59.5, abs 633.4, 0.626 m, mAP 0.10; SLOPER4D 54.5 / 45.0 /
+PVE 66.1, abs 123.2, 0.112 m, mAP 0.60; 3DPW 51.7 / 40.1 / PVE 75.2,
+0.197 m, mAP 0.42. The strongest image-only row: on pose it edges CameraHMR
+on Waymo (76.6 vs 76.9, PA 59.5 vs 60.0), on SLOPER4D (54.5 vs 51.6 MPJPE
+but PVE 66.1 vs 64.1) they trade, on 3DPW it leads every image method
+(51.7 / 40.1 vs CameraHMR 58.0 / 46.3). Its metric depth is the best of
+the image rows on Waymo (0.63 m vs CameraHMR 0.73) and SLOPER4D (0.11 m vs
+0.20), still 8x our anchored placement on Waymo. All seven compared
+pipelines now have rows on all three splits.
+
 ### 2026-09-15 18:20 — what the gates do in the anchored model; anchored gate ablation queued
 Gate values (weight of the image stream) of abl-anchor-points-000 over 512
 records per validation set, last decoder layer: the semantic groups
