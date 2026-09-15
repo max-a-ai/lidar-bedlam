@@ -146,8 +146,12 @@ class Trainer:
                 if self.device.type == "cuda"
                 else None,
                 # the gate ablations leave the gate MLP or one attention
-                # stream without gradient; DDP must tolerate that
-                find_unused_parameters=cfg.model.gate_mode != "learned",
+                # stream without gradient, and the clothing offset only gets
+                # one from the chamfer term; DDP must tolerate that
+                find_unused_parameters=(
+                    cfg.model.gate_mode != "learned"
+                    or cfg.loss.lidar_chamfer <= 0
+                ),
             )
             if self.world > 1
             else self.model

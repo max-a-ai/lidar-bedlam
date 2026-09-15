@@ -34,7 +34,13 @@ def main(argv: list[str] | None = None) -> int:
     state = torch.load(
         args.checkpoint, map_location=trainer.device, weights_only=False
     )
-    trainer.model.load_state_dict(state["model"])
+    # checkpoints from before a parameter was added (e.g. the clothing
+    # offset) load with that parameter at its initial value
+    missing, unexpected = trainer.model.load_state_dict(
+        state["model"], strict=False
+    )
+    if missing or unexpected:
+        sys.stdout.write(f"missing {missing} unexpected {unexpected}\n")
     results = trainer.evaluate(trainer.val_loaders())
     args.out.parent.mkdir(parents=True, exist_ok=True)
     payload = {

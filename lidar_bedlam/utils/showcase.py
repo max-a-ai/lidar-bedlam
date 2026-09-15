@@ -76,7 +76,7 @@ def run_model(
         return paths
     model = build_model(cfg).to(device)
     state = torch.load(checkpoint, map_location=device, weights_only=False)
-    model.load_state_dict(state["model"])
+    model.load_state_dict(state["model"], strict=False)  # older checkpoints
     model.eval()
     for src in todo:
         loader = DataLoader(
