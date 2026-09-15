@@ -146,3 +146,28 @@ def test_joint_losses_use_coco_joints_for_waymo_rows() -> None:
     pred["joints_coco"] = coco + 1.0
     _, parts = FusionLoss()(pred, batch)
     assert parts["joints3d"].item() > expected + 1e-3
+
+
+def test_place_at_centroid_moves_pelvis_onto_valid_points() -> None:
+    from lidar_bedlam.scripts.score_baselines import place_at_centroid
+
+    pts = torch.zeros(2, 8, 3, dtype=torch.float64)
+    pts[0, :4] = torch.tensor([1.0, 2.0, 10.0])
+    pts[1] = torch.tensor([-1.0, 0.0, 5.0])
+    valid = torch.ones(2, 8, dtype=torch.bool)
+    valid[0, 4:] = False  # padded rows must not pull the centroid
+    joints = torch.zeros(2, 24, 3, dtype=torch.float64)
+    joints[:, 0] = torch.tensor([0.5, 0.5, 0.5])
+    pred = {
+        "vertices": torch.zeros(2, 6890, 3, dtype=torch.float64),
+        "joints3d": joints,
+        "transl": torch.zeros(2, 3, dtype=torch.float64),
+        "box3d": torch.zeros(2, 7, dtype=torch.float64),
+    }
+    out = place_at_centroid(pred, {"points": pts, "points_valid": valid})
+    assert torch.allclose(out["joints3d"][0, 0], pts[0, 0])
+    assert torch.allclose(out["joints3d"][1, 0], pts[1, 0])
+    delta = out["joints3d"][:, 0] - joints[:, 0]
+    assert torch.allclose(out["transl"], delta)
+    assert torch.allclose(out["box3d"][:, :3], delta)
+    assert torch.allclose(out["vertices"][:, 0], delta)

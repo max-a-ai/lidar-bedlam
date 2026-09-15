@@ -680,15 +680,19 @@ ps_btn.on_click(ps_render); display(ps_btn, ps_out); ps_render()
 
 md("""## 12. Architecture: selective-attention fusion
 
-Block diagram of the model (`.docs/figures/architecture.html`, an SVG that
-is also used in the paper draft). Image tokens come from a frozen ViT-H
-(TokenHMR weights, precomputed per shard); LiDAR returns go through a
-trained point tokenizer; 12 joint-group queries attend to both streams and
-mix them with a learned gate that starts from a routing prior.""")
+Block diagram of the model (`.docs/figures/architecture.tex`, TikZ; the PDF
+goes into the paper draft, the PNG is shown here). Image tokens come from a
+frozen ViT-H (TokenHMR weights, precomputed per shard); LiDAR returns go
+through a trained point tokenizer; 12 joint-group queries attend to both
+streams and mix them with a learned gate that starts from a routing prior.
+The translation head has two anchors: the camera parameterisation
+(u, v, log z) used so far, and the point anchor (centroid of the input
+points plus a learned offset, `model.transl_anchor: points`) added on
+2026-09-15 after the LiDAR-HMR comparison.""")
 
 code("""
-from IPython.display import HTML
-display(HTML((ROOT / ".docs" / "figures" / "architecture.html").read_text()))
+from IPython.display import Image
+display(Image(filename=str(ROOT / ".docs" / "figures" / "architecture.png"), width=1400))
 """)
 
 md("""## 13. Scoreboard: our runs against the published pipelines

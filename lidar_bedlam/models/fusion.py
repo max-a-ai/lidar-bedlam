@@ -45,6 +45,10 @@ class ModelConfig:
     point_knn: int = 16
     smpl_model_dir: Path | None = None
     init_depth_m: float = 8.0
+    # "camera": pelvis as (u, v, log z) in the crop, unprojected with K;
+    # "points": centroid of the valid input points plus a metric offset
+    # (samples without points fall back to the camera parameterisation)
+    transl_anchor: str = "camera"
     freeze_backbone: bool = True
     use_backbone: bool = True  # False: train from precomputed tokens only
     crop_size: int = 256
@@ -70,14 +74,18 @@ class SmplHeads(nn.Module):
             self.transl_head.bias.copy_(
                 torch.tensor([0.0, 0.0, float(np.log(init_depth_m))])
             )
+        self.offset_head = nn.Linear(dim, 3)  # metres from the point centroid
+        nn.init.zeros_(self.offset_head.weight)
+        nn.init.zeros_(self.offset_head.bias)
         self.shape_head = nn.Linear(dim, NUM_BETAS)
         nn.init.zeros_(self.shape_head.weight)
         nn.init.zeros_(self.shape_head.bias)
         self.root_index = [g.name for g in JOINT_GROUPS].index("root")
         self.shape_index = [g.name for g in JOINT_GROUPS].index("shape")
 
-    def forward(self, feats: Tensor) -> tuple[Tensor, Tensor, Tensor]:
-        """Rotations (B, 24, 3, 3), betas (B, 10), raw transl (B, 3)."""
+    def forward(self, feats: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+        """Rotations (B, 24, 3, 3), betas (B, 10), raw transl (B, 3) and
+        the metric offset from the point centroid (B, 3)."""
         b = feats.shape[0]
         # float32 heads regardless of autocast: rotations and the SMPL
         # forward that follows are numerically sensitive
@@ -92,8 +100,10 @@ class SmplHeads(nn.Module):
             )
         rots = rot6d_to_matrix(rot6d)
         betas = self.shape_head(feats[:, self.shape_index]).float()
-        raw_t = self.transl_head(feats[:, self.root_index]).float()
-        return rots, betas, raw_t
+        root = feats[:, self.root_index]
+        raw_t = self.transl_head(root).float()
+        offset = self.offset_head(root).float()
+        return rots, betas, raw_t, offset
 
 
 def translation_from_raw(raw: Tensor, intrinsics: Tensor, size: int) -> Tensor:
@@ -108,6 +118,20 @@ def translation_from_raw(raw: Tensor, intrinsics: Tensor, size: int) -> Tensor:
     x = (u - intrinsics[:, 0, 2]) / intrinsics[:, 0, 0] * z
     y = (v - intrinsics[:, 1, 2]) / intrinsics[:, 1, 1] * z
     return torch.stack([x, y, z], -1)
+
+
+def point_centroid(
+    points: Tensor, valid: Tensor | None
+) -> tuple[Tensor, Tensor]:
+    """Mean of the valid points (B, 3) and whether any were valid (B,)."""
+    if valid is None:
+        valid = torch.ones(
+            points.shape[:2], dtype=torch.bool, device=points.device
+        )
+    w = valid.to(points.dtype)[..., None]
+    n = w.sum(1)
+    centroid = (points * w).sum(1) / n.clamp(min=1.0)
+    return centroid, n.squeeze(-1) > 0
 
 
 def project(points: Tensor, intrinsics: Tensor) -> Tensor:
@@ -218,10 +242,18 @@ class SelectiveFusionModel(nn.Module):
         img = self.image_tokens(batch)
         pts, _ = self.points(batch["points"])
         feats, gates = self.decoder(img, pts)
-        rots, betas, raw_t = self.heads(feats)
+        rots, betas, raw_t, offset = self.heads(feats)
         transl = translation_from_raw(
             raw_t, batch["intrinsics"], self.cfg.crop_size
         )
+        if self.cfg.transl_anchor == "points":
+            centroid, has_pts = point_centroid(
+                batch["points"].float(), batch.get("points_valid")
+            )
+            transl = torch.where(has_pts[:, None], centroid + offset, transl)
+        elif self.cfg.transl_anchor != "camera":
+            msg = f"unknown transl_anchor {self.cfg.transl_anchor!r}"
+            raise ValueError(msg)
         conf: Tensor = torch.sigmoid(
             self.iou_head(feats[:, self.heads.root_index]).squeeze(-1)
         )

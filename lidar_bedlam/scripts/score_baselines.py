@@ -111,8 +111,36 @@ def _select(batch: dict[str, Any], rows: list[int]) -> dict[str, Any]:
     return out
 
 
+def place_at_centroid(
+    pred: dict[str, torch.Tensor], batch: dict[str, Any]
+) -> dict[str, torch.Tensor]:
+    """Move each prediction so its pelvis sits on the centroid of the
+    record's input points: the placement a LiDAR-only method gets from the
+    scan alone, without any learned offset."""
+    pts = batch["points"].to(torch.float64)
+    valid = batch.get("points_valid")
+    w = (
+        valid.to(torch.float64)
+        if valid is not None
+        else torch.ones(pts.shape[:2], dtype=torch.float64)
+    )[..., None]
+    centroid = (pts * w).sum(1) / w.sum(1).clamp(min=1.0)
+    delta = centroid - pred["joints3d"][:, 0]
+    out = dict(pred)
+    out["vertices"] = pred["vertices"] + delta[:, None]
+    out["joints3d"] = pred["joints3d"] + delta[:, None]
+    out["transl"] = pred["transl"] + delta
+    box = pred["box3d"].clone()
+    box[:, :3] += delta
+    out["box3d"] = box
+    return out
+
+
 def score(
-    table: PredictionTable, loader: DataLoader[Any], smpl: SmplModel
+    table: PredictionTable,
+    loader: DataLoader[Any],
+    smpl: SmplModel,
+    centroid: bool = False,
 ) -> tuple[MetricSummary, int]:
     """Summary over the records that have a prediction, and the miss count."""
     samples: list[SampleMetrics] = []
@@ -122,7 +150,10 @@ def score(
         pred, rows = table.batch(keys, smpl)
         missing += len(keys) - len(rows)
         if rows:
-            samples.extend(sample_metrics(pred, _select(batch, rows), smpl))
+            sel = _select(batch, rows)
+            if centroid:
+                pred = place_at_centroid(pred, sel)
+            samples.extend(sample_metrics(pred, sel, smpl))
     return summarize(samples), missing
 
 
@@ -139,6 +170,12 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=0,
         help="score only the first n records per source (0 = all)",
+    )
+    ap.add_argument(
+        "--place-at-centroid",
+        action="store_true",
+        help="pelvis moved onto the centroid of the input points; results "
+        "are keyed <method>-centroid",
     )
     args = ap.parse_args(argv)
     cfg = load_config(args.config, args.set)
@@ -158,14 +195,17 @@ def main(argv: list[str] | None = None) -> int:
         if table.split not in loaders:
             sys.stdout.write(f"skip {path}: no val source {table.split}\n")
             continue
-        summary, missing = score(table, loaders[table.split], smpl)
-        results.setdefault(table.name, {})[table.split] = {
+        summary, missing = score(
+            table, loaders[table.split], smpl, args.place_at_centroid
+        )
+        name = table.name + ("-centroid" if args.place_at_centroid else "")
+        results.setdefault(name, {})[table.split] = {
             **asdict(summary),
             "missing": missing,
             "meta": table.meta,
         }
         sys.stdout.write(
-            f"{table.name:>18} {table.split:<14} n={summary.n:<5} "
+            f"{name:>18} {table.split:<14} n={summary.n:<5} "
             f"MPJPE {summary.mpjpe:6.1f}  PA {summary.pa_mpjpe:6.1f}  "
             f"abs {summary.abs_mpjpe:6.1f}  PVE {summary.pve:6.1f}  "
             f"transl {summary.transl_err_m:6.3f} m  mAP {summary.map:.3f}  "

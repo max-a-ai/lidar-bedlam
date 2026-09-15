@@ -95,6 +95,7 @@ def build_model(cfg: TrainConfig) -> SelectiveFusionModel:
             point_knn=m.point_knn,
             smpl_model_dir=Path(cfg.body_models),
             init_depth_m=m.init_depth_m,
+            transl_anchor=m.transl_anchor,
             use_backbone=m.use_backbone,
         )  # fmt: skip
     )

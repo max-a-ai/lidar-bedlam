@@ -133,6 +133,33 @@ def test_forward_without_smpl() -> None:
             assert g0[i] > 0.8
 
 
+def test_point_anchored_translation_uses_valid_centroid() -> None:
+    from dataclasses import replace
+
+    model = _tiny_model(smpl=False)
+    model.cfg = replace(model.cfg, transl_anchor="points")
+    points = torch.randn(2, 40, 3) + torch.tensor([1.0, -0.5, 12.0])
+    valid = torch.ones(2, 40, dtype=torch.bool)
+    valid[0, 20:] = False  # padded rows must not move the centroid
+    valid[1] = False  # no scan: camera parameterisation
+    points[0, 20:] = 0.0
+    k = torch.tensor([[[500.0, 0, 32], [0, 500, 32], [0, 0, 1]]]).expand(
+        2, 3, 3
+    )
+    batch = {
+        "image": torch.randn(2, 3, 64, 64),
+        "points": points,
+        "points_valid": valid,
+        "intrinsics": k,
+    }
+    out = model(batch)  # offset head starts at zero
+    assert torch.allclose(out["transl"][0], points[0, :20].mean(0), atol=1e-5)
+    model.cfg = replace(model.cfg, transl_anchor="camera")
+    cam = model(batch)["transl"]
+    assert torch.allclose(out["transl"][1], cam[1], atol=1e-5)
+    assert abs(float(cam[1, 2]) - model.cfg.init_depth_m) < 1e-3
+
+
 @pytest.mark.skipif(not SMPL_DIR.exists(), reason="SMPL model files absent")
 def test_forward_backward_with_smpl_and_loss() -> None:
     model = _tiny_model(smpl=True)

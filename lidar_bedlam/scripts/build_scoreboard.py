@@ -35,6 +35,11 @@ STATIC_ROWS = [
     ("camerahmr-full", "CameraHMR", "image only, GT intrinsics"),
     ("lidar-hmr-mirror", "LiDAR-HMR", "LiDAR only, mirrored"),
     (
+        "lidar-hmr-mirror-centroid",
+        "LiDAR-HMR",
+        "LiDAR only, mirrored, pelvis put on the point centroid",
+    ),
+    (
         "human3r",
         "Human3R",
         "image only, single frame on the crop",
@@ -63,6 +68,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
                 ["full-gate-none-3dpw-000"],
             ),
             ("ours · gate none, mix80", ["full-gate-none-mix80-000"]),
+            (
+                "ours · translation anchored to the point centroid",
+                ["full-anchor-points-000"],
+            ),
             ("ours · + LiDAR chamfer term", ["full-chamfer-000"]),
             ("ours · + LiDAR ICP term", ["full-icp-000"]),
             (
@@ -113,6 +122,10 @@ GROUPS: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
             ),
             ("image only", ["abl-image-only-000", "abl-image-only-s1"]),
             ("LiDAR only", ["abl-lidar-only-000", "abl-lidar-only-s1"]),
+            (
+                "translation anchored to the point centroid",
+                ["abl-anchor-points-000", "abl-anchor-points-s1"],
+            ),
         ],
     ),
     (

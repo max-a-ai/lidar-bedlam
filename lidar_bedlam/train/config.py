@@ -46,6 +46,7 @@ class ModelSection:
     point_tokens: int = 128
     point_knn: int = 16
     init_depth_m: float = 8.0
+    transl_anchor: str = "camera"  # camera | points (see models.fusion)
     use_backbone: bool = False
     gate_mode: str = (
         "learned"  # learned | none | hard | image_only | lidar_only

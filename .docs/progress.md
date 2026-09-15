@@ -230,6 +230,32 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 09:20 — point-anchored translation head; TikZ architecture; LiDAR-HMR placed by the centroid alone
+Why LiDAR-HMR places at 0.083 m: its loader subtracts the centroid of the
+person's points, the network predicts the mesh in that local frame and the
+centroid is added back (our baseline runner does the same with the box
+centre of the points). Our head regresses (u, v, log z) in the camera frame
+from an 8 m prior, nothing ties the depth to the scan; LiDAR-only reaches
+0.233 m. New option `model.transl_anchor: points` (`ModelConfig.transl_anchor`,
+`SmplHeads.offset_head` zero-initialised, `point_centroid` over the valid
+input points; samples without points keep the camera parameterisation).
+Configs `ablation_anchor_points.yaml` (abl-anchor-points, 2 seeds, jobs
+856814/856815) and `full_anchor_points.yaml` (856816) on Helma; scoreboard
+rows in the fusion axis and the headline table. Test
+`test_point_anchored_translation_uses_valid_centroid`.
+
+`score_baselines.py --place-at-centroid`: the pelvis of every prediction
+moved onto the centroid of the record's input points (what a LiDAR method
+gets from the scan alone). LiDAR-HMR mirrored on Waymo val: placement
+0.106 m, abs 140.6 mm, mAP 0.45 (learned: 0.083 m, 117.4 mm, 0.48). The
+scan alone gives 10 cm; their learned offset adds 2 cm. Static row
+`lidar-hmr-mirror-centroid` (`results_centroid.json`). Test
+`test_place_at_centroid_moves_pelvis_onto_valid_points`.
+
+Architecture figure redone in TikZ (`.docs/figures/architecture.{tex,pdf,png}`,
+every number taken from the code; both translation anchors shown). Notebook
+section 12 shows the PNG (builder updated, executed notebook spliced).
+
 ### 2026-09-15 08:45 — cluster2 as a second training host; pseudo-GT fit quality
 cluster2 (ivlcluster02, `ssh cluster2`): 7x RTX 4090 24 GB, 96 CPUs, 251 GB
 RAM, single-node Slurm (partition `rtx4090`, no time limit), internet
