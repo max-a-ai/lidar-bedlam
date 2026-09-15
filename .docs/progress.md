@@ -257,6 +257,17 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 16:20 — LiDAR-HMR on 3DPW; anchored short reference; BEDLAM 2 images down
+LiDAR-HMR mirrored on the 3DPW test crops (simulated main_0 scan):
+117.6 / 80.7 / PVE 156.6, 0.131 m, mAP 0.47; pelvis on the centroid: 0.196 m,
+0.36 (`results_threedpw_lidarhmr*.json`). Its pose is far behind the
+image methods on this close-range split. a-abl-mixed-short (anchored
+reference, seed 0, training-time val): Waymo 74.6 mm, 0.075 m, mAP 0.67;
+SLOPER4D 43.7 mm, 0.027 m; 3DPW 59.8 mm, 0.066 m, as the earlier anchor
+runs. BEDLAM 2: the eight street image folders are on the NAS (0.92 TB);
+the depth repository answered 403 on the `.xxh128` checksum sidecars, so
+the depth pass was restarted skipping them, with retries.
+
 ### 2026-09-15 15:25 — compared pipelines on 3DPW test
 `results_threedpw.json` (4090 chain): HMR2 77.9 / 58.6 / PVE 95.5, 0.175 m,
 mAP 0.39; TokenHMR 65.8 / 50.2 / 89.9, 0.185 m, 0.39; CameraHMR 58.0 /
