@@ -257,6 +257,23 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 10:10 — SAM 3D Body to SMPL: the MHR conversion works
+`third_party/MHR` (submodule) ships `tools/mhr_smpl_conversion` (optimisation
+fit through a barycentric MHR-to-SMPL surface mapping). Test on 12 real
+crops (6 Waymo val, 6 SLOPER4D test) with SAM 3D Body DINOv3-H+ (env
+`sam_3d_body`, full crop as the box, our crop intrinsics) and the fit in
+env `mhr_lod` (CPU torch; MHR assets downloaded to
+`resources/pretrained-checkpoints/mhr/assets`, 4.7 GB, `lod1.fbx` needed
+by `MHR.from_files`). Pitfall: the tool works in centimetres and expects
+`pred_cam_t` added (its SAM3D helper does that; our SAM fork lacks the
+`mhr_model_params` key, so `convert_mhr2smpl(mhr_vertices=100*(v+t))` is
+the route). Result: MHR and SMPL vertices 0.65 / 0.61 cm apart (mean
+nearest vertex, both directions), same extents; on the 6 SLOPER4D frames
+the converted SMPL scores 32.1 mm MPJPE, 23.1 PA, placement 0.025 m
+against the labels (one sequence at 2.3 m, not a benchmark). Scripts,
+raw outputs and the overlay figure in `outputs/baselines/sam3d-body/smoke/`.
+Next: `scripts/baselines/run_sam3d_body.py` over the three splits.
+
 ### 2026-09-15 09:20 — point-anchored translation head; TikZ architecture; LiDAR-HMR placed by the centroid alone
 Why LiDAR-HMR places at 0.083 m: its loader subtracts the centroid of the
 person's points, the network predicts the mesh in that local frame and the

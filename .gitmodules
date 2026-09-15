@@ -16,3 +16,6 @@
 [submodule "third_party/Human3R"]
 	path = third_party/Human3R
 	url = https://github.com/fanegg/Human3R.git
+[submodule "third_party/MHR"]
+	path = third_party/MHR
+	url = https://github.com/facebookresearch/MHR
