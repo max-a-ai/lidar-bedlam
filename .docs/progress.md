@@ -230,6 +230,27 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-15 08:10 — scoreboard: blue for values that beat every compared pipeline; batch-size headroom
+`build_scoreboard.py` marks, in the headline table, every value of our runs
+that beats the best static row of that column (baselines re-scored by us and
+the quoted rows) in blue (`beats_static`, class `b`, wins over the rank
+colours; legend chip). 75 blue cells at the time of writing, mostly
+SLOPER4D columns; on Waymo only PA-MPJPE of a few runs (against the shown
+CameraHMR 63.3, not the measured 60.0) and mAP of gate-none mix80.
+
+Batch-size question (user asked for 2–4x larger batches for speed): the
+model is 29.4 M parameters (decoder 21.3 M, point encoder 7.4 M), so
+weights + grads + AdamW are 0.44 GiB per GPU; everything else is
+activations. Allocator peak at 512 per GPU is 13.7–15.3 GiB (about 22–24
+GiB in nvidia-smi with context and cache) of 96 GiB, so 2x (28 GiB), 3x
+(42 GiB) and 4x (56 GiB) per GPU all fit. Throughput does not follow: the
+12 Sep tests gave 5,200 samples/s at 1024 and 5,600 at 2048 (flat, loader
+bound), and the current runs log 4,600–5,150 samples/s at 2048 with
+0.40–0.44 s per step. A larger batch at the same step count therefore
+costs proportionally more wall time; at the same sample budget it saves
+nothing. The lever is the loader: the h100 nodes have 128 logical CPUs
+and 754 GB RAM, the jobs request 64 CPUs and run 16 workers per rank.
+
 ### 2026-09-15 — ICP term diverged; fixed as a stop-gradient target
 
 Every run with `lidar_icp` collapsed within the first evaluations

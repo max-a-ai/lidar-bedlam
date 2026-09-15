@@ -9,7 +9,8 @@ the last validation line of ``outputs/helma/runs/<run>/metrics.jsonl``.
 Published pipelines come from ``outputs/baselines/results_static.json`` and
 never change; the mirror test from ``results_mirror.json`` when present.
 Rows of one group are ranked per column (green / yellow / red = best /
-second / third; lower is better except mAP).
+second / third; lower is better except mAP). In the headline table a value of
+ours that beats every compared pipeline is blue.
 """
 
 from __future__ import annotations
@@ -362,6 +363,30 @@ def ranks(rows: list[Row], key: str) -> dict[int, int]:
     return {i: pos for pos, (i, _) in enumerate(valid[:3])}
 
 
+def beats_static(rows: list[Row], key: str) -> set[int]:
+    """Indices of our rows whose value beats every static (compared) row."""
+    higher = key.split("_", 1)[1] in HIGHER_IS_BETTER
+
+    def finite(r: Row) -> float | None:
+        v = r.values.get(key)
+        return v if v is not None and np.isfinite(v) else None
+
+    ref = [
+        v for r in rows if r.kind == "static" and (v := finite(r)) is not None
+    ]
+    if not ref:
+        return set()
+    bar = max(ref) if higher else min(ref)
+    out = set()
+    for i, r in enumerate(rows):
+        v = finite(r)
+        if r.kind != "ours" or v is None:
+            continue
+        if (v > bar) if higher else (v < bar):
+            out.add(i)
+    return out
+
+
 def _keys() -> list[str]:
     return [f"{tag}_{m}" for tag, _ in SPLITS for m in METRICS]
 
@@ -370,6 +395,7 @@ def table_html(rows: list[Row]) -> str:
     """One ranked table."""
     keys = _keys()
     rank_by_key = {k: ranks(rows, k) for k in keys}
+    blue_by_key = {k: beats_static(rows, k) for k in keys}
     cls = ["g", "y", "r"]
     h = [
         '<div class="wrap"><table><thead><tr><th></th>'
@@ -392,6 +418,8 @@ def table_html(rows: list[Row]) -> str:
         for k in keys:
             rk = rank_by_key[k].get(i)
             c = f" {cls[rk]}" if rk is not None else ""
+            if i in blue_by_key[k]:
+                c = " b"  # beats every compared pipeline: blue wins
             h.append(f'<td class="num{c}">{fmt(k, r.values.get(k))}</td>')
         h.append("</tr>")
         prev = r.kind
@@ -407,11 +435,11 @@ def table_html(rows: list[Row]) -> str:
 
 STYLE = """
 :root{--ground:#F6F8F6;--panel:#FFFFFF;--ink:#1A2421;--muted:#5E6A65;--rule:#D5DCD8;--accent:#0E6B64;
---g-bg:#D9F0DD;--g-ink:#166534;--y-bg:#FBF0C2;--y-ink:#7A5A00;--r-bg:#F9DBD5;--r-ink:#9C3323;--ours:#EAF3F1}
+--g-bg:#D9F0DD;--g-ink:#166534;--y-bg:#FBF0C2;--y-ink:#7A5A00;--r-bg:#F9DBD5;--r-ink:#9C3323;--b-bg:#D6E6FA;--b-ink:#1D4E9C;--ours:#EAF3F1}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#131917;--panel:#1B2320;--ink:#E7ECE9;--muted:#9BA8A2;--rule:#2B3733;--accent:#5FC7BC;
---g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--ours:#1E2B28}}
+--g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--b-bg:#1B3556;--b-ink:#9CC4F5;--ours:#1E2B28}}
 :root[data-theme="dark"]{--ground:#131917;--panel:#1B2320;--ink:#E7ECE9;--muted:#9BA8A2;--rule:#2B3733;--accent:#5FC7BC;
---g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--ours:#1E2B28}
+--g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--b-bg:#1B3556;--b-ink:#9CC4F5;--ours:#1E2B28}
 body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;padding-inline:24px;padding-block:40px 64px}
 main{max-width:1240px;margin:0 auto;display:grid;gap:40px}
 h1{font-family:"Fraunces","Iowan Old Style",Georgia,serif;font-weight:600;font-size:2.1rem;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-0.01em}
@@ -422,7 +450,7 @@ p{margin:0;max-width:72ch}
 .eyebrow{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:8px}
 .legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:.85rem;color:var(--muted);align-items:center}
 .chip{display:inline-block;padding:2px 10px;border-radius:999px;font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:500}
-.chip.g{background:var(--g-bg);color:var(--g-ink)}.chip.y{background:var(--y-bg);color:var(--y-ink)}.chip.r{background:var(--r-bg);color:var(--r-ink)}
+.chip.g{background:var(--g-bg);color:var(--g-ink)}.chip.y{background:var(--y-bg);color:var(--y-ink)}.chip.r{background:var(--r-bg);color:var(--r-ink)}.chip.b{background:var(--b-bg);color:var(--b-ink)}
 .wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--panel)}
 table{border-collapse:collapse;width:100%;min-width:900px;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
@@ -434,6 +462,7 @@ td.num{font-family:"IBM Plex Mono",monospace;font-size:.88rem}
 tr:last-child td{border-bottom:none}tr.ours td{background:var(--ours)}tr.divider td{border-top:2px solid var(--accent)}
 td.g{background:var(--g-bg)!important;color:var(--g-ink);font-weight:500}
 td.y{background:var(--y-bg)!important;color:var(--y-ink);font-weight:500}
+td.b{background:var(--b-bg)!important;color:var(--b-ink);font-weight:600}
 td.r{background:var(--r-bg)!important;color:var(--r-ink);font-weight:500}
 ol.fn{margin:8px 0 0;padding-left:20px;font-size:.8rem;color:var(--muted);max-width:90ch}ol.fn li{margin-bottom:4px}
 .notes{display:grid;gap:8px;font-size:.88rem;color:var(--muted);max-width:80ch}.notes b{color:var(--ink);font-weight:600}
@@ -493,6 +522,7 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 </header>
 <section><div class="legend"><span>Per column, within each table:</span>
 <span class="chip g">best</span><span class="chip y">second</span><span class="chip r">third</span>
+<span class="chip b">beats every compared pipeline</span>
 <span>· lower is better except mAP · shaded rows are our runs · the published pipelines are static</span></div></section>
 {body}
 <section class="notes">
