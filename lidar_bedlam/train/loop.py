@@ -263,6 +263,21 @@ class Trainer:
             )
         return out
 
+    def figure_loaders(self) -> dict[str, DataLoader[Item]]:
+        """Extra sources drawn for the figures only: three records spread
+        over the synthetic (BEDLAM) training source, so the val plot also
+        shows the domain the model trains on."""
+        out: dict[str, DataLoader[Item]] = {}
+        for s in self.cfg.data.train:
+            if s.name != "synth":
+                continue
+            ds = build_dataset(s, self.cfg, train=False)
+            idx = sorted({(j * len(ds)) // 3 for j in range(min(3, len(ds)))})
+            subset = torch.utils.data.Subset(ds, idx)
+            out["bedlam"] = DataLoader(subset, batch_size=3, num_workers=0)
+            break
+        return out
+
     # -- checkpoints -----------------------------------------------------
 
     def save(self, name: str) -> None:
@@ -467,7 +482,15 @@ class Trainer:
             )
         try:
             figures = eval_figures(
-                self.model, val, self.run_dir, self.step, self.device
+                self.model,
+                {**val, **self.figure_loaders()},
+                self.run_dir,
+                self.step,
+                self.device,
+                smpl=self.smpl_eval,
+                faces=None
+                if self.model.smpl is None
+                else np.asarray(self.model.smpl.faces, dtype=np.int64),
             )
         except Exception as exc:  # figures must never stop a run
             self._log(f"eval figures skipped: {exc}")

@@ -257,6 +257,19 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 02:30 — val plot on the wandb board
+`utils/eval_vis.render_val_plot`: per validation source a 3 x 2 figure,
+three records spread over the source beneath each other; left the crop
+with the predicted mesh projected as a wireframe and the labelled
+keypoints, right the input points with the predicted mesh (red) and the
+labelled mesh (green; the labelled joints where the record has none).
+Title carries the protocol placement error (SMPL translation, or the hip
+centre on keypoint records). A fourth source "bedlam" (three records
+spread over the synthetic training pool, `Trainer.figure_loaders`) shows
+the training domain. Logged as `image/val_plot_<source>` next to the
+keypoint rows; the mirror uploads them unchanged. ~6 s per evaluation.
+Deployed to Helma: every job that starts from now on logs them.
+
 ### 2026-09-16 01:10 — pool-size axis rerun on the v2 recipe
 The old axis stopped at 3,468 steps (only 2x and 16x ran the final
 schedule). `configs/v2_scale_{2x,4x,8x,16x,32x,full}.yaml`: main v2
