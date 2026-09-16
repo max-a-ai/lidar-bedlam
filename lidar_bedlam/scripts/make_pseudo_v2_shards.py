@@ -2,8 +2,9 @@
 
 Runs ``generate.pseudo_fit_v2`` over every Waymo training record: the
 records are grouped by track (one Waymo object seen by one camera),
-ordered by frame time, fitted in batches, and written as a copy of the ``real/v1``
-shards with the fitted SMPL parameters, ``has_smpl`` set on the accepted
+ordered by frame time, fitted in batches, and written as a copy of the
+``real/v1`` shards with the fitted SMPL parameters, ``has_smpl`` set on the
+accepted
 records, and four new per-record arrays: ``label_conf`` (the confidence
 the training loss weights the mesh terms with), ``pseudo_kp_error_m``,
 ``pseudo_chamfer_m`` and ``pseudo_prior_energy``. Token sidecars are

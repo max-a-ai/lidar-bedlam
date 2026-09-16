@@ -217,7 +217,7 @@ class PoseTokenizer(nn.Module):
         return rot6d_rows_to_matrix(self.decoder(latent))
 
     def quantize(self, latent: Tensor) -> tuple[Tensor, Tensor]:
-        """Nearest codebook entries: (quantised latent, code indices (B, T))."""
+        """Nearest codebook entries: quantised latent, code indices (B, T)."""
         b, c, t = latent.shape
         flat = latent.permute(0, 2, 1).reshape(-1, c)
         dist = (
