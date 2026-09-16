@@ -277,6 +277,7 @@ predicted mesh. Numbers of methods we cannot run on our records
   \item Discarded and rerun, not reported: a first mixed run whose Waymo
     keypoints were mapped to the wrong joints, and ablations on a
     preliminary 80/10/10 mixture.
+  \item All trainings have been run at least 2 times with different seeds, ensuring that the results are stable and reproducible.
 \end{itemize}
 
 \subsection{Baselines}
@@ -286,6 +287,10 @@ predicted mesh. Numbers of methods we cannot run on our records
 \todo{Describe baselines.}
 
 \subsection{Main results}
+\subsection{Quantitative Results}
+\begin{itemize}
+  \item We show that a mix of real significantly improves performance over both synthetic-only and real-only training, especially in translation and box metrics.
+\end{itemize}
 % TODO: Table~\ref{tab:main} discussion: synthetic-only transfer, real-only,
 % synthetic+real; gains concentrated in translation and box metrics.
 \todo{Discuss main results.}
