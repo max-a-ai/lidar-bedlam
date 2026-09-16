@@ -257,6 +257,34 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-17 01:30 — pseudo-GT v2: fit in TokenHMR's tokenizer latent space
+`body/pose_tokenizer.py` ports TokenHMR's pose VQ-VAE (AMASS + MOYO, 21
+body joints, 160 latent codes of 256) as a plain torch module; the
+released `tokenizer.pth` is flattened to
+`pretrained-checkpoints/tokenhmr_tokenizer.pt` (round trip 0.7 deg on
+BEDLAM poses, matching the vendored code). `generate/pseudo_fit_v2.py`
+fits Waymo records in that latent space: init from LiDAR-HMR's fit (or
+TokenHMR's image prediction from the old repository), betas shared per
+track (one object seen by one camera), hands at rest, terms for the 3D
+and 2D keypoints, point-to-surface with a 3 cm clothing offset, ground
+contact from the box bottom, trust region to the init, codebook
+commitment, smoothness between frames < 0.25 s apart, betas L2. Gate on
+keypoint error <= 8 cm, chamfer median <= 6 cm, BEDLAM prior energy <= 6;
+confidence = product of Gaussians on the first two, stored per record as
+`label_conf` and used by `losses.smpl.label_weight` to weight every mesh
+term (real labels weigh 1). `scripts/make_pseudo_v2_shards.py` writes
+`real/v1_pseudo2`: 4,063 of 4,591 accepted, keypoint error 27.5 mm on
+the accepted records (LiDAR-HMR init: 31), chamfer median 26 mm, prior
+energy 1.2, 200 s on the 4090. Two bugs found on the way: the smoothness
+pair mask has to be decided in float64 (Waymo timestamps and even their
+offsets across segments collapse in float32, which glued every same-track
+pair together), and a track is one object in one camera. Notebook
+`waymo_pseudo_gt` gained a four-way page (v2, LiDAR-HMR, pedestrian
+generation, ours v1: crop with projected mesh and keypoints above, points
+with the mesh surface below). Ratio axis (`configs/v3_ratio_*.yaml`,
+90/80/70/60 % BEDLAM, real share by dataset size, LiDAR-HMR labels)
+submitted as 865592 to 865595, scoreboard ablation 8.
+
 ### 2026-09-16 19:00 — every queued run finished; pool-size axis and the three full mains
 Training-time validation at the last step, Waymo / SLOPER4D / 3DPW MPJPE
 and placement. Full schedule (all stopped at 80k): main v2 on LiDAR-HMR
