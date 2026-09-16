@@ -295,9 +295,10 @@ offsets across segments collapse in float32, which glued every same-track
 pair together), and a track is one object in one camera. Notebook
 `waymo_pseudo_gt` gained a four-way page (v2, LiDAR-HMR, pedestrian
 generation, ours v1: crop with projected mesh and keypoints above, points
-with the mesh surface below). Ratio axis (`configs/v3_ratio_*.yaml`,
-90/80/70/60 % BEDLAM, real share by dataset size, LiDAR-HMR labels)
-submitted as 865592 to 865595, scoreboard ablation 8.
+with the mesh surface below). Ratio axis first submitted on LiDAR-HMR labels (865592 to
+865595), cancelled and resubmitted as `b-ratio-{90,80,70,60}` on the
+pseudo-GT v2 labels (`configs/b_ratio_*.yaml`, jobs 866240 to 866243),
+scoreboard ablation 8.
 
 ### 2026-09-16 19:00 — every queued run finished; pool-size axis and the three full mains
 Training-time validation at the last step, Waymo / SLOPER4D / 3DPW MPJPE

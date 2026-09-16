@@ -1,14 +1,14 @@
-# v3 ratio axis: 60 % BEDLAM / 40 % real per batch; the real share is drawn from the merged pool of all Waymo, SLOPER4D and 3DPW training records in proportion to their sizes; Waymo carries LiDAR-HMR mesh labels; full schedule with early stop.
-experiment: v3-ratio-60
+# b series (pseudo-GT v2 on Waymo): 90 % BEDLAM / 10 % real per batch; the real share is drawn from the merged pool of all Waymo, SLOPER4D and 3DPW training records in proportion to their sizes; Waymo carries the confidence-weighted pseudo-GT v2 mesh labels; full schedule with early stop.
+experiment: b-ratio-90
 seed: 0
 body_models: ${DATA_ROOT}/body_models
 checkpoint_root: outputs
 data:
   train:
-    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1_lidarhmr"], pattern: "waymo_train_*.npz", weight: 0.0610}
-    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.2797}
-    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.60, variant: random_main}
-    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.0593, variant: random_main}
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1_pseudo2"], pattern: "waymo_train_*.npz", weight: 0.0152}
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.0699}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.90, variant: random_main}
+    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.0148, variant: random_main}
   val:
     - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
     - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
