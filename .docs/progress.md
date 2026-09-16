@@ -257,6 +257,14 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 10:10 — main v2 finished (early stop at 80k)
+a-full-main-v2-000 stopped at 80k by the patience rule; last training-time
+validation Waymo 73.8 mm 0.077 m, SLOPER4D 47.3 0.032, 3DPW 50.0 0.037.
+Against anchor mix80 at 80k (71.9 / 43.8 / 56.6): 2 mm worse on Waymo, 3.5
+worse on SLOPER4D, 6.6 better on 3DPW (its 5 % 3DPW share). Protocol
+evaluation queued (862315) with the loss runs mesh (73.0 / 40.7 / 52.7) and
+chamfer + ICP (75.0 / 38.3 / 48.5).
+
 ### 2026-09-16 07:40 — v2 fusion axis complete (15k steps, 75/10/10/5)
 Training-time validation at 15k, Waymo / SLOPER4D / 3DPW MPJPE and
 placement: learned gates 73.0 mm 0.074 m / 44.6 0.045 / 51.5 0.035; gate
