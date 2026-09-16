@@ -257,6 +257,21 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 19:00 — every queued run finished; pool-size axis and the three full mains
+Training-time validation at the last step, Waymo / SLOPER4D / 3DPW MPJPE
+and placement. Full schedule (all stopped at 80k): main v2 on LiDAR-HMR
+labels 92.1 mm 0.076 m / 45.0 0.034 / 49.7 0.037; main v2 + prior 79.4
+0.077 / 43.8 0.033 / 51.0 0.037; mix80 + prior 77.9 0.077 / 42.5 0.029 /
+54.7 0.058. Pool-size axis (all stopped at the 60k minimum): 2x 81.1 0.109
+/ 64.6 0.043 / 66.6 0.075; 4x 80.2 0.095 / 59.0 0.044 / 64.9 0.056; 8x 78.5
+0.089 / 58.1 0.055 / 63.0 0.050; 16x 79.5 0.087 / 58.2 0.047 / 62.4 0.053;
+32x 77.0 0.081 / 54.1 0.053 / 56.7 0.041; full 74.2 0.078 / 45.8 0.037 /
+54.6 0.040. Pose on every split and Waymo placement improve monotonically
+with the synthetic pool; 2x to 16x sit within 2 mm of each other and the
+step from 32x to the full pool is the largest. Protocol evaluations of
+all nine queued (865466). Crossing frame and val plots rendered from the
+LiDAR-HMR main v2 checkpoint (`outputs/figures/a-full-main-v2-lhmr/`).
+
 ### 2026-09-16 13:10 — v2 label-source axis complete
 15k steps on 75/10/10/5, Waymo / SLOPER4D / 3DPW MPJPE and placement
 (protocol evaluation except the LiDAR-HMR row, training-time): keypoints
