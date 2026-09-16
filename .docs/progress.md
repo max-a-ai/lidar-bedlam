@@ -257,6 +257,21 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 13:10 — v2 label-source axis complete
+15k steps on 75/10/10/5, Waymo / SLOPER4D / 3DPW MPJPE and placement
+(protocol evaluation except the LiDAR-HMR row, training-time): keypoints
+73.0 mm 0.074 m / 49.3 0.047 / 50.8 0.036; our pseudo-GT SMPL 88.3 0.077 /
+47.6 0.038 / 51.9 0.038; pedestrian-generation SMPL (1,489 records) 88.3
+0.088 / 45.9 0.039 / 50.0 0.037; LiDAR-HMR SMPL (4,586 records) 92.4 0.076
+/ 40.8 0.029 / 50.7 0.037. Every pseudo-GT source costs 15 to 19 mm of
+Waymo pose against the 13 keypoints; the mesh labels help SLOPER4D (2 to
+8 mm) and leave 3DPW alone. The keypoint measure on Waymo val rewards
+what the keypoints teach, so the axis cannot show the hand and foot
+realism the mesh labels buy; the qualitative check on the crossing
+frame stays the judge for that. Evaluation queued for the LiDAR-HMR row.
+Main v2 on LiDAR-HMR labels (full schedule) at 30k: 90.5 / 45.3 / 50.3,
+placement 0.074 m, the same 17 mm Waymo gap to main v2.
+
 ### 2026-09-16 11:30 — v2 loss axis complete; first label-source run
 Protocol evaluation at 15k (75/10/10/5), Waymo / SLOPER4D / 3DPW MPJPE
 and placement: reference 73.0 mm 0.074 m / 49.3 0.047 / 50.8 0.036;
