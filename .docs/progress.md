@@ -257,6 +257,20 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-17 03:10 — b series: main trainings on pseudo-GT v2, test run first
+The pseudo-GT v2 labels passed the visual check (four-way notebook page).
+New run family `b-*` (configs `configs/b_*.yaml`): the main recipes with
+the Waymo slice on `real/v1_pseudo2`, confidence-weighted mesh losses
+(`losses.smpl.label_weight`; loader field `label_conf`). First the test
+run `b-full-mix80` (anchor mix80 recipe, job 866119); the other mains
+follow once it is judged. Scoreboard rows "ours · anchor · mix80
+(pseudo-GT v2)" in the headline and main-runs tables. Shards and the
+loader/loss changes deployed to Helma; `v1_pseudo2` token sidecars linked
+from `v1`. Housekeeping: the LiDAR-HMR pointnet2 build fix is kept as
+`third_party/patches/lidar-hmr-pointnet2-setup.patch` (the submodules
+stay at upstream commits); paper draft, bibliography and lock file
+committed.
+
 ### 2026-09-17 01:30 — pseudo-GT v2: fit in TokenHMR's tokenizer latent space
 `body/pose_tokenizer.py` ports TokenHMR's pose VQ-VAE (AMASS + MOYO, 21
 body joints, 160 latent codes of 256) as a plain torch module; the

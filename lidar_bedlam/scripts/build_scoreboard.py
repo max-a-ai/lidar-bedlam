@@ -81,6 +81,7 @@ GROUPS: list[Group] = [
             ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
             (MAIN, MAIN_RUN),
             ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
+            ("ours · anchor · mix80 (pseudo-GT v2)", ["b-full-mix80-000"]),
         ],
         pending=True,
     ),
@@ -99,6 +100,7 @@ GROUPS: list[Group] = [
             ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
             (MAIN, MAIN_RUN),
             ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
+            ("ours · anchor · mix80 (pseudo-GT v2)", ["b-full-mix80-000"]),
             (
                 "ours · anchor · main-mixed (50/40/10)",
                 ["a-full-main-mixed-000"],
@@ -389,6 +391,13 @@ class Row:
 
 # footnotes of our rows, by label (the recipe stays out of the label)
 ROW_FOOTNOTES = {
+    "ours · anchor · mix80 (pseudo-GT v2)": (
+        "b series: as anchor · mix80, but the Waymo training records carry "
+        "the pseudo-GT v2 mesh labels (fit in TokenHMR's tokenizer latent "
+        "space from LiDAR-HMR's initialisation, gated; 4,063 of 4,591 "
+        "records), each weighted by its confidence in the mesh losses; the "
+        "keypoints stay the joint supervision"
+    ),
     "ours · main v2": (
         "point-anchored translation, learned gates; every batch 75 % BEDLAM "
         "(full synthetic pool, random main resolution), 10 % Waymo train "
