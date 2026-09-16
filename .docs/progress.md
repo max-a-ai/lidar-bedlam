@@ -257,6 +257,22 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 11:30 — v2 loss axis complete; first label-source run
+Protocol evaluation at 15k (75/10/10/5), Waymo / SLOPER4D / 3DPW MPJPE
+and placement: reference 73.0 mm 0.074 m / 49.3 0.047 / 50.8 0.036;
++ chamfer 74.0 0.073 / 43.0 0.040 / 49.5 0.036; + ICP 76.9 0.077 / 44.7
+0.045 / 50.3 0.035; + mesh 73.0 0.077 / 46.7 0.039 / 52.2 0.041; + chamfer
++ ICP 75.0 0.077 / 44.1 0.034 / 47.8 0.034; + ICP + mesh 77.4 0.078 / 41.2
+0.035 / 49.6 0.036; all three (training-time, 14k) 75.1 / 42.5 / 48.4.
+No term moves Waymo pose or placement; every ICP combination costs 2 to
+4 mm there; chamfer and the combinations gain 5 to 8 mm on SLOPER4D and
+1 to 3 mm on 3DPW. Same verdict as the camera-frame axis: the surface
+terms help the dense-scan domain only.
+Label source, first row (training-time, 14k): our pseudo-GT SMPL on Waymo
+88.4 / 42.7 / 52.5 at 0.077 m, 15 mm worse on Waymo than the keypoint
+reference at 15k; the pedestrian-generation and LiDAR-HMR rows are
+still training. Evaluations queued (862371, 862390).
+
 ### 2026-09-16 10:10 — main v2 finished (early stop at 80k)
 a-full-main-v2-000 stopped at 80k by the patience rule; last training-time
 validation Waymo 73.8 mm 0.077 m, SLOPER4D 47.3 0.032, 3DPW 50.0 0.037.
