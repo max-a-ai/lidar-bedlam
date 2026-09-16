@@ -71,6 +71,9 @@ DATA = ROOT / "resources" / "data" / "generated"
 PSEUDO = DATA / "real" / "v1_pseudo"
 
 smpl = SmplModel(DATA / "body_models")
+from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
+WSEL = np.nonzero(WAYMO15_TO_COCO17 >= 0)[0]  # the 13 Waymo joints SMPL shares
+CSEL = WAYMO15_TO_COCO17[WSEL]
 shards = [Shard(p) for p in sorted(PSEUDO.glob("waymo_train_*.npz")) if ".fit." not in p.name]
 fits = {p.name[: -len(".fit.npz")]: dict(np.load(p)) for p in sorted(PSEUDO.glob("*.fit.npz"))}
 # only accepted fits are pseudo ground truth
@@ -452,6 +455,140 @@ code("""
 RECORDS = [4, 5]  # positions in the fixed order (0-based); TRI_N records exist
 if TRI_N:
     show(triple_page, TRI_N, TRI_LABEL, unit="record", pages=[r for r in RECORDS if r < TRI_N])
+""")
+
+md("""
+## Four pseudo ground truths of the same record, side by side
+
+Every Waymo training record exists in up to four label sets, all copies
+of the same shards with the SMPL fields replaced:
+
+- **pseudo-GT v2** (`real/v1_pseudo2`) — the fit in TokenHMR's tokenizer
+  latent space, initialised from LiDAR-HMR, with per-track shape, ground
+  contact and a gate (`generate/pseudo_fit_v2.py`); the title carries its
+  residuals and the confidence the training loss uses
+- **LiDAR-HMR** (`real/v1_lidarhmr`) — LiDAR-HMR's published fit of the
+  same frame, in the record's camera frame
+- **pedestrian generation** (`real/v1_pedgen`) — the colleague's fit,
+  lifted onto the keypoints along the world up axis
+- **ours, v1** (`real/v1_pseudo`) — the first fitter (joint rotations
+  optimised directly)
+
+Top row: the camera crop with the labelled keypoints (green) and the
+mesh projected onto it with the crop intrinsics (wireframe). Bottom row:
+the person's LiDAR returns (black), the keypoints and the mesh as a
+surface, rotatable. A source without a mesh for the record shows the crop
+and the returns only. `FOUR_RECORDS` picks the records; the order is the
+fixed permutation of the v2 shards, so record 0 never changes.
+""")
+
+code("""
+FOUR_SOURCES = [
+    ("pseudo-GT v2", DATA / "real" / "v1_pseudo2", "lightblue"),
+    ("LiDAR-HMR", DATA / "real" / "v1_lidarhmr", "plum"),
+    ("pedestrian generation", DATA / "real" / "v1_pedgen", "lightsalmon"),
+    ("ours, v1", DATA / "real" / "v1_pseudo", "lightgreen"),
+]
+FOUR = {label: {p.name: Shard(p) for p in sorted(folder.glob("waymo_train_*.npz")) if ".fit." not in p.name}
+        for label, folder, _ in FOUR_SOURCES if folder.exists()}
+BASE_LABEL = next(iter(FOUR)) if FOUR else None
+FOUR_KEYS = []
+if BASE_LABEL:
+    for name, sh in FOUR[BASE_LABEL].items():
+        FOUR_KEYS += [(name, int(i), str(k)) for i, k in enumerate(sh.array("key"))]
+FOUR_ORDER = np.random.default_rng(1).permutation(len(FOUR_KEYS))
+FACE_STEP = 3  # every k-th face in the 2D wireframe keeps the figure light
+
+
+def four_mesh(label: str, name: str, i: int):
+    \"\"\"Vertices of one source's label for a record, or None.\"\"\"
+    sh = FOUR.get(label, {}).get(name)
+    if sh is None or not bool(sh.array("has_smpl")[i]):
+        return None
+    verts, _ = smpl.forward(SmplParams(*(sh.row(k, i).astype(np.float64)
+                                       for k in ("global_orient", "body_pose", "betas", "transl"))))
+    return verts
+
+
+def project_uv(k: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    z = np.clip(pts[:, 2], 1e-3, None)
+    return np.stack([k[0, 0] * pts[:, 0] / z + k[0, 2], k[1, 1] * pts[:, 1] / z + k[1, 2]], -1)
+
+
+def wire_trace(uv: np.ndarray, faces: np.ndarray, colour: str):
+    f = faces[::FACE_STEP]
+    tri = uv[f]  # (F, 3, 2)
+    xs = np.concatenate([tri[:, [0, 1, 2, 0], 0], np.full((len(f), 1), np.nan)], 1).ravel()
+    ys = np.concatenate([tri[:, [0, 1, 2, 0], 1], np.full((len(f), 1), np.nan)], 1).ravel()
+    return go.Scatter(x=xs, y=ys, mode="lines", line={"color": colour, "width": 0.6}, opacity=0.6,
+                      hoverinfo="skip", showlegend=False)
+
+
+def four_title(label: str, name: str, i: int, verts, rec) -> str:
+    if verts is None:
+        return f"{label}<br><sub>no mesh label</sub>"
+    ok = rec["valid15"]
+    kp = np.linalg.norm(smpl.coco_joints(verts)[CSEL][ok[WSEL]] - rec["kp15"][WSEL][ok[WSEL]], axis=1).mean() * 100 if ok[WSEL].any() else float("nan")
+    extra = ""
+    sh = FOUR[label][name]
+    if sh.has("label_conf"):
+        extra = (f", chamfer {float(sh.array('pseudo_chamfer_m')[i]) * 100:.1f} cm, prior {float(sh.array('pseudo_prior_energy')[i]):.1f}"
+                 f", conf {float(sh.array('label_conf')[i]):.2f}")
+    return f"{label}<br><sub>keypoints {kp:.1f} cm{extra}</sub>"
+
+
+def four_page(n: int):
+    \"\"\"One record in every label set: crop with projection above, 3D below.\"\"\"
+    name, i, key = FOUR_KEYS[int(FOUR_ORDER[n])]
+    base = FOUR[BASE_LABEL][name]
+    rec = {"image": base.array("image")[i], "K": base.row("intrinsics", i).astype(np.float64),
+           "points": base.scan(i, "real").points.astype(np.float64),
+           "kp15": base.array("joints3d")[i][:15].astype(np.float64),
+           "valid15": base.array("joints3d_valid")[i][:15].astype(bool),
+           "kp2d": base.array("kp2d")[i][:15].astype(np.float64)}
+    labels = list(FOUR)
+    meshes = [four_mesh(lab, name, i) for lab in labels]
+    titles = [four_title(lab, name, i, v, rec) for lab, v in zip(labels, meshes)] + [""] * len(labels)
+    fig = make_subplots(rows=2, cols=len(labels), row_heights=[0.42, 0.58], vertical_spacing=0.04,
+                        horizontal_spacing=0.02, subplot_titles=titles,
+                        specs=[[{"type": "xy"}] * len(labels), [{"type": "scene"}] * len(labels)])
+    centre = rec["kp15"][rec["valid15"]].mean(0) if rec["valid15"].any() else rec["points"].mean(0)
+    for col, (lab, verts) in enumerate(zip(labels, meshes), start=1):
+        colour = dict((l, c) for l, _, c in FOUR_SOURCES)[lab]
+        fig.add_trace(go.Image(z=rec["image"], hoverinfo="skip"), row=1, col=col)
+        if verts is not None:
+            fig.add_trace(wire_trace(project_uv(rec["K"], verts), smpl.faces, "red"), row=1, col=col)
+        ok2 = rec["kp2d"][:, 2] > 0
+        fig.add_trace(go.Scatter(x=rec["kp2d"][ok2, 0], y=rec["kp2d"][ok2, 1], mode="markers",
+                                 marker={"color": "limegreen", "size": 6}, showlegend=False, hoverinfo="skip"),
+                      row=1, col=col)
+        fig.update_xaxes(visible=False, range=[0, rec["image"].shape[1]], row=1, col=col)
+        fig.update_yaxes(visible=False, range=[rec["image"].shape[0], 0], scaleanchor=f"x{'' if col == 1 else col}", row=1, col=col)
+        traces = []
+        if verts is not None:
+            traces.append(mesh_trace(verts - centre, smpl.faces, lab, color=colour, opacity=0.55))
+        traces += [points_trace(rec["points"] - centre, "LiDAR returns", color="black", size=2.5),
+                   points_trace(rec["kp15"][rec["valid15"]] - centre, "Waymo 3D keypoints", color="limegreen", size=5)]
+        for t in traces:
+            fig.add_trace(t.update(legendgroup=t.name, showlegend=col == 1 or t.name == lab), row=2, col=col)
+    scene = {"aspectmode": "data", "xaxis_title": "x [m]", "yaxis_title": "z [m]", "zaxis_title": "up [m]",
+             "camera": {"eye": {"x": 1.4, "y": -1.6, "z": 0.7}}}
+    fig.update_layout(height=900, margin={"l": 0, "r": 0, "t": 80, "b": 0},
+                      title={"text": f"{key}<br><sub>{np.linalg.norm(centre):.1f} m away, {len(rec['points'])} returns</sub>",
+                             "x": 0.02, "font": {"size": 13}},
+                      legend={"orientation": "h", "x": 0, "y": 0, "itemsizing": "constant"},
+                      **{f"scene{'' if c == 1 else c}": scene for c in range(1, len(labels) + 1)})
+    fig.update_annotations(font_size=11)
+    return fig
+
+
+FOUR_LABEL = lambda p: f"&nbsp;&nbsp;<b>record {p + 1} of {len(FOUR_KEYS)}</b> &nbsp;{FOUR_KEYS[int(FOUR_ORDER[p])][2]}"  # noqa: E731
+FOUR_RECORDS = [0, 1, 2]  # positions in the fixed order (0-based)
+if FOUR:
+    print("label sets:", ", ".join(f"{lab} ({sum(int(sh.array('has_smpl').sum()) for sh in d.values())} meshes)" for lab, d in FOUR.items()))
+    show(four_page, len(FOUR_KEYS), FOUR_LABEL, unit="record", pages=[r for r in FOUR_RECORDS if r < len(FOUR_KEYS)])
+else:
+    print("no label sets found under real/")
 """)
 
 md("""

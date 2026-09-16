@@ -52,11 +52,19 @@ def _masked_mean(err: Tensor, mask: Tensor) -> Tensor:
     return (err * m).sum() / denom
 
 
+def label_weight(batch: dict[str, Tensor]) -> Tensor:
+    """Per-record weight of the mesh label: 1 for a real label, the
+    fitter's confidence for a pseudo-GT label, 0 without a label."""
+    has = batch["has_smpl"].float()
+    conf = batch.get("label_conf")
+    return has if conf is None else has * conf.float()
+
+
 def smpl_param_loss(
     pred: dict[str, Tensor], batch: dict[str, Tensor]
 ) -> dict[str, Tensor]:
     """MSE on rotation matrices (orient, body pose) and on betas."""
-    has = batch["has_smpl"]
+    has = label_weight(batch)
     go_p = as_rotmats(pred["global_orient"], 1)
     go_g = as_rotmats(batch["global_orient"], 1)
     bp_p = as_rotmats(pred["body_pose"], 23)
@@ -132,7 +140,7 @@ def kp2d_loss(
 def translation_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
     """L1 on the SMPL translation (3D placement) in the camera frame."""
     err = (pred - batch["transl"]).abs().sum(-1)
-    return _masked_mean(err, batch["has_smpl"])
+    return _masked_mean(err, label_weight(batch))
 
 
 def box3d_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
@@ -277,8 +285,8 @@ class FusionLoss:
             vertex_loss,
         )
 
-        has = batch["has_smpl"].bool()
-        if not has.any():
+        has = label_weight(batch)
+        if not (has > 0).any():
             zero = pred["vertices"].sum() * 0.0
             return {"vertex": zero, "normal": zero, "edge": zero}
         with torch.no_grad():

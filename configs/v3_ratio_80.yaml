@@ -1,0 +1,43 @@
+# v3 ratio axis: 80 % BEDLAM / 20 % real per batch; the real share is drawn from the merged pool of all Waymo, SLOPER4D and 3DPW training records in proportion to their sizes; Waymo carries LiDAR-HMR mesh labels; full schedule with early stop.
+experiment: v3-ratio-80
+seed: 0
+body_models: ${DATA_ROOT}/body_models
+checkpoint_root: outputs
+data:
+  train:
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1_lidarhmr"], pattern: "waymo_train_*.npz", weight: 0.0305}
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1398}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.80, variant: random_main}
+    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.0297, variant: random_main}
+  val:
+    - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
+    - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
+    - {name: threedpw_test, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_test_*.npz"}
+  n_points: 1024
+  use_augmented_image: 0.5
+  point_augment: true
+  require_tokens: true
+  num_workers: 16
+  val_max_samples: 10000  # full SLOPER4D test (9,904) and Waymo val (894)
+model:
+  dim: 512
+  num_heads: 8
+  num_layers: 4
+  point_tokens: 128
+  point_knn: 16
+  init_depth_m: 8.0
+  use_backbone: false
+  gate_mode: learned
+  transl_anchor: points
+optim:
+  batch_size: 2048  # batch tests 2026-09-12
+  lr: 3.0e-4  # ~sqrt scaling from 1e-4 at batch 256
+  weight_decay: 0.05
+  warmup_steps: 500
+  max_steps: 150000  # ~20 h at 0.42 s/step incl. evals; the chain job resumes past 24 h
+  min_steps: 80000  # the finals plateaued by ~60k: stop once patience runs out
+  patience_evals: 5  # 5 evals x 2000 steps without a new best MPJPE on any source
+  grad_clip: 1.0
+  amp: true
+  eval_every_steps: 1000  # ~68 s per eval incl. figures and checkpoint, vs ~6.5 min of training
+  checkpoint_every_steps: 1000

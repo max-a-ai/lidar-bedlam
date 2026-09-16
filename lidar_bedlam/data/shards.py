@@ -154,6 +154,13 @@ class ShardDataset(Dataset[Item]):
             "distance_scale": torch.tensor(
                 float(shard.array("distance_scale")[i])
             ),
+            # pseudo-GT shards carry a confidence per mesh label that the
+            # mesh losses are weighted with; real labels count in full
+            "label_conf": torch.tensor(
+                float(shard.array("label_conf")[i])
+                if shard.has("label_conf")
+                else 1.0
+            ),
         }
         tokens = self._token_array(s)
         if tokens is not None:

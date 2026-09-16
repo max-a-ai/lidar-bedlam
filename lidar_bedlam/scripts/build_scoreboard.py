@@ -218,6 +218,21 @@ GROUPS: list[Group] = [
         pending=True,
     ),
     Group(
+        "Ablation 8: synthetic-to-real ratio",
+        "Every real training record (Waymo with LiDAR-HMR mesh labels, "
+        "SLOPER4D, 3DPW) drawn in proportion to the dataset sizes, BEDLAM "
+        "filling the batch to the stated share; full schedule with early "
+        "stop, point anchor.",
+        [
+            ("90 / 10", ["v3-ratio-90-000"]),
+            ("80 / 20", ["v3-ratio-80-000"]),
+            ("70 / 30", ["v3-ratio-70-000"]),
+            ("60 / 40", ["v3-ratio-60-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+        pending=True,
+    ),
+    Group(
         "Other final-schedule runs (camera-frame translation, 50/40/10)",
         "Single-change runs of the earlier recipe, kept for reference.",
         [

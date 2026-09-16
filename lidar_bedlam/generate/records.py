@@ -206,6 +206,10 @@ class Shard:
     def __len__(self) -> int:
         return self.n
 
+    def has(self, name: str) -> bool:
+        """Whether the shard stores an array called ``name``."""
+        return name in self._m
+
     def array(self, name: str) -> NDArray[Any]:
         """The whole stacked array as a read-only view (index a row)."""
         return self._m[name]
@@ -233,10 +237,19 @@ class Shard:
 def rewrite_shard(
     src: Path, dst: Path, updates: dict[str, NDArray[Any]]
 ) -> None:
-    """Copy a shard, replacing whole stacked arrays (same shapes)."""
+    """Copy a shard, replacing whole stacked arrays (same shapes); an
+    array the shard does not have yet is added when it has one row per
+    record."""
     with np.load(src, allow_pickle=False) as z:
         arrays = {k: z[k] for k in z.files}
+    n = len(arrays["key"])
     for name, value in updates.items():
+        if name not in arrays:
+            if value.shape[:1] != (n,):
+                msg = f"{name}: {value.shape} does not have {n} rows"
+                raise ValueError(msg)
+            arrays[name] = value
+            continue
         if arrays[name].shape != value.shape:
             msg = f"{name}: {arrays[name].shape} vs {value.shape}"
             raise ValueError(msg)
