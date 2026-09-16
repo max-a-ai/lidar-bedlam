@@ -257,6 +257,22 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 05:10 — anchored full runs evaluated at 80k; first v2 ablations finished
+Protocol evaluation of the anchored finals (all stopped at 80k by the
+early-stop rule), Waymo / SLOPER4D / 3DPW MPJPE and placement: mix80 71.9
+mm 0.078 m / 43.8 0.029 / 56.6 0.063; main-mixed 76.8 0.087 / 44.6 0.026 /
+59.6 0.064; gate none 76.4 0.086 / 41.7 0.029 / 59.8 0.062; synth only 76.4
+0.111 / 52.6 0.065 / 49.4 0.040; real only 78.4 0.126 / 66.6 0.038 / 92.5
+0.108; LiDAR only 91.5 0.081 / 52.0 0.031 / 76.7 0.067. The mixture buys
+placement (real only and synth only each lose 3 to 5 cm on Waymo) and
+SLOPER4D pose; synth only is the best 3DPW row of the axis.
+First v2 ablations (15k steps, 75/10/10/5): learned gates 73.0 mm 0.074 m
+/ 44.6 0.045 / 51.5 0.035; gate none 70.6 0.074 / 38.7 0.031 / 46.0 0.034.
+Plain sum beats the learned gate on every split again, by 6 mm on SLOPER4D.
+Protocol evaluations queued (861716 done, 861793). Note: eval_runs.sbatch
+takes a space-separated RUNS list; two comma-separated submissions had
+evaluated only their first run.
+
 ### 2026-09-16 03:00 — first pose-prior run (short schedule) finished
 a-abl-mixed-short-prior-000 (anchored 50/40/10, 3,468 steps, prior weight
 0.05), training-time validation: Waymo 84.1 / 72.1 mm, 0.075 m; SLOPER4D
