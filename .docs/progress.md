@@ -257,6 +257,17 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-16 07:40 — v2 fusion axis complete (15k steps, 75/10/10/5)
+Training-time validation at 15k, Waymo / SLOPER4D / 3DPW MPJPE and
+placement: learned gates 73.0 mm 0.074 m / 44.6 0.045 / 51.5 0.035; gate
+none 70.6 0.074 / 38.7 0.031 / 46.0 0.034; gate hard 73.5 0.077 / 39.9
+0.030 / 49.4 0.034; LiDAR only 82.7 0.078 / 38.0 0.022 / 65.4 0.045; image
+only (camera-frame translation) 112.2 2.16 / 71.9 0.76 / 72.8 1.19. Plain
+sum wins every split for the third time; LiDAR alone matches the fused
+model on SLOPER4D (close, densely scanned person) and loses 12 to 20 mm
+elsewhere; image alone cannot place at all. Protocol evaluations queued
+(861978, 861990).
+
 ### 2026-09-16 05:10 — anchored full runs evaluated at 80k; first v2 ablations finished
 Protocol evaluation of the anchored finals (all stopped at 80k by the
 early-stop rule), Waymo / SLOPER4D / 3DPW MPJPE and placement: mix80 71.9
