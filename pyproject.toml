@@ -83,6 +83,7 @@ select = [
 # notebook cell sources embedded as strings are not subject to the 79-col rule
 "lidar_bedlam/scripts/build_debug_notebook.py" = ["E501"]
 "lidar_bedlam/scripts/build_pseudo_gt_notebook.py" = ["E501"]
+"lidar_bedlam/scripts/build_hand_probe_notebook.py" = ["E501"]
 # the page template (CSS, prose) is embedded as strings
 "lidar_bedlam/scripts/build_scoreboard.py" = ["E501"]
 
@@ -104,5 +105,5 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["build_debug_notebook", "build_pseudo_gt_notebook", "verify_notebook", "lidar_bedlam.scripts.build_debug_notebook", "lidar_bedlam.scripts.build_pseudo_gt_notebook", "lidar_bedlam.scripts.verify_notebook"]
+module = ["build_debug_notebook", "build_pseudo_gt_notebook", "verify_notebook", "lidar_bedlam.scripts.build_debug_notebook", "lidar_bedlam.scripts.build_pseudo_gt_notebook", "lidar_bedlam.scripts.verify_notebook", "build_hand_probe_notebook", "lidar_bedlam.scripts.build_hand_probe_notebook"]
 disallow_untyped_calls = false
