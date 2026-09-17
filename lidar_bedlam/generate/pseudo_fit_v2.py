@@ -81,6 +81,11 @@ class FitV2Config:
     conf_chamfer_sigma_m: float = 0.04
     crop_size: int = 256
     vertex_stride: int = 4  # every k-th vertex in the point-to-mesh term
+    # SMPL joints no Waymo keypoint observes and no data term constrains:
+    # set to the rest rotation after decoding (wrists 20, 21; feet 10, 11).
+    # The ankles stay free (ground contact and the ankle keypoint hold
+    # them), the head too (nose, forehead and head centre are labelled).
+    neutral_joints: tuple[int, ...] = (10, 11, 20, 21)
 
 
 @dataclass
@@ -159,16 +164,25 @@ class PseudoFitterV2:
 
     # -- pieces ----------------------------------------------------------
 
+    def _body(self, decoded: Tensor) -> Tensor:
+        """Full body pose (N, 23, 3, 3): the decoded 21 joints with the
+        unobserved joints at rest, plus the hands at rest."""
+        n = decoded.shape[0]
+        eye = torch.eye(3, device=decoded.device)
+        body = decoded.clone()
+        for j in self.cfg.neutral_joints:
+            body[:, j - 1] = eye
+        hands = eye.expand(n, 2, 3, 3)
+        return torch.cat([body, hands], 1)
+
     def _mesh(
         self, orient: Tensor, body: Tensor, betas: Tensor, transl: Tensor
     ) -> tuple[Tensor, Tensor]:
-        """Vertices and COCO joints; ``body`` (N, 21, 3, 3), hands at rest."""
-        n = body.shape[0]
-        hands = torch.eye(3, device=body.device).expand(n, 2, 3, 3)
+        """Vertices and COCO joints; ``body`` (N, 23, 3, 3)."""
         out = self.smpl(
             betas=betas,
             global_orient=orient,
-            body_pose=torch.cat([body, hands], 1),
+            body_pose=body,
             transl=transl,
             pose2rot=False,
         )
@@ -260,7 +274,8 @@ class PseudoFitterV2:
         opt = torch.optim.Adam([latent, go6d, transl, betas_track], lr=cfg.lr)
         for _ in range(cfg.iters):
             opt.zero_grad(set_to_none=True)
-            body = self.tok.decode(latent)
+            decoded = self.tok.decode(latent)
+            body = self._body(decoded)
             betas = betas_track[t["track"]]
             verts, coco = self._mesh(
                 rot6d_to_matrix(go6d)[:, None], body, betas, transl
@@ -285,7 +300,7 @@ class PseudoFitterV2:
             sink = torch.relu(low - ground_y)
             hover = torch.relu(ground_y - low - cfg.ground_tolerance_m)
             loss = loss + cfg.w_ground * (sink**2 + 0.1 * hover**2).mean()
-            body6d = matrix_to_rot6d(body)
+            body6d = matrix_to_rot6d(decoded)
             loss = loss + cfg.w_trust_pose * ((body6d - body0_6d) ** 2).mean()
             loss = loss + cfg.w_trust_orient * ((go6d - go6d0) ** 2).mean()
             loss = (
@@ -318,17 +333,15 @@ class PseudoFitterV2:
     ) -> FitV2Result:
         cfg = self.cfg
         n = len(batch.keys)
-        body = self.tok.decode(latent)
+        full = self._body(self.tok.decode(latent))
         betas = betas_track[t["track"]]
         orient = rot6d_to_matrix(go6d)
-        verts, coco = self._mesh(orient[:, None], body, betas, transl)
+        verts, coco = self._mesh(orient[:, None], full, betas, transl)
         kp_err = self._kp_error(coco, t["joints3d"], t["joints3d_valid"])
         dist = torch.cdist(t["points"], verts).min(-1).values
         dist = torch.where(t["points_valid"], dist, torch.nan)
         chamfer = dist.nanmedian(-1).values
         chamfer = torch.nan_to_num(chamfer, nan=float("inf"))
-        hands = torch.eye(3, device=body.device).expand(n, 2, 3, 3)
-        full = torch.cat([body, hands], 1)
         energy = self.prior(full)
         kp_np = kp_err.cpu().numpy().astype(np.float64)
         ch_np = chamfer.cpu().numpy().astype(np.float64)

@@ -257,6 +257,18 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-17 05:20 — pseudo-GT v2: unobserved wrists and feet at rest
+First b-series val plots showed bent palms: the v2 labels had inherited
+LiDAR-HMR's wrist rotations (median 28 / 25 deg) because nothing in the
+fit observes the wrists. `FitV2Config.neutral_joints` (feet 10, 11 and
+wrists 20, 21) are set to the rest rotation after decoding, hands stay at
+rest, ankles and head free (ground contact, ankle and head keypoints).
+Regenerated `real/v1_pseudo2`: 4,070 accepted, keypoint error 27.7 mm,
+chamfer 26 mm, prior energy 1.1; synced to Helma, so the pending b-ratio
+runs stage the corrected labels. `b-full-mix80` (866119) still trains on
+the first labels (staged at start); at 7k: Waymo 83.6 mm 0.075 m,
+SLOPER4D 42.0, 3DPW 58.0.
+
 ### 2026-09-17 04:40 — wandb mirror dropped every validation row (and its plots)
 The mirror runs one pass per two minutes as a fresh process that finishes
 its runs at the end; the trainer writes the validation row of step N
