@@ -67,6 +67,7 @@ The checkpoint comes from Helma:
 """)
 
 code("""
+import io
 from pathlib import Path
 
 import ipywidgets as W
@@ -225,8 +226,13 @@ def draw(i: int, pred: dict) -> None:
     ax3.set_ylabel("z")
     ax3.set_zlabel("-y")
     fig.tight_layout()
-    display(fig)
+    # PNG bytes, not the figure object: the trainer's renderer above put
+    # matplotlib on the Agg backend, which leaves widget outputs without an
+    # inline figure formatter
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=90)
     plt.close(fig)
+    display(Image(data=buf.getvalue()))
     print(angles(pred["body_pose"]))
 """)
 
