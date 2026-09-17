@@ -257,6 +257,19 @@ rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
 
 ## Experiments
 
+### 2026-09-17 04:40 — wandb mirror dropped every validation row (and its plots)
+The mirror runs one pass per two minutes as a fresh process that finishes
+its runs at the end; the trainer writes the validation row of step N
+about a minute after the training row of step N, so it usually reaches
+the mirror one pass later, and a resumed wandb run refuses a row at a step
+it already holds. The images were uploaded as media files, the rows
+were silently dropped: no val plots on the board for the new run, and
+the earlier runs got theirs only when both rows landed in one pass.
+`wandb_mirror.py` now logs such a row at the next free step (the epoch x
+axis keeps it in place), tolerates a half-written offset file (the old
+crash in the log) and writes the offset atomically. `b-full-mix80-000`
+deleted on wandb and re-mirrored from the first row.
+
 ### 2026-09-17 03:10 — b series: main trainings on pseudo-GT v2, test run first
 The pseudo-GT v2 labels passed the visual check (four-way notebook page).
 New run family `b-*` (configs `configs/b_*.yaml`): the main recipes with

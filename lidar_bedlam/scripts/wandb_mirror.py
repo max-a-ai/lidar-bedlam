@@ -86,7 +86,12 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
         offset_file = run_dir / ".mirror_offset"
         if (run_dir / ".mirror_done").exists():
             continue  # finished and fully mirrored
-        offset = int(offset_file.read_text()) if offset_file.exists() else 0
+        try:
+            offset = (
+                int(offset_file.read_text()) if offset_file.exists() else 0
+            )
+        except ValueError:  # partially written offset: retry next pass
+            continue
         size = metrics.stat().st_size
         done = (run_dir / "DONE").exists()
         if size <= offset and not done:
@@ -106,10 +111,18 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
                 if not line.endswith("\n"):
                     break  # partial write, next pass
                 row = json.loads(line)
-                run.log(_with_images(row, run_dir), step=int(row["step"]))
+                # a resumed run refuses steps it already holds: the trainer
+                # writes the validation row (with its figures) a minute
+                # after the training row of the same step, so it often
+                # arrives one pass later; it then goes to the next free
+                # step (the epoch x axis keeps it in place)
+                step = max(int(row["step"]), int(run.step))
+                run.log(_with_images(row, run_dir), step=step)
                 offset += len(line.encode())
                 sent += 1
-        offset_file.write_text(str(offset))
+        tmp = offset_file.with_suffix(".tmp")
+        tmp.write_text(str(offset))
+        tmp.replace(offset_file)
         if done:
             run.finish()
             del open_runs[run_dir.name]
