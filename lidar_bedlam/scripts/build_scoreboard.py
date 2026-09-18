@@ -66,6 +66,108 @@ class Group:
 
 V2_ABL = "15k steps on the main v2 mixture (75/10/10/5), point anchor"
 
+# runs that have to be retrained once the Waymo hand problem is fixed, and
+# why; the scoreboard greys their rows and the schedule lists them
+HAND = "trained before the Waymo hand fix"
+PGT = "Waymo keypoints only; rerun on pseudo-GT v2 with the hand fix"
+RETRAIN: dict[str, str] = {
+    "a-full-main-v2-prior-000": HAND + "; prior variant of main v2",
+    "a-full-mix80-prior-000": HAND + "; prior variant of mix80",
+    "a-full-main-mixed-000": HAND + "; mixture row of ablation 2",
+    "a-full-synth-only-000": HAND + "; data row of ablation 2",
+    "a-full-real-only-000": HAND + "; data row of ablation 2",
+    "a-full-lidar-only-000": HAND + "; modality row of ablation 1",
+    "full-image-only-000": HAND
+    + "; camera-frame translation and 50/40/10 mixture, rerun on the "
+    "main v2 mixture",
+    "v2-abl-ref-000": PGT,
+    "v2-abl-gate-none-000": PGT,
+    "v2-abl-gate-hard-000": PGT,
+    "v2-abl-lidar-only-000": PGT,
+    "v2-abl-image-only-000": PGT,
+    "v2-abl-loss-chamfer-000": PGT,
+    "v2-abl-loss-icp-000": PGT,
+    "v2-abl-loss-mesh-000": PGT,
+    "v2-abl-loss-chamfer-icp-000": PGT,
+    "v2-abl-loss-icp-mesh-000": PGT,
+    "v2-abl-loss-chamfer-icp-mesh-000": PGT,
+    "v2-abl-pseudo-pedgen-000": HAND + "; label-source comparison",
+    "v2-abl-pseudo-lhmr-000": HAND + "; label-source comparison",
+    "v2-scale-2x-000": PGT,
+    "v2-scale-4x-000": PGT,
+    "v2-scale-8x-000": PGT,
+    "v2-scale-16x-000": PGT,
+    "v2-scale-32x-000": PGT,
+    "v2-scale-full-000": PGT,
+}
+
+# what has to be trained, in order, once the hand fix is in: (block, runs,
+# schedule, what for). The scoreboard renders it and --schedule-md writes it.
+SCHEDULE: list[tuple[str, str, str, str]] = [
+    (
+        "0 · prerequisite",
+        "t-short-real, t-short-simlidar (9k steps each)",
+        "short",
+        "find the Waymo hand problem: real returns against LiDAR simulated "
+        "on the pseudo-GT mesh; no full training before the cause is fixed",
+    ),
+    (
+        "1 · mains",
+        "b-full-mix80, b-full-main-v2 (pseudo-GT v2 + fix); "
+        "a-full-mix80, a-full-main-v2 (keypoints + fix)",
+        "full, early stop",
+        "headline rows; b-full-mix80 replaces the run on the first v2 labels",
+    ),
+    (
+        "2 · label source (ablation 5)",
+        "v2-abl-ref, v2-abl-pseudo-v2 (new), v2-abl-pseudo-pedgen, "
+        "v2-abl-pseudo-lhmr",
+        "15k",
+        "the pseudo-GT v2 row is missing; the others predate the fix",
+    ),
+    (
+        "3 · fusion and loss (ablations 3, 4)",
+        "v2-abl-gate-none/hard, lidar-only, image-only; six v2-abl-loss-*",
+        "15k",
+        "rerun on pseudo-GT v2 so the axes match the mains",
+    ),
+    (
+        "4 · modality and data (ablations 1, 2)",
+        "a-full-lidar-only, image-only (main v2 mixture); "
+        "a-full-synth-only, a-full-real-only, a-full-main-mixed",
+        "full, early stop",
+        "final-schedule rows predate the fix; image only also moves to the "
+        "main v2 mixture",
+    ),
+    (
+        "5 · pool size (ablation 7)",
+        "v2-scale-2x … full",
+        "60k to 80k, early stop",
+        "predates the fix",
+    ),
+    (
+        "6 · ratio (ablation 8)",
+        "b-ratio-90/80/70/60",
+        "full, early stop",
+        "running now on the corrected labels but without the fix; rerun "
+        "if the fix changes the training data or loss",
+    ),
+    (
+        "7 · pose prior",
+        "a-full-main-v2-prior, a-full-mix80-prior",
+        "full, early stop",
+        "only worth rerunning if the hand fix is not a prior itself",
+    ),
+    (
+        "8 · LiDAR synthesis (ablation 6, removed from the board)",
+        "rig SLOPER4D, rig Waymo, ball 0.25 m, Waymo resolution only, "
+        "reference",
+        "full, early stop",
+        "never run on the point-anchored model; the old camera-frame rows "
+        "were dropped",
+    ),
+]
+
 GROUPS: list[Group] = [
     Group(
         "Headline: our main trainings against the published pipelines",
@@ -74,40 +176,26 @@ GROUPS: list[Group] = [
         "ablation tables below.",
         [
             ("ours · main v2", ["a-full-main-v2-000"]),
-            (
-                "ours · main v2 (pseudo-GT LiDAR-HMR)",
-                ["a-full-main-v2-lhmr-000"],
-            ),
             ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
             (MAIN, MAIN_RUN),
             ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
-            ("ours · anchor · mix80 (pseudo-GT v2)", ["b-full-mix80-000"]),
         ],
         pending=True,
     ),
     Group(
         "Main runs",
-        "Every full-schedule training of the main recipe: the mixture and "
-        "the translation head are what differ (anchor = point-anchored "
-        "translation, the model since 2026-09-15; the rows without it use "
-        "the camera-frame translation).",
+        "Every full-schedule training of the main recipe with the "
+        "point-anchored translation (the model since 2026-09-15); the "
+        "mixture is what differs.",
         [
             ("ours · main v2", ["a-full-main-v2-000"]),
-            (
-                "ours · main v2 (pseudo-GT LiDAR-HMR)",
-                ["a-full-main-v2-lhmr-000"],
-            ),
             ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
             (MAIN, MAIN_RUN),
             ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
-            ("ours · anchor · mix80 (pseudo-GT v2)", ["b-full-mix80-000"]),
             (
                 "ours · anchor · main-mixed (50/40/10)",
                 ["a-full-main-mixed-000"],
             ),
-            ("ours · main-mixed (50/40/10)", ["full-main-mixed-000"]),
-            ("ours · main-mixed (50/40/10), seed 1", ["full-main-mixed-s1"]),
-            ("ours · mix80 (80/10/10)", ["full-mix80-000"]),
         ],
         pending=True,
     ),
@@ -173,8 +261,8 @@ GROUPS: list[Group] = [
         [
             ("reference: Waymo keypoints", ["v2-abl-ref-000"]),
             (
-                "pseudo-GT SMPL, ours (keypoints + LiDAR fit)",
-                ["v2-abl-pseudo-waymo-000"],
+                "pseudo-GT SMPL v2, ours (TokenHMR latent fit, 4,070 records)",
+                ["v2-abl-pseudo-v2-000"],
             ),
             (
                 "pseudo-GT SMPL, pedestrian generation (1,489 records)",
@@ -187,21 +275,6 @@ GROUPS: list[Group] = [
             (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
         pending=True,
-    ),
-    Group(
-        "Ablation 6: LiDAR synthesis (final schedule)",
-        "How the LiDAR is simulated on the synthetic records; the reference "
-        "draws the sensor inside a 1 m ball and sweeps 12 resolutions. "
-        "Camera-frame translation rows (50/40/10), main at the bottom.",
-        [
-            ("ball 1 m, 12 resolutions (reference)", ["full-main-mixed-000"]),
-            ("ball 1 m, 12 resolutions, seed 1", ["full-main-mixed-s1"]),
-            ("LiDAR at the SLOPER4D rig pose", ["full-rig-sloper4d-000"]),
-            ("LiDAR at the Waymo rig pose", ["full-rig-waymo-000"]),
-            ("ball 0.25 m", ["full-ball025-000"]),
-            ("Waymo resolution only", ["full-target-waymo-000"]),
-            (MAIN + MAIN_NOTE, MAIN_RUN),
-        ],
     ),
     Group(
         "Ablation 7: synthetic pool size",
@@ -234,133 +307,6 @@ GROUPS: list[Group] = [
         ],
         pending=True,
     ),
-    Group(
-        "Other final-schedule runs (camera-frame translation, 50/40/10)",
-        "Single-change runs of the earlier recipe, kept for reference.",
-        [
-            ("+ pseudo-GT Waymo", ["full-pseudo-waymo-000"]),
-            ("+ 3DPW mesh-LiDAR", ["full-3dpw-000"]),
-            ("gate none (plain sum)", ["full-gate-none-000"]),
-            ("anchor · gate none", ["a-full-gate-none-000"]),
-            ("gate hard (fixed priors)", ["full-gate-hard-000"]),
-            ("LiDAR only", ["full-lidar-only-000"]),
-            ("gate none + 3DPW mesh-LiDAR", ["full-gate-none-3dpw-000"]),
-            ("gate none, mix80", ["full-gate-none-mix80-000"]),
-            (
-                "translation anchored to the point centroid",
-                ["full-anchor-points-000"],
-            ),
-            ("+ LiDAR chamfer term", ["full-chamfer-000"]),
-            ("+ LiDAR ICP term", ["full-icp-000"]),
-            ("+ mesh terms (vertex, normal, edge)", ["full-meshloss-000"]),
-        ],
-        archive=True,
-    ),
-    Group(
-        "Earlier fusion axis (1/3 schedule, 50/40/10, mean of 2 seeds)",
-        "Camera-frame translation unless marked anchor.",
-        [
-            (
-                "learned gates (reference)",
-                ["abl-mixed-short-001", "abl-mixed-short-s1"],
-            ),
-            (
-                "anchor · learned gates (reference)",
-                ["a-abl-mixed-short-000", "a-abl-mixed-short-s1"],
-            ),
-            (
-                "anchor · gate none (plain sum)",
-                ["a-abl-gate-none-000", "a-abl-gate-none-s1"],
-            ),
-            (
-                "anchor · gate hard (fixed priors)",
-                ["a-abl-gate-hard-000", "a-abl-gate-hard-s1"],
-            ),
-            (
-                "anchor · LiDAR only",
-                ["a-abl-lidar-only-000", "a-abl-lidar-only-s1"],
-            ),
-            (
-                "anchor · learned gates + pose prior",
-                ["a-abl-mixed-short-prior-000", "a-abl-mixed-short-prior-s1"],
-            ),
-            (
-                "gate none (plain sum)",
-                ["abl-gate-none-000", "abl-gate-none-s1"],
-            ),
-            (
-                "gate hard (fixed priors)",
-                ["abl-gate-hard-000", "abl-gate-hard-s1"],
-            ),
-            ("image only", ["abl-image-only-000", "abl-image-only-s1"]),
-            ("LiDAR only", ["abl-lidar-only-000", "abl-lidar-only-s1"]),
-            (
-                "translation anchored to the point centroid",
-                ["abl-anchor-points-000", "abl-anchor-points-s1"],
-            ),
-        ],
-        archive=True,
-    ),
-    Group(
-        "Earlier pool-size axis (fixed 3,468 steps, 50/40/10)",
-        "Camera-frame translation; 2x and 16x also at the final schedule.",
-        [
-            ("2x (9k records)", ["abl-scale-2x-001"]),
-            ("4x", ["abl-scale-4x-001"]),
-            ("8x", ["abl-scale-8x-001"]),
-            ("16x", ["abl-scale-16x-001"]),
-            ("32x", ["abl-scale-32x-001"]),
-            (
-                "full pool (reference)",
-                ["abl-mixed-short-001", "abl-mixed-short-s1"],
-            ),
-            ("2x, final schedule", ["full-scale-2x-000"]),
-            ("16x, final schedule", ["full-scale-16x-000"]),
-        ],
-        archive=True,
-    ),
-    Group(
-        "Earlier loss axis (1/3 schedule, 50/40/10, mean of 2 seeds)",
-        "Camera-frame translation.",
-        [
-            ("reference", ["abl-mixed-short-001", "abl-mixed-short-s1"]),
-            ("+ chamfer", ["abl-loss-chamfer-000", "abl-loss-chamfer-s1"]),
-            ("+ ICP", ["abl-loss-icp-000", "abl-loss-icp-s1"]),
-            ("+ mesh terms", ["abl-loss-mesh-000", "abl-loss-mesh-s1"]),
-            (
-                "+ chamfer + ICP",
-                ["abl-loss-chamfer-icp-000", "abl-loss-chamfer-icp-s1"],
-            ),
-            (
-                "+ ICP + mesh terms",
-                ["abl-loss-icp-mesh-000", "abl-loss-icp-mesh-s1"],
-            ),
-            (
-                "+ chamfer + ICP + mesh terms",
-                [
-                    "abl-loss-chamfer-icp-mesh-000",
-                    "abl-loss-chamfer-icp-mesh-s1",
-                ],
-            ),
-        ],
-        archive=True,
-    ),
-    Group(
-        "Earlier synthesis and label axes (1/3 schedule, 50/40/10)",
-        "Camera-frame translation.",
-        [
-            (
-                "ball 1 m, 12 resolutions (reference)",
-                ["abl-mixed-short-001", "abl-mixed-short-s1"],
-            ),
-            ("ball 0.25 m", ["abl-ball025-000"]),
-            ("LiDAR at the Waymo rig pose", ["abl-rig-waymo-000"]),
-            ("Waymo resolution only", ["abl-target-waymo-000"]),
-            ("+ pseudo-GT SMPL on Waymo", ["abl-pseudo-waymo-000"]),
-            ("+ 3DPW mesh-LiDAR 10 %", ["abl-3dpw-000"]),
-        ],
-        archive=True,
-    ),
 ]
 
 # methods whose placement is not meaningful on our crops
@@ -387,6 +333,7 @@ class Row:
     kind: str  # static | ours
     values: dict[str, float | None] = field(default_factory=dict)
     footnote: str | None = None
+    retrain: str | None = None  # why the run has to be trained again
 
 
 # footnotes of our rows, by label (the recipe stays out of the label)
@@ -510,10 +457,18 @@ def group_rows(
     for label, runs in spec:
         loaded = [(r, load_run(root, r)) for r in runs]
         found = [(r, x) for r, x in loaded if x is not None]
+        reason = next((RETRAIN[r] for r in runs if r in RETRAIN), None)
         if not found:
             if pending:
                 rows.append(
-                    Row(label, "queued", "ours", {}, ROW_FOOTNOTES.get(label))
+                    Row(
+                        label,
+                        "queued",
+                        "ours",
+                        {},
+                        ROW_FOOTNOTES.get(label),
+                        reason,
+                    )
                 )
             continue
         values = average([x[0] for _, x in found])
@@ -523,7 +478,9 @@ def group_rows(
             note = f"mean of {len(found)} seeds; " + note
         if len(found) < len(runs):
             note += f" ({len(runs) - len(found)} seed pending)"
-        rows.append(Row(label, note, "ours", values, ROW_FOOTNOTES.get(label)))
+        rows.append(
+            Row(label, note, "ours", values, ROW_FOOTNOTES.get(label), reason)
+        )
     return rows
 
 
@@ -569,7 +526,7 @@ def fmt(key: str, v: float | None) -> str:
 def ranks(rows: list[Row], key: str) -> dict[int, int]:
     """Row index -> rank (0..2) of the best three values in a column."""
     higher = key.split("_", 1)[1] in HIGHER_IS_BETTER
-    have = [(i, r.values.get(key)) for i, r in enumerate(rows)]
+    have = [(i, r.values.get(key)) for i, r in enumerate(rows) if not r.retrain]
     valid = [(i, v) for i, v in have if v is not None and np.isfinite(v)]
     valid.sort(key=lambda t: -t[1] if higher else t[1])
     return {i: pos for pos, (i, _) in enumerate(valid[:3])}
@@ -613,10 +570,11 @@ def table_html(rows: list[Row]) -> str:
         '<div class="wrap"><table><thead><tr><th></th>'
         '<th class="group" colspan="6">Waymo val · 894</th>'
         '<th class="group" colspan="6">SLOPER4D test · 9,904</th>'
-        '<th class="group" colspan="6">3DPW test · 6,617</th></tr><tr><th>method</th>'
+        '<th class="group" colspan="6">3DPW test · 6,617</th>'
+        '<th class="group"></th></tr><tr><th>method</th>'
     ]
     h.append("".join(f"<th>{lbl}</th>" for _ in SPLITS for lbl in LABELS))
-    h.append("</tr></thead><tbody>")
+    h.append("<th>retrain</th></tr></thead><tbody>")
     prev = None
     for i, r in enumerate(rows):
         div = " divider" if prev == "static" and r.kind == "ours" else ""
@@ -624,9 +582,10 @@ def table_html(rows: list[Row]) -> str:
         if r.footnote:
             n = 1 + sum(1 for x in rows[:i] if x.footnote)
             mark = f"<sup>{n}</sup>"
+        grey = " retrain" if r.retrain else ""
         h.append(
-            f'<tr class="{r.kind}{div}"><td class="name">{r.label}{mark}'
-            f"<small>{r.note}</small></td>"
+            f'<tr class="{r.kind}{div}{grey}"><td class="name">{r.label}'
+            f"{mark}<small>{r.note}</small></td>"
         )
         for k in keys:
             rk = rank_by_key[k].get(i)
@@ -634,7 +593,7 @@ def table_html(rows: list[Row]) -> str:
             if i in blue_by_key[k] and rk is None:
                 c = " b"  # beats every compared pipeline but is not ranked
             h.append(f'<td class="num{c}">{fmt(k, r.values.get(k))}</td>')
-        h.append("</tr>")
+        h.append(f'<td class="why">{r.retrain or ""}</td></tr>')
         prev = r.kind
     h.append("</tbody></table></div>")
     notes = [(i, r.footnote) for i, r in enumerate(rows) if r.footnote]
@@ -648,11 +607,11 @@ def table_html(rows: list[Row]) -> str:
 
 STYLE = """
 :root{--ground:#F6F8F6;--panel:#FFFFFF;--ink:#1A2421;--muted:#5E6A65;--rule:#D5DCD8;--accent:#0E6B64;
---g-bg:#D9F0DD;--g-ink:#166534;--y-bg:#FBF0C2;--y-ink:#7A5A00;--r-bg:#F9DBD5;--r-ink:#9C3323;--b-bg:#D6E6FA;--b-ink:#1D4E9C;--ours:#EAF3F1}
+--g-bg:#D9F0DD;--g-ink:#166534;--y-bg:#FBF0C2;--y-ink:#7A5A00;--r-bg:#F9DBD5;--r-ink:#9C3323;--b-bg:#D6E6FA;--b-ink:#1D4E9C;--ours:#EAF3F1;--grey-bg:#ECEDEC;--grey-ink:#7A827E}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#131917;--panel:#1B2320;--ink:#E7ECE9;--muted:#9BA8A2;--rule:#2B3733;--accent:#5FC7BC;
---g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--b-bg:#1B3556;--b-ink:#9CC4F5;--ours:#1E2B28}}
+--g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--b-bg:#1B3556;--b-ink:#9CC4F5;--ours:#1E2B28;--grey-bg:#202422;--grey-ink:#7E8783}}
 :root[data-theme="dark"]{--ground:#131917;--panel:#1B2320;--ink:#E7ECE9;--muted:#9BA8A2;--rule:#2B3733;--accent:#5FC7BC;
---g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--b-bg:#1B3556;--b-ink:#9CC4F5;--ours:#1E2B28}
+--g-bg:#1D3F28;--g-ink:#8FE0A5;--y-bg:#453A0F;--y-ink:#F1D46B;--r-bg:#4A2019;--r-ink:#F3A08E;--b-bg:#1B3556;--b-ink:#9CC4F5;--ours:#1E2B28;--grey-bg:#202422;--grey-ink:#7E8783}
 body{background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;padding-inline:24px;padding-block:40px 64px}
 main{max-width:1240px;margin:0 auto;display:grid;gap:40px}
 h1{font-family:"Fraunces","Iowan Old Style",Georgia,serif;font-weight:600;font-size:2.1rem;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-0.01em}
@@ -663,7 +622,7 @@ p{margin:0;max-width:72ch}
 .eyebrow{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:8px}
 .legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:.85rem;color:var(--muted);align-items:center}
 .chip{display:inline-block;padding:2px 10px;border-radius:999px;font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:500}
-.chip.g{background:var(--g-bg);color:var(--g-ink)}.chip.y{background:var(--y-bg);color:var(--y-ink)}.chip.r{background:var(--r-bg);color:var(--r-ink)}.chip.b{background:var(--b-bg);color:var(--b-ink)}
+.chip.grey{background:var(--grey-bg);color:var(--grey-ink)}.chip.g{background:var(--g-bg);color:var(--g-ink)}.chip.y{background:var(--y-bg);color:var(--y-ink)}.chip.r{background:var(--r-bg);color:var(--r-ink)}.chip.b{background:var(--b-bg);color:var(--b-ink)}
 .wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--panel)}
 table{border-collapse:collapse;width:100%;min-width:1300px;font-variant-numeric:tabular-nums}
 th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--rule);white-space:nowrap}
@@ -673,6 +632,9 @@ td:first-child,th:first-child{text-align:left}
 td.name{font-weight:500}td.name small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
 td.num{font-family:"IBM Plex Mono",monospace;font-size:.88rem}
 tr:last-child td{border-bottom:none}tr.ours td{background:var(--ours)}tr.divider td{border-top:2px solid var(--accent)}
+tr.retrain td{background:var(--grey-bg)!important;color:var(--grey-ink)}tr.retrain td.num{color:var(--grey-ink)}
+td.why{text-align:left;white-space:normal;min-width:260px;max-width:360px;font-size:.76rem;color:var(--muted);line-height:1.3}
+table.sched{min-width:0}table.sched td{white-space:normal;text-align:left;vertical-align:top;font-size:.88rem}table.sched td.b{font-weight:600}
 td.g{background:var(--g-bg)!important;color:var(--g-ink);font-weight:500}
 td.y{background:var(--y-bg)!important;color:var(--y-ink);font-weight:500}
 td.b{background:var(--b-bg)!important;color:var(--b-ink);font-weight:600}
@@ -717,9 +679,11 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
             sections.append(f"<section>{html}</section>")
     if archived:
         sections.append(
-            "<details><summary>Earlier runs (camera-frame translation, "
-            "50/40/10 mixture)</summary>" + "".join(archived) + "</details>"
+            "<details><summary>Earlier runs</summary>"
+            + "".join(archived)
+            + "</details>"
         )
+    sections.append(schedule_html())
     body = "\n".join(sections)
     return f"""<title>LiDAR-BEDLAM Scoreboard</title>
 {FONTS}
@@ -733,15 +697,58 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 <section><div class="legend"><span>Per column, within each table:</span>
 <span class="chip g">best</span><span class="chip y">second</span><span class="chip r">third</span>
 <span class="chip b">beats every compared pipeline (below the top three)</span>
-<span>· lower is better except mAP · shaded rows are our runs · the published pipelines are static</span></div></section>
+<span>· lower is better except mAP · shaded rows are our runs · the published pipelines are static</span>
+<span class="chip grey">grey</span><span>to be retrained (numbers kept, reason in the last column); grey rows are not ranked</span></div></section>
 {body}
 <section class="notes">
 <p><b>Image baselines</b> get our 256 px crop and the crop's true intrinsics; the weak-perspective camera is converted to metric translation with the real principal point. CameraHMR is given the ground-truth intrinsics instead of estimating them.</p>
 <p><b>LiDAR-HMR</b> runs the Waymo release weights on 1,024 points centred on the box centre in a z-up frame; SLOPER4D is out of its training domain.</p>
-<p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablations 3 to 5 train 15k steps on the main v2 mixture, ablation 7 trains 60k to 80k steps on it; every ablation table ends with the main run at its final schedule for reference. The collapsed block at the end holds the runs of the earlier recipe (camera-frame translation, 50/40/10 mixture, one-third schedule = 3,468 steps).</p>
+<p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablations 3 to 5 train 15k steps on the main v2 mixture, ablation 7 trains 60k to 80k steps on it; every ablation table ends with the main run at its final schedule for reference. Runs of the earlier recipe (camera-frame translation, 50/40/10 mixture, the LiDAR-HMR label main, the first pseudo-GT v2 labels with bent wrists) were removed from the board on 2026-09-18; the retraining schedule below lists what replaces them.</p>
 </section>
 </main>
 """
+
+
+def schedule_html() -> str:
+    """The retraining schedule as a table."""
+    h = [
+        "<section><h2>Retraining schedule</h2><p class='desc'>Nothing "
+        "beyond the short tests starts before the Waymo hand problem is "
+        "understood; then the blocks run in this order.</p>"
+        '<div class="wrap"><table class="sched"><thead><tr><th>block</th>'
+        "<th>runs</th><th>schedule</th><th>why</th></tr></thead><tbody>"
+    ]
+    for block, runs, sched, why in SCHEDULE:
+        h.append(
+            f'<tr><td class="b">{block}</td><td>{runs}</td><td>{sched}</td>'
+            f"<td>{why}</td></tr>"
+        )
+    h.append("</tbody></table></div></section>")
+    return "".join(h)
+
+
+def schedule_md() -> str:
+    """The retraining schedule as markdown."""
+    lines = [
+        "# Retraining schedule",
+        "",
+        "Generated by `lidar_bedlam/scripts/build_scoreboard.py "
+        "--schedule-md`; edit `SCHEDULE` and `RETRAIN` there.",
+        "",
+        "Rule: no full training starts before the Waymo hand problem is "
+        "found (block 0). Then the blocks run in order; each run in "
+        "`RETRAIN` is greyed on the scoreboard until its replacement exists.",
+        "",
+        "| block | runs | schedule | why |",
+        "|---|---|---|---|",
+    ]
+    lines += [
+        f"| {block} | {runs} | {sched} | {why} |"
+        for block, runs, sched, why in SCHEDULE
+    ]
+    lines += ["", "## Greyed rows and their reason", ""]
+    lines += [f"- `{run}`: {why}" for run, why in RETRAIN.items()]
+    return "\n".join(lines) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -753,10 +760,19 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument("--stamp", default="")
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--schedule-md",
+        type=Path,
+        default=None,
+        help="also write the retraining schedule as markdown (.docs/retrain_schedule.md)",
+    )
     args = ap.parse_args(argv)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(build(args.root, args.baselines, args.stamp))
     sys.stdout.write(f"wrote {args.out}\n")
+    if args.schedule_md is not None:
+        args.schedule_md.write_text(schedule_md())
+        sys.stdout.write(f"wrote {args.schedule_md}\n")
     return 0
 
 
