@@ -3,10 +3,11 @@
 Per evaluation and validation source two PNGs. ``image/val_<source>``: a
 row of crops with the ground-truth keypoints (green) and the predicted
 keypoints (red). ``image/val_plot_<source>``: three samples beneath each
-other, left the crop with the predicted mesh projected onto it, right the
-input points with the predicted mesh (red) and the label (green mesh, or
-the labelled joints where the record has no mesh). The trainer references
-the files from ``metrics.jsonl`` and the wandb mirror uploads them.
+other, three panels each -- left the input crop on its own, middle the same
+crop with the predicted mesh projected onto it, right the input points with
+the predicted mesh (red) and the label (green mesh, or the labelled joints
+where the record has no mesh). The trainer references the files from
+``metrics.jsonl`` and the wandb mirror uploads them.
 """
 
 from __future__ import annotations
@@ -142,20 +143,31 @@ def render_val_plot(
     path: Path,
     n: int = 3,
 ) -> Path:
-    """Three samples (rows): projection on the crop, 3D estimate vs label."""
+    """Three samples (rows), three panels each: the input crop on its own,
+    the same crop with the predicted mesh projected onto it, and the input
+    points with the predicted mesh (red) against the label."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     n = min(n, int(batch["image"].shape[0]))
-    fig = plt.figure(figsize=(8.4, 3.9 * n))
+    fig = plt.figure(figsize=(12.6, 3.9 * n))
     verts = pred["vertices"].detach().cpu().float().numpy()
     sub = np.arange(0, verts.shape[1], 4)  # every 4th vertex in 3D
     for i in range(n):
         k = batch["intrinsics"][i].detach().cpu().numpy()
         img = _denormalise(batch["image"][i])
-        ax = fig.add_subplot(n, 2, 2 * i + 1)
+        # left: the crop as the model sees it, nothing drawn over it
+        raw = fig.add_subplot(n, 3, 3 * i + 1)
+        raw.imshow(img)
+        raw.set_xlim(0, img.shape[1])
+        raw.set_ylim(img.shape[0], 0)
+        raw.set_xticks([])
+        raw.set_yticks([])
+        raw.set_title(f"{batch['dataset'][i]} | input crop", fontsize=9)
+        # middle: the same crop with the mesh and the labelled keypoints
+        ax = fig.add_subplot(n, 3, 3 * i + 2)
         ax.imshow(img)
         _wire(ax, _project(k, verts[i]), faces, "red")
         gt, _ = _keypoints(i, batch, pred)
@@ -166,11 +178,10 @@ def render_val_plot(
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(
-            f"{batch['dataset'][i]} | placement error "
-            f"{_placement_error(i, batch, pred):.2f} m",
+            f"placement error {_placement_error(i, batch, pred):.2f} m",
             fontsize=9,
         )
-        ax3 = fig.add_subplot(n, 2, 2 * i + 2, projection="3d")
+        ax3 = fig.add_subplot(n, 3, 3 * i + 3, projection="3d")
         pts = batch["points"][i].detach().cpu().numpy()
         valid = batch["points_valid"][i].detach().cpu().numpy().astype(bool)
         pts = pts[valid]
