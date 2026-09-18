@@ -19,8 +19,17 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from lidar_bedlam.data.schema import WAYMO15_TO_COCO17
+from lidar_bedlam.data.schema import JOINT_CONVENTIONS, WAYMO15_TO_COCO17
 from lidar_bedlam.losses.pose_prior import PosePrior
+
+# Waymo pedestrian boxes are padded (about 0.90 x 1.78 x 1.00 m) while the
+# box we derive from the mesh extent is about 0.61 x 1.68 x 0.59 m, so the
+# size term asked for 28 cm more length and 40 cm more width on every Waymo
+# row. The keypoints pin shoulders, elbows and wrists, so the only free way
+# to widen the extent was to rotate the wrists and hands outward: 31-39 deg
+# of wrist bend that no label supervises. Centre and heading share no such
+# convention mismatch and stay on.
+WAYMO_CONVENTION_ID = JOINT_CONVENTIONS.index("waymo15")
 
 
 def rodrigues(aa: Tensor) -> Tensor:
@@ -144,10 +153,19 @@ def translation_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
 
 
 def box3d_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
-    """Centre L1 + size L1 + heading (1 - cos) on the 7-vector 3D box."""
+    """Centre L1 + size L1 + heading (1 - cos) on the 7-vector 3D box.
+
+    The size term is dropped on Waymo rows, whose boxes use the padded
+    convention (see :data:`WAYMO_CONVENTION_ID`); centre and heading apply
+    to every row.
+    """
     gt = batch["box3d"]
     centre = (pred[:, :3] - gt[:, :3]).abs().sum(-1)
     size = (pred[:, 3:6] - gt[:, 3:6]).abs().sum(-1)
+    conv = batch.get("joint_convention_id")
+    if conv is not None:
+        waymo = conv.reshape(size.shape) == WAYMO_CONVENTION_ID
+        size = torch.where(waymo, torch.zeros_like(size), size)
     yaw = 1.0 - torch.cos(pred[:, 6] - gt[:, 6])
     return _masked_mean(centre + size + yaw, batch["has_box3d"])
 
