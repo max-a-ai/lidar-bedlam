@@ -15,12 +15,69 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 import wandb
+
+# wandb stages one ``run-<stamp>-<id>`` tree per ``init``. The login-node
+# loop re-runs this script with --once every couple of minutes, so every
+# pass stages a fresh tree for each active run; left alone they cost a few
+# hundred inodes each and exhausted the 500k file quota of /home/hpc.
+# Every tree is dropped once its run is finished, and trees a crashed pass
+# left behind are swept after this many hours.
+STAGING_MAX_AGE_H = 6.0
+
+
+def _mirror_root() -> Path | None:
+    """The staging root, when the loop set one (``WANDB_MIRROR_DIR``)."""
+    root = os.environ.get("WANDB_MIRROR_DIR")
+    return Path(root).resolve() if root else None
+
+
+def _drop_staging(staging: Path) -> None:
+    """Remove one staging tree, never anything outside the mirror root."""
+    root = _mirror_root()
+    if root is None:
+        return  # staging lives in the run's own directory: leave it alone
+    try:
+        staging.resolve().relative_to(root)
+    except ValueError:
+        return
+    shutil.rmtree(staging, ignore_errors=True)
+
+
+def _close(run: Any) -> None:
+    """Finish ``run`` and drop the staging tree wandb wrote for it."""
+    staging = Path(run.dir).parent  # <root>/wandb/run-<stamp>-<id>/files
+    run.finish()  # blocks until the upload completes
+    _drop_staging(staging)
+
+
+def sweep_staging(max_age_h: float = STAGING_MAX_AGE_H) -> int:
+    """Drop staging trees a crashed pass never finished; returns the count.
+
+    Trees of the current pass are minutes old and never match.
+    """
+    root = _mirror_root()
+    if root is None:
+        return 0
+    cutoff = time.time() - max_age_h * 3600.0
+    dropped = 0
+    for path in sorted((root / "wandb").glob("run-*")):
+        if not path.is_dir():
+            continue
+        try:
+            stale = path.stat().st_mtime < cutoff
+        except OSError:  # vanished under us
+            continue
+        if stale:
+            shutil.rmtree(path, ignore_errors=True)
+            dropped += 1
+    return dropped
 
 
 def _run_config(run_dir: Path) -> dict[str, Any]:
@@ -124,7 +181,7 @@ def mirror_once(root: Path, open_runs: dict[str, Any]) -> int:
         tmp.write_text(str(offset))
         tmp.replace(offset_file)
         if done:
-            run.finish()
+            _close(run)
             del open_runs[run_dir.name]
             (run_dir / ".mirror_done").write_text(str(offset))
             sys.stdout.write(f"{run_dir.name}: finished\n")
@@ -137,9 +194,19 @@ def main() -> int:
     ap.add_argument("--root", type=Path, default=Path("outputs"))
     ap.add_argument("--interval", type=float, default=120.0)
     ap.add_argument("--once", action="store_true")
+    ap.add_argument(
+        "--staging-max-age",
+        type=float,
+        default=STAGING_MAX_AGE_H,
+        help="drop staging trees a crashed pass left behind, in hours",
+    )
     args = ap.parse_args()
     open_runs: dict[str, Any] = {}
     while True:
+        stale = sweep_staging(args.staging_max_age)
+        if stale:
+            sys.stdout.write(f"swept {stale} stale staging trees\n")
+            sys.stdout.flush()
         sent = mirror_once(args.root, open_runs)
         if sent:
             sys.stdout.write(
@@ -151,7 +218,7 @@ def main() -> int:
             break
         time.sleep(args.interval)
     for run in open_runs.values():
-        run.finish()
+        _close(run)
     return 0
 
 
