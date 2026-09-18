@@ -91,20 +91,21 @@ def tokenhmr_init(key: str) -> dict[str, Any] | None:
 
 
 def load_records(
-    src: Path, init_dir: Path, pattern: str, n_points: int
+    src: Path, init_dir: Path | None, pattern: str, n_points: int
 ) -> tuple[list[Path], list[Record]]:
-    """Every record of the shards with its LiDAR-HMR or TokenHMR init."""
+    """Every record of the shards with its LiDAR-HMR or TokenHMR init
+    (TokenHMR only when ``init_dir`` is None, e.g. for the val split)."""
     shards = sorted(p for p in src.glob(pattern) if ".fit." not in p.name)
     records: list[Record] = []
     for si, shard in enumerate(shards):
-        init_path = init_dir / shard.name
-        with (
-            np.load(shard, allow_pickle=False) as z,
-            np.load(init_path, allow_pickle=False) as zi,
-        ):
+        with np.load(shard, allow_pickle=False) as z:
             keys = [str(k) for k in z["key"]]
-            assert keys == [str(k) for k in zi["key"]], shard.name
-            has_init = zi["has_smpl"].astype(bool)
+            zi: Any = None
+            has_init = np.zeros(len(keys), dtype=bool)
+            if init_dir is not None:
+                zi = np.load(init_dir / shard.name, allow_pickle=False)
+                assert keys == [str(k) for k in zi["key"]], shard.name
+                has_init = zi["has_smpl"].astype(bool)
             pts_all = z["scan/real/points"].astype(np.float32)
             counts = z["scan/real/count"].astype(int)
             for i, key in enumerate(keys):
@@ -214,7 +215,12 @@ def main(argv: list[str] | None = None) -> int:
     """CLI."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", type=Path, required=True)
-    ap.add_argument("--init", type=Path, required=True)
+    ap.add_argument(
+        "--init",
+        type=Path,
+        default=None,
+        help="LiDAR-HMR shards with the same names; TokenHMR only if absent",
+    )
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--pattern", default="waymo_train_*.npz")
     ap.add_argument("--batch-size", type=int, default=96)
@@ -313,7 +319,10 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(f"{shard.name}: {int(has.sum())}/{n} labelled\n")
     stats = summarize(all_results)
     stats["seconds"] = time.time() - t0
-    (args.out / "pseudo_v2_stats.json").write_text(json.dumps(stats, indent=1))
+    prefix = args.pattern.split("*")[0].strip("_") or "all"
+    (args.out / f"pseudo_v2_stats_{prefix}.json").write_text(
+        json.dumps(stats, indent=1)
+    )
     sys.stdout.write(json.dumps(stats, indent=1) + "\n")
     return 0
 
