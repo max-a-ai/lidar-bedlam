@@ -526,7 +526,9 @@ def fmt(key: str, v: float | None) -> str:
 def ranks(rows: list[Row], key: str) -> dict[int, int]:
     """Row index -> rank (0..2) of the best three values in a column."""
     higher = key.split("_", 1)[1] in HIGHER_IS_BETTER
-    have = [(i, r.values.get(key)) for i, r in enumerate(rows) if not r.retrain]
+    have = [
+        (i, r.values.get(key)) for i, r in enumerate(rows) if not r.retrain
+    ]
     valid = [(i, v) for i, v in have if v is not None and np.isfinite(v)]
     valid.sort(key=lambda t: -t[1] if higher else t[1])
     return {i: pos for pos, (i, _) in enumerate(valid[:3])}
@@ -701,6 +703,25 @@ def build(root: Path, baselines: Path, stamp: str) -> str:
 <span class="chip grey">grey</span><span>to be retrained (numbers kept, reason in the last column); grey rows are not ranked</span></div></section>
 {body}
 <section class="notes">
+<p><b>The 3D box bug: nearly every row below is superseded.</b> Until
+<code>8df62e5</code> the box loss compared raw 3D boxes, but Waymo pedestrian
+labels are padded (about 0.90 x 1.78 x 1.00 m) while the box we derive from
+the mesh extent is about 0.61 x 1.68 x 0.59 m. The size term therefore
+demanded 28 cm more length and 40 cm more width on every Waymo row, and
+since the keypoints pin shoulders, elbows and wrists, the only free way to
+widen the mesh was to rotate the wrists and hands outward. Measured on two
+9k-step tests: wrist bend 31-39 deg with the term on, 6 deg with it off, and
+lateral hand reach falling by 10-54 %. Dropping the term moved Waymo val
+MPJPE from 85.4 / 86.4 mm to 59.8 mm while SLOPER4D and 3DPW were unchanged
+(38.4 vs 38.6 / 37.5 and 55.5 vs 58.1 / 56.1), which is the signature of a
+Waymo-label problem rather than a model one. <b>Every run that trained on
+Waymo rows is affected, which is all of them except
+<code>a-full-synth-only</code></b> (BEDLAM only, so no Waymo rows and no
+change). Ablation 8 is the clearest casualty: its finding that less real
+data scores better is an artefact, since more Waymo share meant more
+corruption (1.5 % Waymo gave 81.7 mm, 6.1 % gave 87.5 mm). The
+<code>b-ratio-*-001</code> series plus a new 50/50 is rerunning under the
+fix; the retraining schedule lists the rest.</p>
 <p><b>Image baselines</b> get our 256 px crop and the crop's true intrinsics; the weak-perspective camera is converted to metric translation with the real principal point. CameraHMR is given the ground-truth intrinsics instead of estimating them.</p>
 <p><b>LiDAR-HMR</b> runs the Waymo release weights on 1,024 points centred on the box centre in a z-up frame; SLOPER4D is out of its training domain.</p>
 <p><b>Our runs</b>: rows marked final are re-evaluated from <code>last.pt</code> on the full sets; running rows show their latest in-training evaluation; their Waymo placement and abs MPJPE appear once the run is re-evaluated with the current protocol (runs started before the placement fix logged an inflated Waymo placement). Ablations 3 to 5 train 15k steps on the main v2 mixture, ablation 7 trains 60k to 80k steps on it; every ablation table ends with the main run at its final schedule for reference. Runs of the earlier recipe (camera-frame translation, 50/40/10 mixture, the LiDAR-HMR label main, the first pseudo-GT v2 labels with bent wrists) were removed from the board on 2026-09-18; the retraining schedule below lists what replaces them.</p>
