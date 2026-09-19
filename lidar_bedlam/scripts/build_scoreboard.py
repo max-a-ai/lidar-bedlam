@@ -70,6 +70,10 @@ V2_ABL = "15k steps on the main v2 mixture (75/10/10/5), point anchor"
 # why; the scoreboard greys their rows and the schedule lists them
 HAND = "trained before the Waymo hand fix"
 PGT = "Waymo keypoints only; rerun on pseudo-GT v2 with the hand fix"
+BOX = (
+    "trained with the Waymo box size term, which bent the wrists; "
+    "replaced by the -001 rerun under 8df62e5"
+)
 RETRAIN: dict[str, str] = {
     "a-full-main-v2-prior-000": HAND + "; prior variant of main v2",
     "a-full-mix80-prior-000": HAND + "; prior variant of mix80",
@@ -99,6 +103,10 @@ RETRAIN: dict[str, str] = {
     "v2-scale-16x-000": PGT,
     "v2-scale-32x-000": PGT,
     "v2-scale-full-000": PGT,
+    "b-ratio-90-000": BOX,
+    "b-ratio-80-000": BOX,
+    "b-ratio-70-000": BOX,
+    "b-ratio-60-000": BOX,
 }
 
 # what has to be trained, in order, once the hand fix is in: (block, runs,
@@ -299,10 +307,15 @@ GROUPS: list[Group] = [
         "in proportion to the dataset sizes, BEDLAM filling the batch to the "
         "stated share; full schedule with early stop, point anchor.",
         [
-            ("90 / 10", ["b-ratio-90-000"]),
-            ("80 / 20", ["b-ratio-80-000"]),
-            ("70 / 30", ["b-ratio-70-000"]),
-            ("60 / 40", ["b-ratio-60-000"]),
+            ("90 / 10", ["b-ratio-90-001"]),
+            ("80 / 20", ["b-ratio-80-001"]),
+            ("70 / 30", ["b-ratio-70-001"]),
+            ("60 / 40", ["b-ratio-60-001"]),
+            ("50 / 50", ["b-ratio-50-000"]),
+            ("90 / 10, box bug", ["b-ratio-90-000"]),
+            ("80 / 20, box bug", ["b-ratio-80-000"]),
+            ("70 / 30, box bug", ["b-ratio-70-000"]),
+            ("60 / 40, box bug", ["b-ratio-60-000"]),
             (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
         pending=True,
@@ -654,9 +667,91 @@ FONTS = (
 )
 
 
-def build(root: Path, baselines: Path, stamp: str) -> str:
+def _eta_text(seconds: float | None) -> str:
+    if seconds is None:
+        return "–"
+    if seconds < 3600:
+        return f"~{seconds / 60:.0f} min"
+    return f"~{seconds / 3600:.1f} h"
+
+
+def running_html(squeue: Path | None, root: Path, configs: Path) -> str:
+    """The "Currently running" section: what is in the queue right now.
+
+    Mirrors the table `running_table.py` splices into the handoff, so the
+    page opens with the live picture and the result tables below it carry
+    the same runs as ``running`` rows.
+    """
+    from lidar_bedlam.scripts.running_table import SOURCES, arrow, collect
+
+    if squeue is None or not squeue.exists():
+        return ""
+    text = squeue.read_text()
+    head = "<h2>Currently running</h2>"
+    if not text.strip():
+        # a successful squeue always prints its header: empty means the
+        # capture failed, which is not the same as an empty queue
+        return (
+            f"<section>{head}<p class='desc'>Queue state unknown: the "
+            "squeue capture came back empty, so the cluster was not "
+            "reached. This is not an empty queue.</p></section>"
+        )
+    runs = collect(text, root / "runs", configs, 1)
+    if not runs:
+        return (
+            f"<section>{head}<p class='desc'>Nothing in the queue.</p>"
+            "</section>"
+        )
+    h = [
+        f"<section>{head}<p class='desc'>Regenerated every hourly tick; "
+        "arrows compare the latest evaluation with the previous one and "
+        "lower is better, so a down arrow is a run still learning. These "
+        "runs also appear in their own table below.</p>",
+        '<div class="wrap"><table><thead><tr><th>run</th><th>step</th>'
+        "<th>of target</th><th>progress</th><th>time left</th>",
+    ]
+    h.append("".join(f"<th>{lbl} MPJPE</th>" for lbl, _ in SOURCES))
+    h.append("</tr></thead><tbody>")
+    live = [r for r in runs if not r.queued]
+    waiting = [r for r in runs if r.queued]
+    for r in live:
+        pct = 100.0 * r.step / r.target if r.target else 0.0
+        h.append(
+            f'<tr class="ours"><td class="name">{r.name}</td>'
+            f'<td class="num">{r.step:,}</td>'
+            f'<td class="num">{r.target:,} ({r.target_kind})</td>'
+            f'<td class="num">{pct:.0f} %</td>'
+            f'<td class="num">{_eta_text(r.eta_s)}</td>'
+        )
+        for label, _ in SOURCES:
+            t = r.trends.get(label)
+            cell = (
+                "–" if t is None else f"{t[0]:.1f} {arrow(t[1])} {t[1]:+.1f} %"
+            )
+            h.append(f'<td class="num">{cell}</td>')
+        h.append("</tr>")
+    if waiting:
+        h.append(
+            f'<tr class="ours"><td class="name">{len(waiting)} queued</td>'
+            f'<td class="num" colspan="{4 + len(SOURCES)}">waiting for '
+            "nodes; each claims its run name at start</td></tr>"
+        )
+    h.append("</tbody></table></div></section>")
+    return "".join(h)
+
+
+def build(
+    root: Path,
+    baselines: Path,
+    stamp: str,
+    squeue: Path | None = None,
+    configs: Path = Path("configs"),
+) -> str:
     """The whole page."""
     sections = []
+    live = running_html(squeue, root, configs)
+    if live:
+        sections.append(live)
     archived = []
     for i, g in enumerate(GROUPS):
         rows = group_rows(root, g.rows, g.pending)
@@ -776,6 +871,8 @@ def main(argv: list[str] | None = None) -> int:
     """CLI."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path, default=Path("outputs/helma"))
+    ap.add_argument("--squeue-file", type=Path, default=None)
+    ap.add_argument("--configs", type=Path, default=Path("configs"))
     ap.add_argument(
         "--baselines", type=Path, default=Path("outputs/baselines")
     )
@@ -789,7 +886,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(build(args.root, args.baselines, args.stamp))
+    args.out.write_text(
+        build(
+            args.root,
+            args.baselines,
+            args.stamp,
+            args.squeue_file,
+            args.configs,
+        )
+    )
     sys.stdout.write(f"wrote {args.out}\n")
     if args.schedule_md is not None:
         args.schedule_md.write_text(schedule_md())

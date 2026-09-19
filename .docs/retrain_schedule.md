@@ -44,3 +44,7 @@ Rule: no full training starts before the Waymo hand problem is found (block 0). 
 - `v2-scale-16x-000`: Waymo keypoints only; rerun on pseudo-GT v2 with the hand fix
 - `v2-scale-32x-000`: Waymo keypoints only; rerun on pseudo-GT v2 with the hand fix
 - `v2-scale-full-000`: Waymo keypoints only; rerun on pseudo-GT v2 with the hand fix
+- `b-ratio-90-000`: trained with the Waymo box size term, which bent the wrists; replaced by the -001 rerun under 8df62e5
+- `b-ratio-80-000`: trained with the Waymo box size term, which bent the wrists; replaced by the -001 rerun under 8df62e5
+- `b-ratio-70-000`: trained with the Waymo box size term, which bent the wrists; replaced by the -001 rerun under 8df62e5
+- `b-ratio-60-000`: trained with the Waymo box size term, which bent the wrists; replaced by the -001 rerun under 8df62e5
