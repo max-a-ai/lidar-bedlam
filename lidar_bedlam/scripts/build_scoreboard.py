@@ -49,7 +49,7 @@ STATIC_ROWS = [
 ]
 
 MAIN = "ours · anchor · mix80"
-MAIN_RUN = ["a-full-mix80-000"]
+MAIN_RUN = ["a-full-mix80-001"]
 MAIN_NOTE = " (main, final schedule)"
 
 
@@ -70,10 +70,6 @@ V2_ABL = "15k steps on the main v2 mixture (75/10/10/5), point anchor"
 # why; the scoreboard greys their rows and the schedule lists them
 HAND = "trained before the Waymo hand fix"
 PGT = "Waymo keypoints only; rerun on pseudo-GT v2 with the hand fix"
-BOX = (
-    "trained with the Waymo box size term, which bent the wrists; "
-    "replaced by the -001 rerun under 8df62e5"
-)
 RETRAIN: dict[str, str] = {
     "a-full-main-v2-prior-000": HAND + "; prior variant of main v2",
     "a-full-mix80-prior-000": HAND + "; prior variant of mix80",
@@ -103,10 +99,6 @@ RETRAIN: dict[str, str] = {
     "v2-scale-16x-000": PGT,
     "v2-scale-32x-000": PGT,
     "v2-scale-full-000": PGT,
-    "b-ratio-90-000": BOX,
-    "b-ratio-80-000": BOX,
-    "b-ratio-70-000": BOX,
-    "b-ratio-60-000": BOX,
 }
 
 # what has to be trained, in order, once the hand fix is in: (block, runs,
@@ -183,10 +175,11 @@ GROUPS: list[Group] = [
         "sets. Recipes in the footnotes; every other run of ours is in the "
         "ablation tables below.",
         [
-            ("ours · main v2", ["a-full-main-v2-000"]),
-            ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
+            ("ours · main v2", ["a-full-main-v2-001"]),
+            ("ours · main v2 + pose prior", ["a-full-main-v2-prior-001"]),
             (MAIN, MAIN_RUN),
-            ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
+            ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-001"]),
+            ("ours · mix90 (pseudo-GT v2)", ["b-ratio-90-001"]),
         ],
         pending=True,
     ),
@@ -196,10 +189,11 @@ GROUPS: list[Group] = [
         "point-anchored translation (the model since 2026-09-15); the "
         "mixture is what differs.",
         [
-            ("ours · main v2", ["a-full-main-v2-000"]),
-            ("ours · main v2 + pose prior", ["a-full-main-v2-prior-000"]),
+            ("ours · main v2", ["a-full-main-v2-001"]),
+            ("ours · main v2 + pose prior", ["a-full-main-v2-prior-001"]),
             (MAIN, MAIN_RUN),
-            ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-000"]),
+            ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-001"]),
+            ("ours · mix90 (pseudo-GT v2)", ["b-ratio-90-001"]),
             (
                 "ours · anchor · main-mixed (50/40/10)",
                 ["a-full-main-mixed-000"],
@@ -312,10 +306,6 @@ GROUPS: list[Group] = [
             ("70 / 30", ["b-ratio-70-001"]),
             ("60 / 40", ["b-ratio-60-001"]),
             ("50 / 50", ["b-ratio-50-000"]),
-            ("90 / 10, box bug", ["b-ratio-90-000"]),
-            ("80 / 20, box bug", ["b-ratio-80-000"]),
-            ("70 / 30, box bug", ["b-ratio-70-000"]),
-            ("60 / 40, box bug", ["b-ratio-60-000"]),
             (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
         pending=True,
