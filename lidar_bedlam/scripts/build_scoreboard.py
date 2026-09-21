@@ -113,10 +113,10 @@ SCHEDULE: list[tuple[str, str, str, str]] = [
     ),
     (
         "1 · mains",
-        "b-full-mix80, b-full-main-v2 (pseudo-GT v2 + fix); "
-        "a-full-mix80, a-full-main-v2 (keypoints + fix)",
-        "full, early stop",
-        "headline rows; b-full-mix80 replaces the run on the first v2 labels",
+        "m-boxhead, m-nobox, m-boxhead-kp, m-gate-none, m-chamfer, m-prior "
+        "(15k, one split; then the winner to the full schedule)",
+        "15k, resumable",
+        "pick the main recipe under the box fix before any full run",
     ),
     (
         "2 · label source (ablation 5)",
@@ -180,6 +180,25 @@ GROUPS: list[Group] = [
             (MAIN, MAIN_RUN),
             ("ours · anchor · mix80 + pose prior", ["a-full-mix80-prior-001"]),
             ("ours · mix90 (pseudo-GT v2)", ["b-ratio-90-001"]),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Main recipe under the box fix (15k steps, resumable)",
+        "Six single-change variants on one split: 75 % BEDLAM, the remaining "
+        "25 % drawn from all Waymo, SLOPER4D and 3DPW training records in "
+        "proportion to their sizes (4,591 / 21,062 / 4,468); full validation "
+        "sets. Padded box head (d473c55) unless stated; Waymo on pseudo-GT v2 "
+        "unless stated. The winner continues to the full schedule.",
+        [
+            ("box head (reference)", ["m-boxhead-000"]),
+            ("box loss off", ["m-nobox-000"]),
+            ("box head, Waymo keypoints only", ["m-boxhead-kp-000"]),
+            ("box head + gate none (plain sum)", ["m-gate-none-000"]),
+            ("box head + LiDAR chamfer term", ["m-chamfer-000"]),
+            ("box head + pose prior 0.05", ["m-prior-000"]),
+            ("box head, first test (t-short-boxhead)", ["t-short-boxhead-000"]),
+            (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
         pending=True,
     ),

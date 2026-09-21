@@ -7,7 +7,7 @@ Rule: no full training starts before the Waymo hand problem is found (block 0). 
 | block | runs | schedule | why |
 |---|---|---|---|
 | 0 · prerequisite | t-short-real, t-short-simlidar (9k steps each) | short | find the Waymo hand problem: real returns against LiDAR simulated on the pseudo-GT mesh; no full training before the cause is fixed |
-| 1 · mains | b-full-mix80, b-full-main-v2 (pseudo-GT v2 + fix); a-full-mix80, a-full-main-v2 (keypoints + fix) | full, early stop | headline rows; b-full-mix80 replaces the run on the first v2 labels |
+| 1 · mains | m-boxhead, m-nobox, m-boxhead-kp, m-gate-none, m-chamfer, m-prior (15k, one split; then the winner to the full schedule) | 15k, resumable | pick the main recipe under the box fix before any full run |
 | 2 · label source (ablation 5) | v2-abl-ref, v2-abl-pseudo-v2 (new), v2-abl-pseudo-pedgen, v2-abl-pseudo-lhmr | 15k | the pseudo-GT v2 row is missing; the others predate the fix |
 | 3 · fusion and loss (ablations 3, 4) | v2-abl-gate-none/hard, lidar-only, image-only; six v2-abl-loss-* | 15k | rerun on pseudo-GT v2 so the axes match the mains |
 | 4 · modality and data (ablations 1, 2) | a-full-lidar-only, image-only (main v2 mixture); a-full-synth-only, a-full-real-only, a-full-main-mixed | full, early stop | final-schedule rows predate the fix; image only also moves to the main v2 mixture |
