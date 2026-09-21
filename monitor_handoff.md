@@ -48,6 +48,7 @@ is for and what to do when it finishes.
 | t-short-real-000 | 9k-step hand test, real Waymo returns | nothing (val plots only) |
 | t-short-simlidar-000 | 9k-step hand test, Waymo returns simulated on the pseudo-GT mesh | nothing (val plots only) |
 | b-ratio-90/80/70/60-001, b-ratio-50-000 | ablation 8 rerun under the box fix (`8df62e5`: box size term dropped on Waymo rows); 50/50 is new (jobs 874734-874738) | full-set eval |
+| t-short-boxhead-000 | 15k-step test of the padded box head (`d473c55`): Waymo box loss trains a residual head on the detached mesh box; main mixture 75 % BEDLAM + all real; watch Waymo MPJPE, transl and mAP together | nothing (val plots only); report Waymo wrist bend, transl, mAP |
 | t-short-nobox-000 | 9k-step hand test, t_short_real recipe with `loss.box3d=0` (Waymo box labels are padded 0.9 x 1.0 m, the mesh box is 0.6 x 0.6 m; suspected cause of the bent hands) | nothing (val plots only); report Waymo wrist bend |
 
 Finished and fully evaluated: `b-full-mix80-000` and all four
@@ -187,6 +188,10 @@ Current layout (2026-09-18):
 - Headline table (mains against the published pipelines), "Main runs",
   ablations 1, 2, 3, 4, 5, 7, 8. Ablation 6 and every camera-frame /
   50-40-10 run were removed on 2026-09-18; do not add them back.
+- First column "pseudo-GT": derived from each run's `config.json` (the
+  Waymo training source directory; `WAYMO_LABEL_DIRS` maps it to v2 / v1 /
+  lhmr / pedgen, `real/v1` = keypoints only = red cross). Runs without a
+  config.json show an empty cell; pull the config with the results.
 - Every run listed in the `RETRAIN` dict is rendered grey (CSS class
   `retrain`), keeps its numbers, is excluded from the best/second/third
   colours, and shows its reason in the last column "retrain". When the user
@@ -219,9 +224,10 @@ to be an rsync copy on top of a stale checkout: it sat 150 commits behind on
 "untracked working tree files would be overwritten". It is now a clean
 checkout of `origin/main`.
 
-The division of labour is fixed: **the user pushes, Claude pulls on Helma
-and confirms it landed.** Never push, and never rsync code into the
-workspace again — that is what broke it.
+The division of labour: **Claude pushes only after the user's explicit go
+in the chat (rule of 2026-09-21; the git hook then asks for confirmation),
+then pulls on Helma and confirms it landed.** Never push unasked, and never
+rsync code into the workspace again — that is what broke it.
 
     # after the user has pushed
     ssh -4 helma 'cd /hnvme/workspace/v103fe17-lidar-bedlam && git pull --ff-only'
@@ -241,7 +247,8 @@ only) with the `.tokens.npy` sidecars hard-linked from `real/v1`; add the
 directory to `STAGE_DIRS` when submitting.
 
 ## Standing rules (hooks enforce them)
-- Claude never pushes to git; print the command for the user. Commits are
+- Claude pushes only after the user's explicit go in the chat, never on its
+  own; force pushes are blocked. Commits are
   one line, `<prefix>: <description>`, one `-m`, at most 72 characters,
   lowercase after the colon, prefix in
   add|bug|minor|refactor|docs|test|config|remove.
