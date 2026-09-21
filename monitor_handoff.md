@@ -52,7 +52,7 @@ is for and what to do when it finishes.
 | t-short-real-000 | 9k-step hand test, real Waymo returns | nothing (val plots only) |
 | t-short-simlidar-000 | 9k-step hand test, Waymo returns simulated on the pseudo-GT mesh | nothing (val plots only) |
 | b-ratio-90/80/70/60-001, b-ratio-50-000 | ablation 8 rerun under the box fix (`8df62e5`: box size term dropped on Waymo rows); 50/50 is new (jobs 874734-874738) | full-set eval |
-| m-boxhead / m-nobox / m-boxhead-kp / m-gate-none / m-chamfer / m-prior (-000) | the six 15k mains under the box fix on one split (configs/m_*.yaml); resumable with `RUN_NAME=<run>` and `EXTRA_SET="optim.max_steps=N"`; the board has a group for them | nothing (val plots only); report Waymo MPJPE, transl, mAP |
+| m-boxhead / m-nobox / m-boxhead-kp / m-gate-none / m-chamfer / m-prior (-000) | jobs 880923-880928; the six 15k mains under the box fix on one split (configs/m_*.yaml); resumable with `RUN_NAME=<run>` and `EXTRA_SET="optim.max_steps=N"`; the board has a group for them | nothing (val plots only); report Waymo MPJPE, transl, mAP |
 | t-short-boxhead-000 | 15k-step test of the padded box head (`d473c55`): Waymo box loss trains a residual head on the detached mesh box; main mixture 75 % BEDLAM + all real; watch Waymo MPJPE, transl and mAP together | nothing (val plots only); report Waymo wrist bend, transl, mAP |
 | t-short-nobox-000 | 9k-step hand test, t_short_real recipe with `loss.box3d=0` (Waymo box labels are padded 0.9 x 1.0 m, the mesh box is 0.6 x 0.6 m; suspected cause of the bent hands) | nothing (val plots only); report Waymo wrist bend |
 
@@ -216,6 +216,15 @@ the script, not in this file, and note the change here.
 
 ## How the scoreboard is built (keep in sync with the builder)
 `lidar_bedlam/scripts/build_scoreboard.py` is the only source of the page.
+Since 2026-09-21 its `--out` writes the **compact interactive page**
+(`lidar_bedlam/scripts/pocket_board.py`: one metric at a time, groups fold,
+a tapped row shows every metric plus validation sparklines, "all metrics
+side by side" renders the wide table and switches on by itself from 800 px,
+so an iPhone in landscape gets the full table). `--classic <path>` still
+writes the old static wide page when someone wants it. Both read the same
+loaders, so the numbers are identical. The hourly tick publishes `--out` to
+the artifact URL below; the classic page needs no artifact of its own.
+Group layout, grey rows and the schedule below apply to both pages.
 Current layout (2026-09-18):
 
 - Headline table (mains against the published pipelines), "Main runs",
