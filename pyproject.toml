@@ -86,6 +86,7 @@ select = [
 "lidar_bedlam/scripts/build_hand_probe_notebook.py" = ["E501"]
 # the page template (CSS, prose) is embedded as strings
 "lidar_bedlam/scripts/build_scoreboard.py" = ["E501"]
+"lidar_bedlam/scripts/pocket_board.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -98,12 +99,12 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = ["hmr2", "hmr2.*", "prompt_hmr", "prompt_hmr.*", "sam_3d_body", "sam_3d_body.*", "mhr", "mhr.*", "conversion", "lib", "lib.*", "core.*", "add_ckpt_path", "dust3r", "dust3r.*", "src", "src.*", "roma", "models.*", "pytorch3d", "smplx", "smplx.*", "OpenExr", "OpenEXR", "Imath", "pyarrow", "pyarrow.*", "PIL", "PIL.*", "plotly", "plotly.*", "matplotlib", "matplotlib.*", "sam3", "sam3.*", "trimesh", "trimesh.*", "wandb", "wandb.*"]
+module = ["hmr2", "hmr2.*", "prompt_hmr", "prompt_hmr.*", "sam_3d_body", "sam_3d_body.*", "mhr", "mhr.*", "conversion", "lib", "lib.*", "core.*", "add_ckpt_path", "dust3r", "dust3r.*", "src", "src.*", "roma", "models.*", "pytorch3d", "smplx", "smplx.*", "OpenExr", "OpenEXR", "Imath", "pyarrow", "pyarrow.*", "PIL", "PIL.*", "plotly", "plotly.*", "matplotlib", "matplotlib.*", "sam3", "sam3.*", "trimesh", "trimesh.*", "wandb", "wandb.*", "ipywidgets", "ipywidgets.*", "IPython", "IPython.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["build_debug_notebook", "build_pseudo_gt_notebook", "verify_notebook", "lidar_bedlam.scripts.build_debug_notebook", "lidar_bedlam.scripts.build_pseudo_gt_notebook", "lidar_bedlam.scripts.verify_notebook", "build_hand_probe_notebook", "lidar_bedlam.scripts.build_hand_probe_notebook"]
+module = ["build_debug_notebook", "build_pseudo_gt_notebook", "verify_notebook", "lidar_bedlam.scripts.build_debug_notebook", "lidar_bedlam.scripts.build_pseudo_gt_notebook", "lidar_bedlam.scripts.verify_notebook", "build_hand_probe_notebook", "lidar_bedlam.scripts.build_hand_probe_notebook", "build_inference_notebooks", "lidar_bedlam.scripts.build_inference_notebooks", "build_cardata_notebook", "lidar_bedlam.scripts.build_cardata_notebook"]
 disallow_untyped_calls = false

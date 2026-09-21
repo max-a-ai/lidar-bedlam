@@ -944,7 +944,18 @@ def main(argv: list[str] | None = None) -> int:
         "--baselines", type=Path, default=Path("outputs/baselines")
     )
     ap.add_argument("--stamp", default="")
-    ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="the page: compact and interactive (pocket_board), the default view",
+    )
+    ap.add_argument(
+        "--classic",
+        type=Path,
+        default=None,
+        help="also write the wide static table page",
+    )
     ap.add_argument(
         "--schedule-md",
         type=Path,
@@ -952,9 +963,11 @@ def main(argv: list[str] | None = None) -> int:
         help="also write the retraining schedule as markdown (.docs/retrain_schedule.md)",
     )
     args = ap.parse_args(argv)
+    from lidar_bedlam.scripts.pocket_board import build_pocket
+
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
-        build(
+        build_pocket(
             args.root,
             args.baselines,
             args.stamp,
@@ -963,6 +976,17 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     sys.stdout.write(f"wrote {args.out}\n")
+    if args.classic is not None:
+        args.classic.write_text(
+            build(
+                args.root,
+                args.baselines,
+                args.stamp,
+                args.squeue_file,
+                args.configs,
+            )
+        )
+        sys.stdout.write(f"wrote {args.classic}\n")
     if args.schedule_md is not None:
         args.schedule_md.write_text(schedule_md())
         sys.stdout.write(f"wrote {args.schedule_md}\n")
