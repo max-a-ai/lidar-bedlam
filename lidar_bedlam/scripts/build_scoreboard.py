@@ -337,6 +337,49 @@ class Row:
     values: dict[str, float | None] = field(default_factory=dict)
     footnote: str | None = None
     retrain: str | None = None  # why the run has to be trained again
+    labels: str | None = None  # Waymo label source: v2 | v1 | lhmr | pedgen
+    # | "" (keypoints only); None for static rows
+
+
+# Waymo shard directory -> pseudo-GT label tag ("" = keypoints only)
+WAYMO_LABEL_DIRS = {
+    "v1_pseudo2": "v2",
+    "v1_pseudo": "v1",
+    "v1_lidarhmr": "lhmr",
+    "v1_pedgen": "pedgen",
+    "v1_simlidar": "v2",  # pseudo-GT v2 labels, simulated returns
+    "v1": "",
+}
+
+
+def waymo_labels(root: Path, run: str) -> str | None:
+    """Which Waymo label source the run trained on, from its config.json:
+    the pseudo-GT tag, "" for keypoints only, None when unknown or when
+    Waymo was not a training source."""
+    cfg = root / "runs" / run / "config.json"
+    if not cfg.exists():
+        return None
+    try:
+        data = json.loads(cfg.read_text())
+    except json.JSONDecodeError:
+        return None
+    for src in data.get("data", {}).get("train", []):
+        if src.get("name") != "waymo":
+            continue
+        tags = {
+            WAYMO_LABEL_DIRS.get(Path(d).name, "?") for d in src.get("dirs", [])
+        }
+        return "+".join(sorted(tags))
+    return None
+
+
+def labels_html(tag: str | None) -> str:
+    """The pseudo-GT cell: a tick with the source, a cross for keypoints."""
+    if tag is None:
+        return '<td class="lab"></td>'
+    if tag == "":
+        return '<td class="lab no">&#10007;</td>'
+    return f'<td class="lab yes">&#10003; ({tag})</td>'
 
 
 # footnotes of our rows, by label (the recipe stays out of the label)
@@ -461,6 +504,11 @@ def group_rows(
         loaded = [(r, load_run(root, r)) for r in runs]
         found = [(r, x) for r, x in loaded if x is not None]
         reason = next((RETRAIN[r] for r in runs if r in RETRAIN), None)
+        tags = {waymo_labels(root, r) for r, _ in found}
+        tags.discard(None)
+        labels = "/".join(sorted(t for t in tags if t is not None)) or (
+            "" if tags else None
+        )
         if not found:
             if pending:
                 rows.append(
@@ -482,7 +530,15 @@ def group_rows(
         if len(found) < len(runs):
             note += f" ({len(runs) - len(found)} seed pending)"
         rows.append(
-            Row(label, note, "ours", values, ROW_FOOTNOTES.get(label), reason)
+            Row(
+                label,
+                note,
+                "ours",
+                values,
+                ROW_FOOTNOTES.get(label),
+                reason,
+                labels,
+            )
         )
     return rows
 
@@ -572,11 +628,11 @@ def table_html(rows: list[Row]) -> str:
     blue_by_key = {k: beats_static(rows, k) for k in keys}
     cls = ["g", "y", "r"]
     h = [
-        '<div class="wrap"><table><thead><tr><th></th>'
+        '<div class="wrap"><table><thead><tr><th></th><th></th>'
         '<th class="group" colspan="6">Waymo val · 894</th>'
         '<th class="group" colspan="6">SLOPER4D test · 9,904</th>'
         '<th class="group" colspan="6">3DPW test · 6,617</th>'
-        '<th class="group"></th></tr><tr><th>method</th>'
+        '<th class="group"></th></tr><tr><th>pseudo-GT</th><th>method</th>'
     ]
     h.append("".join(f"<th>{lbl}</th>" for _ in SPLITS for lbl in LABELS))
     h.append("<th>retrain</th></tr></thead><tbody>")
@@ -589,8 +645,8 @@ def table_html(rows: list[Row]) -> str:
             mark = f"<sup>{n}</sup>"
         grey = " retrain" if r.retrain else ""
         h.append(
-            f'<tr class="{r.kind}{div}{grey}"><td class="name">{r.label}'
-            f"{mark}<small>{r.note}</small></td>"
+            f'<tr class="{r.kind}{div}{grey}">{labels_html(r.labels)}'
+            f'<td class="name">{r.label}{mark}<small>{r.note}</small></td>'
         )
         for k in keys:
             rk = rank_by_key[k].get(i)
@@ -634,6 +690,7 @@ th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--rule);whit
 th{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--panel)}
 th.group{text-align:center;border-bottom:none;padding-bottom:2px;color:var(--ink);letter-spacing:.14em}
 td:first-child,th:first-child{text-align:left}
+td.lab{text-align:center;white-space:nowrap;font-family:"IBM Plex Mono",monospace;font-size:.8rem}td.lab.yes{color:var(--g-ink)}td.lab.no{color:var(--r-ink);font-size:1rem}
 td.name{font-weight:500}td.name small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
 td.num{font-family:"IBM Plex Mono",monospace;font-size:.88rem}
 tr:last-child td{border-bottom:none}tr.ours td{background:var(--ours)}tr.divider td{border-top:2px solid var(--accent)}
@@ -785,7 +842,8 @@ def build(
 <span class="chip g">best</span><span class="chip y">second</span><span class="chip r">third</span>
 <span class="chip b">beats every compared pipeline (below the top three)</span>
 <span>· lower is better except mAP · shaded rows are our runs · the published pipelines are static</span>
-<span class="chip grey">grey</span><span>to be retrained (numbers kept, reason in the last column); grey rows are not ranked</span></div></section>
+<span class="chip grey">grey</span><span>to be retrained (numbers kept, reason in the last column); grey rows are not ranked</span>
+<span>· first column: Waymo label source of the training, &#10003; (v2 | v1 | lhmr | pedgen) = pseudo-GT SMPL mesh, &#10007; = the 3D and 2D keypoints only</span></div></section>
 {body}
 <section class="notes">
 <p><b>The 3D box bug: nearly every row below is superseded.</b> Until
