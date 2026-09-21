@@ -212,6 +212,7 @@ body.wide .seg{display:none}
 details.grp{background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
 details.grp>summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:baseline;font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:1rem}
 details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary .t small{display:block;font-family:"IBM Plex Sans",system-ui,sans-serif;font-weight:400;font-size:.72rem;color:var(--muted);line-height:1.2}
 details.grp>summary .n{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted);font-weight:400;white-space:nowrap}
 details.grp>summary::before{content:"▸";color:var(--accent);font-size:.8rem;transition:transform .15s}
 details.grp[open]>summary::before{transform:rotate(90deg)}
@@ -223,10 +224,17 @@ th:first-child{text-align:left}
 th.split{text-align:center;color:var(--ink);letter-spacing:.12em;border-bottom:none;padding-bottom:1px}
 th button{all:unset;cursor:pointer}th button:focus-visible{outline:2px solid var(--accent)}
 th .dir{color:var(--accent)}
-td{padding:7px 8px;border-bottom:1px solid var(--rule);text-align:right;font-family:"IBM Plex Mono",monospace;font-size:.82rem;white-space:nowrap}
-td.name{text-align:left;font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:.84rem;font-weight:500;white-space:normal;line-height:1.25;max-width:0;width:52%}
-body.wide td.name{width:auto;max-width:none;min-width:190px;white-space:nowrap}
-body.wide td{padding:5px 6px;font-size:.74rem}
+td{padding:7px 6px;border-bottom:1px solid var(--rule);text-align:right;font-family:"IBM Plex Mono",monospace;font-size:.8rem;white-space:nowrap}
+td.name{text-align:left;font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:.84rem;font-weight:500;white-space:normal;line-height:1.25;max-width:0;width:46%;overflow-wrap:anywhere}
+body.wide .wrap{overflow-x:visible}
+body.wide table{table-layout:fixed}
+body.wide th,body.wide td{padding:4px 2px;font-size:.6rem;letter-spacing:0}
+body.wide th{font-size:.5rem;letter-spacing:.02em}
+body.wide th:first-child{width:17%}
+body.wide td.name{width:auto;max-width:none;min-width:0;white-space:normal;font-size:.66rem;line-height:1.15;overflow-wrap:anywhere}
+body.wide td.name small{font-size:.54rem}
+body.wide .tag{font-size:.5rem;padding:0 3px;margin-right:2px}
+@media (min-width:1100px){body.wide th,body.wide td{padding:5px 6px;font-size:.76rem}body.wide th{font-size:.62rem;letter-spacing:.06em}body.wide td.name{font-size:.84rem}body.wide td.name small{font-size:.68rem}body.wide .tag{font-size:.62rem;padding:0 5px}}
 td.name small{display:block;font-weight:400;color:var(--muted);font-size:.68rem;margin-top:1px}
 tr.ours td{background:var(--ours)}
 tr.retrain td{background:var(--grey-bg)!important;color:var(--grey-ink)}
@@ -254,6 +262,7 @@ tr.card td{background:var(--ground)!important;white-space:normal;padding:8px 10p
 .legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:3px}
 table.sched td{white-space:normal;font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:.78rem;text-align:left;vertical-align:top}
 table.sched td.b{font-weight:600;white-space:nowrap}
+@media (max-width:420px){td.name{font-size:.8rem}td.name small{font-size:.64rem}th{padding:6px 5px}}
 @media (min-width:600px){body{font-size:15px}td.name{width:46%}}
 @media (prefers-reduced-motion: reduce){details.grp>summary::before{transition:none}}
 </style>
@@ -288,6 +297,9 @@ function unit(key){ return key === 'transl_err_m' ? 'metres, lower is better' : 
 function finite(v){ return v != null && Number.isFinite(v); }
 function ranks(rows, k, hi){ const valid = rows.map((r, i) => [i, r.v[k]]).filter(([i, v]) => finite(v) && !rows[i].retrain); valid.sort((a, b) => hi ? b[1] - a[1] : a[1] - b[1]); const out = {}; valid.slice(0, 3).forEach(([i], p) => out[i] = p); return out; }
 function beats(rows, k, hi){ const ref = rows.filter(r => r.kind === 'static' && finite(r.v[k])).map(r => r.v[k]); if (!ref.length) return new Set(); const bar = hi ? Math.max(...ref) : Math.min(...ref); const s = new Set(); rows.forEach((r, i) => { if (r.kind === 'ours' && finite(r.v[k]) && (hi ? r.v[k] > bar : r.v[k] < bar)) s.add(i); }); return s; }
+function splitName(label){ label = label.replace(/^ours · /, ''); let head = label, rest = ''; const cut = Math.min(...[label.indexOf(' ('), label.indexOf(', ')].filter(i => i > 0)); if (Number.isFinite(cut)) { head = label.slice(0, cut); rest = label.slice(cut).replace(/^[ ,(]+/, '').replace(/\)$/, ''); } if (head.length > 28) { const j = head.lastIndexOf(' · '); if (j > 8) { rest = (head.slice(j + 3) + (rest ? ' · ' + rest : '')); head = head.slice(0, j); } } return [head, rest]; }
+function nameCell(r){ const [head, rest] = splitName(r.label); const sub = [rest, r.note].filter(Boolean).join(' · '); return `${tag(r)}${head}${sub ? `<small>${sub}</small>` : ''}`; }
+function splitTitle(t){ const i = t.indexOf(':'); if (i > 0) return [t.slice(0, i), t.slice(i + 1).trim()]; const j = t.indexOf(' ('); if (j > 0) return [t.slice(0, j), t.slice(j + 2).replace(/\)$/, '')]; return [t, '']; }
 function tag(r){ if (r.kind !== 'ours' || r.labels == null) return ''; return r.labels === '' ? '<span class="tag no">✗ kp</span>' : `<span class="tag yes">✓ ${r.labels}</span>`; }
 function spark(pts, key){ const w = 150, h = 40, p = 3; const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); const sx = x => x1 > x0 ? p + (x - x0) / (x1 - x0) * (w - 2 * p) : w / 2; const sy = y => y1 > y0 ? h - p - (y - y0) / (y1 - y0) * (h - 2 * p) : h / 2; const d = pts.map((q, i) => (i ? 'L' : 'M') + sx(q[0]).toFixed(1) + ' ' + sy(q[1]).toFixed(1)).join(''); const last = pts[pts.length - 1]; const best = key === 'map' ? Math.max(...ys) : Math.min(...ys); return `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="validation curve"><line x1="${p}" y1="${sy(best).toFixed(1)}" x2="${w - p}" y2="${sy(best).toFixed(1)}" stroke="var(--spark-dim)" stroke-dasharray="2 3"/><path d="${d}" fill="none" stroke="var(--spark)" stroke-width="1.5"/><circle cx="${sx(last[0]).toFixed(1)}" cy="${sy(last[1]).toFixed(1)}" r="2.5" fill="var(--spark)"/></svg>`; }
 function sparks(r){ const c = r.run && D.curves[r.run]; if (!c) return ''; const key = SM[state.metric] || 'mpjpe'; const mk = Object.keys(SM).find(k => SM[k] === key); let h = ''; D.splits.forEach(s => { const pts = c[s.tag + '_' + key]; if (!pts || pts.length < 2) return; const last = pts[pts.length - 1]; h += `<div class="spark"><div class="cap"><span>${s.short} ${M[mk].label}</span><b>${fmt(mk, last[1])} @ ${(last[0] / 1000).toFixed(0)}k</b></div>${spark(pts, key)}</div>`; }); return h ? `<div class="sparks">${h}</div>` : ''; }
@@ -312,14 +324,15 @@ function render(){
     const rk = Object.fromEntries(cols.map(c => [c.k, ranks(rows, c.k, c.hi)])); const bl = Object.fromEntries(cols.map(c => [c.k, beats(rows, c.k, c.hi)]));
     const det = document.createElement('details'); det.className = 'grp'; det.open = gi === 0 || state.openGroups.includes(gi);
     det.addEventListener('toggle', () => { const og = new Set(state.openGroups); det.open ? og.add(gi) : og.delete(gi); state.openGroups = [...og]; save(); });
-    let h = `<summary>${g.title}<span class="n">${rows.length} rows</span></summary><p class="desc">${g.desc}</p><div class="wrap"><table><thead>`;
+    const [th, tsub] = splitTitle(g.title);
+    let h = `<summary><span class="t">${th}${tsub ? `<small>${tsub}</small>` : ''}</span><span class="n">${rows.length} rows</span></summary><p class="desc">${g.desc}</p><div class="wrap"><table><thead>`;
     if (wide) { h += '<tr><th></th>' + D.splits.map(s => `<th class="split" colspan="${D.metrics.length}">${s.short}</th>`).join('') + '</tr>'; }
     h += '<tr><th>method</th>' + cols.map(c => `<th><button data-k="${c.k}">${c.label}${sortKey === c.k ? ' <span class="dir">▾</span>' : ''}</button></th>`).join('') + '</tr></thead><tbody>';
     let prev = null;
     rows.forEach((r, i) => {
       const div = prev === 'static' && r.kind === 'ours' ? ' divider' : ''; prev = r.kind;
       const id = gi + ':' + r.i;
-      h += `<tr class="row ${r.kind}${div}${r.retrain ? ' retrain' : ''}" data-id="${id}"><td class="name">${tag(r)}${r.label}<small>${r.note}</small></td>`;
+      h += `<tr class="row ${r.kind}${div}${r.retrain ? ' retrain' : ''}" data-id="${id}"><td class="name">${nameCell(r)}</td>`;
       cols.forEach(c => { const p = rk[c.k][i]; const cls = p != null ? ['g', 'y', 'r'][p] : (bl[c.k].has(i) ? 'b' : ''); h += `<td class="${cls}">${fmt(c.k.slice(2), r.v[c.k])}</td>`; });
       h += '</tr>';
       if (state.open.has(id)) h += `<tr class="card"><td colspan="${cols.length + 1}">${card(r)}</td></tr>`;
