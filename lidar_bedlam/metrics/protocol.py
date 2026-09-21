@@ -73,6 +73,11 @@ def sample_metrics(
     joints = _to_np(pred["joints3d"])
     transl = _to_np(pred["transl"])
     boxes = _to_np(pred["box3d"])
+    # Waymo rows are scored on the padded-convention box when the model
+    # predicts one (the labels are padded, the mesh extent is not)
+    boxes_padded = (
+        _to_np(pred["box3d_padded"]) if "box3d_padded" in pred else None
+    )
     conf = (
         _to_np(pred["box_conf"]) if "box_conf" in pred else np.ones(len(verts))
     )
@@ -86,7 +91,10 @@ def sample_metrics(
     out = []
     for i in range(len(verts)):
         conv = str(conventions[i])
+        box = boxes[i]
         if conv == "waymo15":
+            if boxes_padded is not None:
+                box = boxes_padded[i]
             coco = smpl.coco_joints(verts[i])
             sel = WAYMO15_TO_COCO17[:15] >= 0
             p = coco[WAYMO15_TO_COCO17[:15][sel]]
@@ -112,7 +120,7 @@ def sample_metrics(
             abs_mpjpe=mpjpe(p, g, valid),
             transl_err_m=float(np.linalg.norm(p_root - g_root)),
             gt_depth_m=float(g_root[2]),
-            iou=iou3d(boxes[i], gt_box[i], CAMERA_UP_AXIS),
+            iou=iou3d(box, gt_box[i], CAMERA_UP_AXIS),
             box_conf=float(conf[i]),
             n_joints=int(valid.sum()),
         )

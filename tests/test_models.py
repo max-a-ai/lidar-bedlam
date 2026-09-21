@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import torch
 
-from lidar_bedlam.losses.smpl import FusionLoss
+from lidar_bedlam.losses.smpl import FusionLoss, LossWeights
 from lidar_bedlam.models.fusion import (
     ModelConfig,
     SelectiveFusionModel,
@@ -221,3 +221,52 @@ def test_forward_from_precomputed_tokens_without_backbone() -> None:
     # the LiDAR-only sample used the learned no-image token
     img = model.image_tokens(batch)
     assert torch.allclose(img[1], model.no_image.expand_as(img)[1])
+
+
+def test_padded_box_trains_head_and_translation_only() -> None:
+    """The Waymo box loss must reach the box head and the translation,
+    never the pose or the shape heads."""
+    from lidar_bedlam.losses.smpl import WAYMO_CONVENTION_ID
+
+    model = _tiny_model(smpl=True)
+    b = 2
+    batch = {
+        "image": torch.randn(b, 3, 64, 64),
+        "points": torch.randn(b, 40, 3) + torch.tensor([0.0, 0.0, 8.0]),
+        "intrinsics": torch.tensor(
+            [[[500.0, 0, 32], [0, 500, 32], [0, 0, 1]]]
+        ).expand(b, 3, 3),
+        "has_smpl": torch.tensor([False, False]),
+        "global_orient": torch.zeros(b, 3),
+        "body_pose": torch.zeros(b, 69),
+        "betas": torch.zeros(b, 10),
+        "transl": torch.tensor([[0.0, 0.0, 8.0]] * b),
+        "joints3d": torch.zeros(b, 24, 3),
+        "joints3d_valid": torch.zeros(b, 24, dtype=torch.bool),
+        "kp2d": torch.zeros(b, 24, 3),
+        "has_kp2d": torch.tensor([False, False]),
+        "box3d": torch.tensor([[0.0, 0.0, 8.0, 0.9, 1.8, 1.0, 0.0]] * b),
+        "has_box3d": torch.tensor([True, True]),
+        "joint_convention_id": torch.tensor([WAYMO_CONVENTION_ID] * b),
+    }
+    out = model(batch)
+    assert out["box3d_padded"].shape == (b, 7)
+    # at init the residual is zero: padded box == mesh box
+    assert torch.allclose(out["box3d_padded"], out["box3d"], atol=1e-6)
+    w = LossWeights(
+        global_orient=0, body_pose=0, betas=0, joints3d=0, kp2d=0,
+        transl=0, box3d=1.0, box_conf=0,
+    )  # fmt: skip
+    total, _ = FusionLoss(w)(out, batch)
+    total.backward()  # type: ignore[no-untyped-call]
+    heads = model.heads
+    assert heads.box_head.weight.grad is not None
+    assert heads.box_head.weight.grad.abs().sum() > 0
+    # the translation path (camera-frame or point-anchored head)
+    tg = [heads.transl_head.weight.grad, heads.offset_head.weight.grad]
+    assert any(g is not None and g.abs().sum() > 0 for g in tg)
+    for name, head in heads.rot_heads.items():
+        g = head.weight.grad
+        assert g is None or g.abs().sum() == 0, name
+    g = heads.shape_head.weight.grad
+    assert g is None or g.abs().sum() == 0

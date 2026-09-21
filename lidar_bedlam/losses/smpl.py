@@ -152,20 +152,24 @@ def translation_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
     return _masked_mean(err, label_weight(batch))
 
 
-def box3d_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
-    """Centre L1 + size L1 + heading (1 - cos) on the 7-vector 3D box.
+def select_box(pred: dict[str, Tensor], batch: dict[str, Tensor]) -> Tensor:
+    """The predicted box a row is scored on: the padded-convention box on
+    Waymo rows (see :data:`WAYMO_CONVENTION_ID`) when the model has one,
+    the mesh-extent box everywhere else."""
+    box = pred["box3d"]
+    padded = pred.get("box3d_padded")
+    conv = batch.get("joint_convention_id")
+    if padded is None or conv is None:
+        return box
+    waymo = conv.reshape(-1, 1) == WAYMO_CONVENTION_ID
+    return torch.where(waymo, padded, box)
 
-    The size term is dropped on Waymo rows, whose boxes use the padded
-    convention (see :data:`WAYMO_CONVENTION_ID`); centre and heading apply
-    to every row.
-    """
+
+def box3d_loss(pred: Tensor, batch: dict[str, Tensor]) -> Tensor:
+    """Centre L1 + size L1 + heading (1 - cos) on the 7-vector 3D box."""
     gt = batch["box3d"]
     centre = (pred[:, :3] - gt[:, :3]).abs().sum(-1)
     size = (pred[:, 3:6] - gt[:, 3:6]).abs().sum(-1)
-    conv = batch.get("joint_convention_id")
-    if conv is not None:
-        waymo = conv.reshape(size.shape) == WAYMO_CONVENTION_ID
-        size = torch.where(waymo, torch.zeros_like(size), size)
     yaw = 1.0 - torch.cos(pred[:, 6] - gt[:, 6])
     return _masked_mean(centre + size + yaw, batch["has_box3d"])
 
@@ -234,13 +238,12 @@ class FusionLoss:
         parts = smpl_param_loss(pred, batch)
         parts["joints3d"] = joints3d_loss(pred, batch)
         parts["transl"] = translation_loss(pred["transl"], batch)
-        parts["box3d"] = box3d_loss(pred["box3d"], batch)
+        box = select_box(pred, batch)
+        parts["box3d"] = box3d_loss(box, batch)
         if "kp2d" in pred:
             parts["kp2d"] = kp2d_loss(pred, batch, self.w.crop_size)
         if "box_conf" in pred and "box3d" in pred:
-            parts["box_conf"] = box_conf_loss(
-                pred["box_conf"], pred["box3d"], batch
-            )
+            parts["box_conf"] = box_conf_loss(pred["box_conf"], box, batch)
         parts.update(self._surface_terms(pred, batch))
         parts.update(self._mesh_terms(pred, batch))
         if self.prior is not None and self.w.pose_prior > 0:

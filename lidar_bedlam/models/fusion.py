@@ -80,6 +80,11 @@ class SmplHeads(nn.Module):
         self.shape_head = nn.Linear(dim, NUM_BETAS)
         nn.init.zeros_(self.shape_head.weight)
         nn.init.zeros_(self.shape_head.bias)
+        # padded-box residual (Waymo convention): centre offset (m) and
+        # log size scale on top of the mesh-extent box
+        self.box_head = nn.Linear(dim, 6)
+        nn.init.zeros_(self.box_head.weight)
+        nn.init.zeros_(self.box_head.bias)
         self.root_index = [g.name for g in JOINT_GROUPS].index("root")
         self.shape_index = [g.name for g in JOINT_GROUPS].index("shape")
 
@@ -104,6 +109,12 @@ class SmplHeads(nn.Module):
         raw_t = self.transl_head(root).float()
         offset = self.offset_head(root).float()
         return rots, betas, raw_t, offset
+
+    def box_residual(self, feats: Tensor) -> tuple[Tensor, Tensor]:
+        """Centre offset (B, 3) in metres and log size scale (B, 3) of the
+        padded box relative to the mesh-extent box."""
+        r = self.box_head(feats[:, self.root_index]).float()
+        return r[:, :3], r[:, 3:]
 
 
 def translation_from_raw(raw: Tensor, intrinsics: Tensor, size: int) -> Tensor:
@@ -268,7 +279,19 @@ class SelectiveFusionModel(nn.Module):
         }
         if self.smpl is not None:
             self._add_smpl_outputs(out, batch["intrinsics"])
+            out["box3d_padded"] = self._padded_box(out, feats)
         return out
+
+    def _padded_box(self, out: dict[str, Tensor], feats: Tensor) -> Tensor:
+        """The Waymo-convention box: the mesh-extent box, its vertices
+        detached, plus the learned residual. Its loss reaches the box head
+        and the translation, never the pose or the shape."""
+        centre_off, log_scale = self.heads.box_residual(feats)
+        box = out["box3d"].detach()
+        transl = out["transl"]
+        centre = box[:, :3] - transl.detach() + transl + centre_off
+        size = box[:, 3:6] * torch.exp(log_scale)
+        return torch.cat([centre, size, box[:, 6:7]], -1)
 
     def _add_smpl_outputs(self, out: dict[str, Tensor], k: Tensor) -> None:
         assert self.smpl is not None
