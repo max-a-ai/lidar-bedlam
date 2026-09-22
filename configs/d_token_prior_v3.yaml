@@ -1,0 +1,43 @@
+# Debug: token-manifold prior (option 1). Rows without a mesh label are pulled toward the nearest TokenHMR codebook pose (loss.token_prior 1.0 on the squared 6-D distance of the 21 body rotations to their tokenizer round trip). Same split and 15k schedule as the mains.
+experiment: d-token-prior-v3
+seed: 0
+body_models: ${DATA_ROOT}/body_models
+checkpoint_root: outputs
+data:
+  train:
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1_pseudo3"], pattern: "waymo_train_*.npz", weight: 0.0381}
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1748}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.75, variant: random_main}
+    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.0371, variant: random_main}
+  val:
+    - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
+    - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
+    - {name: threedpw_test, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_test_*.npz"}
+  n_points: 1024
+  use_augmented_image: 0.5
+  point_augment: true
+  require_tokens: true
+  num_workers: 16
+  val_max_samples: 10000
+model:
+  dim: 512
+  num_heads: 8
+  num_layers: 4
+  point_tokens: 128
+  point_knn: 16
+  init_depth_m: 8.0
+  use_backbone: false
+  gate_mode: learned
+  transl_anchor: points
+loss:
+  token_prior: 1.0
+optim:
+  batch_size: 2048
+  lr: 3.0e-4
+  weight_decay: 0.05
+  warmup_steps: 500
+  max_steps: 15000
+  grad_clip: 1.0
+  amp: true
+  eval_every_steps: 1000
+  checkpoint_every_steps: 1000
