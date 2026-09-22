@@ -62,6 +62,9 @@ class FitV2Config:
     iters: int = 150
     lr: float = 0.01
     w_joints3d: float = 1.0
+    # hip centre (COCO 11, 12 mean) against the labelled hip centre: the
+    # root the evaluation and the training placement loss are measured on
+    w_root: float = 1.0
     w_kp2d: float = 0.5
     w_lidar: float = 0.5
     lidar_offset_m: float = 0.03
@@ -86,6 +89,27 @@ class FitV2Config:
     # The ankles stay free (ground contact and the ankle keypoint hold
     # them), the head too (nose, forehead and head centre are labelled).
     neutral_joints: tuple[int, ...] = (10, 11, 20, 21)
+    # constant offset per Waymo keypoint (13 shared joints, in the order of
+    # ``WAYMO15_TO_COCO17 >= 0``) from the regressed COCO joint to the
+    # annotated point, in the pelvis-centred body frame, metres. Waymo
+    # annotates the hips wider (trochanter) and the shoulders narrower than
+    # the COCO regressor places them, and the knees a little lower; measured
+    # on 1,900 confident pseudo-GT v2 fits (2026-09-22).
+    joint_offset_m: tuple[tuple[float, float, float], ...] = (
+        (0.000, -0.003, -0.005),  # nose
+        (-0.020, 0.003, 0.003),  # left shoulder
+        (-0.001, 0.000, 0.001),  # left elbow
+        (-0.001, -0.003, 0.000),  # left wrist
+        (0.023, 0.000, 0.002),  # left hip
+        (-0.001, -0.016, -0.002),  # left knee
+        (0.001, 0.001, -0.001),  # left ankle
+        (0.019, 0.005, 0.004),  # right shoulder
+        (0.001, -0.004, 0.001),  # right elbow
+        (-0.001, 0.000, -0.002),  # right wrist
+        (-0.027, -0.001, 0.004),  # right hip
+        (0.000, -0.012, -0.003),  # right knee
+        (-0.002, 0.007, 0.000),  # right ankle
+    )
 
 
 @dataclass
@@ -190,10 +214,32 @@ class PseudoFitterV2:
         coco = torch.einsum("jv,bvc->bjc", self.coco, verts)
         return verts, coco
 
-    def _kp_error(self, coco: Tensor, gt: Tensor, valid: Tensor) -> Tensor:
-        err = (coco[:, self.csel] - gt[:, self.wsel]).norm(dim=-1)
+    def _kp_error(
+        self,
+        coco: Tensor,
+        gt: Tensor,
+        valid: Tensor,
+        orient: Tensor | None = None,
+    ) -> Tensor:
+        """Mean distance of the regressed joints to the labelled keypoints;
+        with ``orient`` (B, 3, 3) the joints carry the convention offsets."""
+        pred = coco[:, self.csel]
+        if orient is not None:
+            off = torch.as_tensor(
+                self.cfg.joint_offset_m, dtype=coco.dtype, device=coco.device
+            )
+            pred = pred + torch.einsum("bij,kj->bki", orient, off)
+        err = (pred - gt[:, self.wsel]).norm(dim=-1)
         v = valid[:, self.wsel].float()
         out: Tensor = (err * v).sum(1) / v.sum(1).clamp_min(1)
+        return out
+
+    def _root_error(self, coco: Tensor, gt: Tensor, valid: Tensor) -> Tensor:
+        """Distance of the hip centres, zero where a hip is unlabelled."""
+        both = (valid[:, 4] & valid[:, 10]).float()
+        p_root = (coco[:, 11] + coco[:, 12]) / 2.0
+        g_root = (gt[:, 4] + gt[:, 10]) / 2.0
+        out: Tensor = (p_root - g_root).norm(dim=-1) * both
         return out
 
     def _to_device(self, b: FitBatch) -> dict[str, Tensor]:
@@ -277,15 +323,17 @@ class PseudoFitterV2:
             decoded = self.tok.decode(latent)
             body = self._body(decoded)
             betas = betas_track[t["track"]]
-            verts, coco = self._mesh(
-                rot6d_to_matrix(go6d)[:, None], body, betas, transl
-            )
+            orient = rot6d_to_matrix(go6d)
+            verts, coco = self._mesh(orient[:, None], body, betas, transl)
             loss = (
                 cfg.w_joints3d
                 * self._kp_error(
-                    coco, t["joints3d"], t["joints3d_valid"]
+                    coco, t["joints3d"], t["joints3d_valid"], orient
                 ).mean()
             )
+            loss = loss + cfg.w_root * self._root_error(
+                coco, t["joints3d"], t["joints3d_valid"]
+            ).mean()
             uv = project(coco[:, self.csel], t["intrinsics"])
             kp_err = (uv - kp[..., :2]).abs().sum(-1) / cfg.crop_size
             loss = loss + cfg.w_kp2d * (
