@@ -16,6 +16,11 @@
 # Submit from the repo root (the Slurm log goes to outputs/). Environment
 # (all optional):
 #   CONFIG        config file (default configs/main_mixed.yaml)
+#   CONFIGS       several config files, space-separated: the data is staged
+#                 once and the trainings run one after another in this job
+#                 (each claims its own run name); on the wall-time signal the
+#                 chain resubmits with the current run resumed and the rest
+#                 still to come. CONFIG is ignored when CONFIGS is set.
 #   RUN_NAME      run name; empty = enumerate <experiment>-NNN once and keep
 #                 it for every resubmission (passed on via --export)
 #   DATA_ROOT     shard root on the cluster (default <REPO>/data/generated)
@@ -52,11 +57,20 @@ export WANDB_MODE=disabled  # metrics.jsonl is mirrored to wandb from the login 
 export OMP_NUM_THREADS=${OMP_THREADS:-2}
 EXTRA_SET="data.num_workers=${WORKERS:-32} $EXTRA_SET"
 
+CONFIGS=${CONFIGS:-}
+if [ -n "$CONFIGS" ]; then
+  # first config of the chain is the one this job trains now
+  set -- $CONFIGS
+  CONFIG=$1; shift
+  REST_CONFIGS="$*"
+else
+  REST_CONFIGS=""
+fi
 if [ -z "${RUN_NAME:-}" ]; then
   RUN_NAME=$(uv run python lidar_bedlam/scripts/next_run_name.py --config "$CONFIG")
 fi
 export RUN_NAME
-echo "run $RUN_NAME config $CONFIG resubmit $RESUBMIT_COUNT job $SLURM_JOB_ID"
+echo "run $RUN_NAME config $CONFIG resubmit $RESUBMIT_COUNT job $SLURM_JOB_ID next: ${REST_CONFIGS:-none}"
 
 STAGE_DIRS=${STAGE_DIRS:-"body_models real/v1 synth/v1 synth/v1_groups02-11 synth/v1_group12 meshlidar/v1"}
 if [ "$STAGE_TO_TMP" = "1" ]; then
@@ -85,8 +99,33 @@ resubmit() {
   if [ -f "outputs/$RUN_NAME/DONE" ]; then
     echo "run finished, no resubmit"; return
   fi
-  sbatch --job-name="$SLURM_JOB_NAME" --export=ALL,CONFIG="$CONFIG",RUN_NAME="$RUN_NAME",DATA_ROOT="${DATA_ROOT_ORIG}",RESUBMIT_COUNT=$((RESUBMIT_COUNT + 1)),EXTRA_SET="$EXTRA_SET" \
+  sbatch --job-name="$SLURM_JOB_NAME" --export=ALL,CONFIG="$CONFIG",CONFIGS="$CONFIG $REST_CONFIGS",RUN_NAME="$RUN_NAME",DATA_ROOT="${DATA_ROOT_ORIG}",RESUBMIT_COUNT=$((RESUBMIT_COUNT + 1)),EXTRA_SET="$EXTRA_SET" \
     "$REPO/lidar_bedlam/slurm/train.sbatch"
+}
+
+# the trainings after the current one, in this job, once it finished on its
+# own (a signalled run resubmits the whole chain instead)
+run_rest() {
+  for next in $REST_CONFIGS; do
+    [ "$SIGNALLED" = "1" ] && return
+    NEXT_NAME=$(uv run python lidar_bedlam/scripts/next_run_name.py --config "$next")
+    echo "chain: run $NEXT_NAME config $next job $SLURM_JOB_ID"
+    # shellcheck disable=SC2086
+    uv run torchrun --standalone --nproc_per_node "$NPROC" lidar_bedlam/scripts/lidar-bedlam-main.py \
+      --config "$next" \
+      --wandb-project "$WANDB_PROJECT" --wandb-name "$NEXT_NAME" \
+      --wandb-mode disabled \
+      --set $EXTRA_SET &
+    TRAIN_PID=$!
+    RUN_NAME=$NEXT_NAME; CONFIG=$next
+    REST_CONFIGS=${REST_CONFIGS#"$next"}; REST_CONFIGS=${REST_CONFIGS# }
+    wait $TRAIN_PID; STATUS=$?
+    if [ "$SIGNALLED" = "1" ]; then
+      wait $TRAIN_PID; STATUS=$?
+      echo "chain run $NEXT_NAME signalled (status $STATUS)"; resubmit; return
+    fi
+    echo "chain run $NEXT_NAME exited with $STATUS"
+  done
 }
 DATA_ROOT_ORIG=${DATA_ROOT_ORIG:-${DATA_ROOT}}
 export DATA_ROOT_ORIG
@@ -111,4 +150,8 @@ if [ "$SIGNALLED" = "1" ]; then  # first wait returns on the trap; wait again
   wait $TRAIN_PID; STATUS=$?
 fi
 echo "trainer exited with $STATUS"
-resubmit
+if [ "$SIGNALLED" = "1" ]; then
+  resubmit
+else
+  run_rest
+fi
