@@ -270,3 +270,80 @@ def test_padded_box_trains_head_and_translation_only() -> None:
         assert g is None or g.abs().sum() == 0, name
     g = heads.shape_head.weight.grad
     assert g is None or g.abs().sum() == 0
+
+
+TOKENIZER = Path("resources/data/generated/body_models/tokenhmr_tokenizer.pt")
+
+
+@pytest.mark.skipif(not TOKENIZER.exists(), reason="tokenizer weights")
+def test_token_manifold_prior_is_zero_on_codebook_poses() -> None:
+    """A pose that already lies on the codebook round-trips to itself, so
+    the prior is (near) zero there and positive on a random pose."""
+    from lidar_bedlam.body.pose_tokenizer import PoseTokenizer
+    from lidar_bedlam.losses.smpl import token_manifold_distance
+
+    tok = PoseTokenizer.load(TOKENIZER)
+    g = torch.Generator().manual_seed(0)
+    # random rotations via the 6-D map
+    rot = rot6d_to_matrix(torch.randn(2, 23, 6, generator=g))
+    d_random = token_manifold_distance(tok, rot)
+    with torch.no_grad():
+        q, _ = tok.quantize(tok.encode(rot[:, :21]))
+        on_manifold = torch.cat([tok.decode(q), rot[:, 21:]], 1)
+    d_on = token_manifold_distance(tok, on_manifold)
+    # a VQ-VAE is not a projection: a decoded pose re-encodes to nearby
+    # codes, so the distance on the manifold is small, not zero
+    assert (d_random > 1e-2).all()
+    assert (d_on < 0.2 * d_random).all()
+
+
+@pytest.mark.skipif(not TOKENIZER.exists(), reason="tokenizer weights")
+def test_token_pose_head_decodes_codebook_poses_and_trains() -> None:
+    cfg = ModelConfig(
+        vit=VIT_TINY, dim=64, num_heads=4, num_layers=2, point_tokens=8,
+        point_knn=4, smpl_model_dir=SMPL_DIR, freeze_backbone=False,
+        pose_head="token", tokenizer_path=TOKENIZER,
+    )  # fmt: skip
+    model = SelectiveFusionModel(cfg)
+    b = 2
+    batch = {
+        "image": torch.randn(b, 3, 64, 64),
+        "points": torch.randn(b, 40, 3) + torch.tensor([0.0, 0.0, 8.0]),
+        "intrinsics": torch.tensor(
+            [[[500.0, 0, 32], [0, 500, 32], [0, 0, 1]]]
+        ).expand(b, 3, 3),
+        "has_smpl": torch.tensor([True, True]),
+        "global_orient": torch.zeros(b, 3),
+        "body_pose": torch.zeros(b, 69),
+        "betas": torch.zeros(b, 10),
+        "transl": torch.tensor([[0.0, 0.0, 8.0]] * b),
+        "joints3d": torch.zeros(b, 24, 3),
+        "joints3d_valid": torch.ones(b, 24, dtype=torch.bool),
+        "kp2d": torch.zeros(b, 24, 3),
+        "has_kp2d": torch.tensor([False, False]),
+        "box3d": torch.zeros(b, 7),
+        "has_box3d": torch.tensor([True, True]),
+    }
+    out = model(batch)
+    assert out["body_pose"].shape == (b, 23, 3, 3)
+    assert "token_commit" in out and out["token_commit"].ndim == 0
+    # the 21 body rotations are a decoded codebook pose: a second round
+    # trip through the tokenizer moves them only slightly
+    from lidar_bedlam.losses.smpl import token_manifold_distance
+
+    tok = model.tokenizer
+    assert tok is not None
+    d_on = token_manifold_distance(tok, out["body_pose"].detach())
+    g = torch.Generator().manual_seed(1)
+    d_random = token_manifold_distance(
+        tok, rot6d_to_matrix(torch.randn(b, 23, 6, generator=g))
+    )
+    assert (d_on < 0.2 * d_random).all()
+    total, parts = FusionLoss()(out, batch)
+    assert "token_commit" in parts
+    total.backward()  # type: ignore[no-untyped-call]
+    assert model.token_head is not None
+    assert model.token_head.queries.grad is not None
+    assert model.token_head.queries.grad.abs().sum() > 0
+    # the tokenizer stays frozen
+    assert all(not p.requires_grad for p in tok.parameters())
