@@ -197,9 +197,27 @@ GROUPS: list[Group] = [
             ("box head + gate none (plain sum)", ["m-gate-none-000"]),
             ("box head + LiDAR chamfer term", ["m-chamfer-000"]),
             ("box head + pose prior 0.05", ["m-prior-000"]),
-            ("box head, pseudo-GT v3 (root term, joint offsets)", ["m-boxhead-v3-000"]),
             ("box head, first test (t-short-boxhead)", ["t-short-boxhead-000"]),
             (MAIN + MAIN_NOTE, MAIN_RUN),
+        ],
+        pending=True,
+    ),
+    Group(
+        "Debug: realism experiments (15k steps, main split)",
+        "Runs that test how to get realistic bodies from Waymo rows: the "
+        "refit pseudo-GT v3 labels (hip-centre term, joint offsets), the "
+        "token-manifold prior (option 1: mesh-less rows pulled toward the "
+        "nearest TokenHMR codebook pose) and the token pose head (option 2: "
+        "the 21 body rotations decoded by the frozen tokenizer). Padded box "
+        "head throughout; kp = Waymo keypoints only.",
+        [
+            ("pseudo-GT v3 (root term, joint offsets)", ["m-boxhead-v3-000"]),
+            ("token prior, kp", ["d-token-prior-kp-000"]),
+            ("token prior, pseudo-GT v3", ["d-token-prior-v3-000"]),
+            ("token head, kp", ["d-token-head-kp-000"]),
+            ("token head, pseudo-GT v3", ["d-token-head-v3-000"]),
+            ("box head, kp (reference)", ["m-boxhead-kp-000"]),
+            ("box head, pseudo-GT v2 (reference)", ["m-boxhead-000"]),
         ],
         pending=True,
     ),

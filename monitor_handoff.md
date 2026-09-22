@@ -50,6 +50,7 @@ is for and what to do when it finishes.
 | b-ratio-90/80/70/60-001, b-ratio-50-000 | ablation 8 rerun under the box fix (`8df62e5`: box size term dropped on Waymo rows); 50/50 is new (jobs 874734-874738) | full-set eval |
 | m-boxhead / m-nobox / m-boxhead-kp / m-gate-none / m-chamfer / m-prior (-000) | jobs 880923-880928; the six 15k mains under the box fix on one split (configs/m_*.yaml); resumable with `RUN_NAME=<run>` and `EXTRA_SET="optim.max_steps=N"`; the board has a group for them | nothing (val plots only); report Waymo MPJPE, transl, mAP |
 | m-boxhead-v3-000 | run 7: box head on pseudo-GT v3 labels (`real/v1_pseudo3`, fitter with hip-centre term + joint offsets); same split as the six mains | nothing (val plots only); compare with m-boxhead-000 and m-boxhead-kp-000 |
+| d-token-prior-kp / d-token-prior-v3 / d-token-head-kp / d-token-head-v3 (-000) | debug runs: token-manifold prior (option 1) and token pose head (option 2), each on keypoints-only and on pseudo-GT v3; two chained jobs (CONFIGS= in train.sbatch), board group "Debug" | nothing (val plots only); report Waymo MPJPE, transl, mAP and hands |
 | t-short-boxhead-000 | 15k-step test of the padded box head (`d473c55`): Waymo box loss trains a residual head on the detached mesh box; main mixture 75 % BEDLAM + all real; watch Waymo MPJPE, transl and mAP together | nothing (val plots only); report Waymo wrist bend, transl, mAP |
 | t-short-nobox-000 | 9k-step hand test, t_short_real recipe with `loss.box3d=0` (Waymo box labels are padded 0.9 x 1.0 m, the mesh box is 0.6 x 0.6 m; suspected cause of the bent hands) | nothing (val plots only); report Waymo wrist bend |
 
@@ -67,7 +68,7 @@ Create with the Monitor tool: persistent=true, timeout_ms=3600000,
 description "Helma b/t-series runs: latest validation line per run,
 failures, completion". The command is the content of `monitor_bseries.sh`
 next to this file, passed verbatim. It watches `outputs/b-*-000`,
-`outputs/t-*-000` and `outputs/m-*-000`.
+`outputs/t-*-000`, `outputs/m-*-000` and `outputs/d-*-000`.
 
 It expires after 30 minutes whatever `timeout_ms` says (see the hourly
 section below): re-arm it on the expiry notice. Its `seen` cache starts
@@ -162,7 +163,7 @@ what failed, what you submitted, what it means. Deltas, not absolutes
 
     S=<the session's scratchpad directory>
     for i in 1 2 3; do bash lidar_bedlam/scripts/pull_helma_results.sh >$S/pull.log 2>&1 && break; sleep 5; done
-    RUNS=$(for i in 1 2 3; do ssh -4 helma 'cd /hnvme/workspace/v103fe17-lidar-bedlam && ls -d outputs/[btavm]*-[0-9][0-9][0-9] outputs/v2-*-[0-9][0-9][0-9] 2>/dev/null | xargs -n1 basename' 2>/dev/null && break; sleep 5; done | sort -u)
+    RUNS=$(for i in 1 2 3; do ssh -4 helma 'cd /hnvme/workspace/v103fe17-lidar-bedlam && ls -d outputs/[btavmd]*-[0-9][0-9][0-9] outputs/v2-*-[0-9][0-9][0-9] 2>/dev/null | xargs -n1 basename' 2>/dev/null && break; sleep 5; done | sort -u)
     for r in $RUNS; do mkdir -p outputs/helma/runs/$r; for i in 1 2 3; do rsync -4 -az helma:/hnvme/workspace/v103fe17-lidar-bedlam/outputs/$r/metrics.jsonl outputs/helma/runs/$r/ 2>/dev/null && break; sleep 3; done; done
     find outputs/helma/runs -type d -empty -delete
     for i in 1 2 3 4 5; do ssh -4 helma 'bash -s' < lidar_bedlam/slurm/capture_squeue.sh > $S/squeue.txt 2>/dev/null; grep -q JOBID $S/squeue.txt && break; sleep 6; done  # appends RUN <jobid> <run-name> lines
