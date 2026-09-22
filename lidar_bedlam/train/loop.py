@@ -83,6 +83,9 @@ def build_dataset(
     return ShardDataset(source_shards(src), ds_cfg)
 
 
+TOKENIZER_FILE = "tokenhmr_tokenizer.pt"  # next to the body models
+
+
 def build_model(cfg: TrainConfig) -> SelectiveFusionModel:
     """Model from the config, with the gate mode applied."""
     m = cfg.model
@@ -98,6 +101,8 @@ def build_model(cfg: TrainConfig) -> SelectiveFusionModel:
             init_depth_m=m.init_depth_m,
             transl_anchor=m.transl_anchor,
             use_backbone=m.use_backbone,
+            pose_head=m.pose_head,
+            tokenizer_path=Path(cfg.body_models) / TOKENIZER_FILE,
         )  # fmt: skip
     )
     decoder = model.decoder
@@ -175,11 +180,21 @@ class Trainer:
             if cfg.loss.pose_prior > 0
             else None
         )
+        tokenizer = None
+        if cfg.loss.token_prior > 0:
+            from lidar_bedlam.body.pose_tokenizer import PoseTokenizer
+
+            tokenizer = getattr(self.model, "tokenizer", None)
+            if tokenizer is None:
+                tokenizer = PoseTokenizer.load(
+                    Path(cfg.body_models) / TOKENIZER_FILE
+                ).to(self.device)
         self.loss_fn = FusionLoss(
             LossWeights(**asdict(cfg.loss)),
             smpl=self.model.smpl,
             faces=faces,
             prior=prior,
+            tokenizer=tokenizer,
         )
         self.smpl_eval = SmplModel(Path(cfg.body_models))
         self.step = 0

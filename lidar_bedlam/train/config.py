@@ -51,6 +51,10 @@ class ModelSection:
     gate_mode: str = (
         "learned"  # learned | none | hard | image_only | lidar_only
     )
+    # rot6d: one 6-D rotation head per joint group; token: the 21 body
+    # rotations come from the frozen TokenHMR tokenizer's decoder, fed by a
+    # query head that predicts its latent (models.fusion.TokenPoseHead)
+    pose_head: str = "rot6d"
 
 
 @dataclass
@@ -95,6 +99,8 @@ class LossSection:
     normal: float = 0.0
     edge: float = 0.0
     pose_prior: float = 0.0  # unobserved joints of rows without a mesh label
+    token_prior: float = 0.0  # tokenizer round-trip distance, mesh-less rows
+    token_commit: float = 0.25  # VQ commitment of the token pose head
 
 
 @dataclass

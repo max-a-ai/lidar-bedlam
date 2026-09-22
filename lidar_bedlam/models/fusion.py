@@ -52,6 +52,41 @@ class ModelConfig:
     freeze_backbone: bool = True
     use_backbone: bool = True  # False: train from precomputed tokens only
     crop_size: int = 256
+    # "rot6d": a 6-D rotation head per joint group (the default);
+    # "token": the 21 body rotations are decoded by the frozen TokenHMR
+    # tokenizer from a latent that a query head predicts (TokenPoseHead),
+    # so every body pose lies on the codebook manifold
+    pose_head: str = "rot6d"
+    tokenizer_path: Path | None = None
+
+
+class TokenPoseHead(nn.Module):
+    """Predict the tokenizer latent (B, C, T) from the group features.
+
+    ``num_tokens`` learnable queries cross-attend to the decoder's joint
+    group features in a small transformer, then a linear map gives each
+    query its code vector. The latent is quantised to the nearest codebook
+    entry with a straight-through estimator, so the frozen decoder always
+    sees a codebook pose while the gradient reaches the queries.
+    """
+
+    def __init__(
+        self, dim: int, num_heads: int, code_dim: int, num_tokens: int
+    ) -> None:
+        super().__init__()
+        self.queries = nn.Parameter(torch.randn(num_tokens, dim) * 0.02)
+        layer = nn.TransformerDecoderLayer(
+            dim, num_heads, dim_feedforward=2 * dim, dropout=0.0,
+            batch_first=True, norm_first=True,
+        )  # fmt: skip
+        self.decoder = nn.TransformerDecoder(layer, num_layers=2)
+        self.proj = nn.Linear(dim, code_dim)
+
+    def forward(self, feats: Tensor) -> Tensor:
+        """Group features (B, G, dim) -> latent (B, C, T)."""
+        q = self.queries[None].expand(feats.shape[0], -1, -1)
+        out: Tensor = self.proj(self.decoder(q, feats).float())
+        return out.permute(0, 2, 1)
 
 
 class SmplHeads(nn.Module):
@@ -206,6 +241,22 @@ class SelectiveFusionModel(nn.Module):
         )
         self.decoder = SelectiveDecoder(cfg.dim, cfg.num_heads, cfg.num_layers)
         self.heads = SmplHeads(cfg.dim, cfg.init_depth_m)
+        self.tokenizer: nn.Module | None = None
+        self.token_head: TokenPoseHead | None = None
+        if cfg.pose_head == "token":
+            from lidar_bedlam.body.pose_tokenizer import PoseTokenizer
+
+            if cfg.tokenizer_path is None:
+                msg = "pose_head 'token' needs tokenizer_path"
+                raise ValueError(msg)
+            tok = PoseTokenizer.load(cfg.tokenizer_path)
+            self.tokenizer = tok
+            self.token_head = TokenPoseHead(
+                cfg.dim, cfg.num_heads, tok.code_dim, tok.num_tokens
+            )
+        elif cfg.pose_head != "rot6d":
+            msg = f"unknown pose_head {cfg.pose_head!r}"
+            raise ValueError(msg)
         self.smpl: nn.Module | None = None
         if cfg.smpl_model_dir is not None:
             import smplx
@@ -254,6 +305,15 @@ class SelectiveFusionModel(nn.Module):
         pts, _ = self.points(batch["points"])
         feats, gates = self.decoder(img, pts)
         rots, betas, raw_t, offset = self.heads(feats)
+        commit: Tensor | None = None
+        if self.token_head is not None and self.tokenizer is not None:
+            latent = self.token_head(feats)
+            q, _ = self.tokenizer.quantize(latent)  # type: ignore[operator]
+            commit = ((latent - q.detach()) ** 2).mean()
+            body = self.tokenizer.decode(  # type: ignore[operator]
+                latent + (q - latent).detach()
+            )
+            rots = torch.cat([rots[:, :1], body, rots[:, 22:]], 1)
         transl = translation_from_raw(
             raw_t, batch["intrinsics"], self.cfg.crop_size
         )
@@ -277,6 +337,8 @@ class SelectiveFusionModel(nn.Module):
             "box_conf": conf,
             "clothing_offset": self.clothing_offset.clamp(0.0, 0.1),
         }
+        if commit is not None:
+            out["token_commit"] = commit
         if self.smpl is not None:
             self._add_smpl_outputs(out, batch["intrinsics"])
             out["box3d_padded"] = self._padded_box(out, feats)

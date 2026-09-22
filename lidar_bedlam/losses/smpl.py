@@ -54,6 +54,23 @@ def as_rotmats(x: Tensor, n_joints: int) -> Tensor:
     return rodrigues(x.reshape(x.shape[0], n_joints, 3))
 
 
+def token_manifold_distance(tokenizer: Any, rotmats: Tensor) -> Tensor:
+    """Per-row squared 6-D distance between the 21 body rotations and their
+    round trip through the frozen tokenizer (encode, nearest code, decode).
+
+    The target is detached: the gradient pulls the prediction toward the
+    nearest codebook pose, never the other way."""
+    from lidar_bedlam.body.pose_tokenizer import matrix_to_rot6d_rows
+
+    body = rotmats[:, :21].float()
+    with torch.no_grad():
+        q, _ = tokenizer.quantize(tokenizer.encode(body))
+        target = tokenizer.decode(q)
+    d = (matrix_to_rot6d_rows(body) - matrix_to_rot6d_rows(target)) ** 2
+    out: Tensor = d.reshape(d.shape[0], -1).mean(1)
+    return out
+
+
 def _masked_mean(err: Tensor, mask: Tensor) -> Tensor:
     """Mean of ``err`` over the entries where ``mask`` is True (or 0)."""
     m = mask.to(err.dtype)
@@ -209,6 +226,12 @@ class LossWeights:
     normal: float = 0.0
     edge: float = 0.0
     pose_prior: float = 0.0  # unobserved joints of unlabelled-mesh rows
+    # distance of the predicted body pose to its round trip through the
+    # frozen TokenHMR tokenizer (rows without a mesh label): a data-driven
+    # plausibility prior on the pose manifold
+    token_prior: float = 0.0
+    # VQ commitment of the token pose head (only emitted by that head)
+    token_commit: float = 0.25
     crop_size: int = 256
     extra: dict[str, float] = field(default_factory=dict)
 
@@ -226,11 +249,13 @@ class FusionLoss:
         smpl: Any = None,
         faces: Tensor | None = None,
         prior: PosePrior | None = None,
+        tokenizer: Any = None,
     ) -> None:
         self.w = weights or LossWeights()
         self.smpl = smpl
         self.faces = faces
         self.prior = prior
+        self.tokenizer = tokenizer  # body.pose_tokenizer.PoseTokenizer
 
     def __call__(
         self, pred: dict[str, Tensor], batch: dict[str, Tensor]
@@ -252,6 +277,15 @@ class FusionLoss:
             parts["pose_prior"] = _masked_mean(
                 energy, ~batch["has_smpl"].bool()
             )
+        if self.tokenizer is not None and self.w.token_prior > 0:
+            parts["token_prior"] = _masked_mean(
+                token_manifold_distance(
+                    self.tokenizer, as_rotmats(pred["body_pose"], 23)
+                ),
+                ~batch["has_smpl"].bool(),
+            )
+        if "token_commit" in pred:
+            parts["token_commit"] = pred["token_commit"]
         total = torch.zeros(
             (), dtype=pred["betas"].dtype, device=pred["betas"].device
         )
