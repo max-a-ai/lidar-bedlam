@@ -278,7 +278,7 @@ table.sched td.b{font-weight:600;white-space:nowrap}
   </div>
   <div class="queue" id="queue"></div>
 </header>
-<div class="legend"><span><i class="sw" style="background:var(--g-bg)"></i>best</span><span><i class="sw" style="background:var(--y-bg)"></i>second</span><span><i class="sw" style="background:var(--r-bg)"></i>third</span><span><i class="sw" style="background:var(--b-bg)"></i>beats every pipeline</span><span><i class="sw" style="background:var(--grey-bg)"></i>to retrain</span><span>· <span class="tag yes">✓ v2</span>pseudo-GT mesh on Waymo, <span class="tag no">✗ kp</span>keypoints only · tap a row for every metric and its validation curves · tap a column to sort</span></div>
+<div class="legend"><span><i class="sw" style="background:var(--g-bg)"></i>best</span><span><i class="sw" style="background:var(--y-bg)"></i>second</span><span><i class="sw" style="background:var(--r-bg)"></i>third</span><span><i class="sw" style="background:var(--b-bg)"></i>beats every pipeline</span><span><i class="sw" style="background:var(--grey-bg)"></i>to retrain</span><span>· <span class="tag yes">✓ v2</span>pseudo-GT mesh on Waymo (v3 = refit with hip-centre term and joint offsets), <span class="tag no">✗ kp</span>keypoints only · tap a row for every metric and its validation curves · tap a column to sort</span></div>
 <div id="groups"></div>
 <details class="grp" id="sched"><summary>Retraining schedule<span class="n" id="schedN"></span></summary><div class="wrap"><table class="sched"><tbody id="schedBody"></tbody></table></div></details>
 </main>

@@ -197,6 +197,7 @@ GROUPS: list[Group] = [
             ("box head + gate none (plain sum)", ["m-gate-none-000"]),
             ("box head + LiDAR chamfer term", ["m-chamfer-000"]),
             ("box head + pose prior 0.05", ["m-prior-000"]),
+            ("box head, pseudo-GT v3 (root term, joint offsets)", ["m-boxhead-v3-000"]),
             ("box head, first test (t-short-boxhead)", ["t-short-boxhead-000"]),
             (MAIN + MAIN_NOTE, MAIN_RUN),
         ],
@@ -362,6 +363,7 @@ class Row:
 
 # Waymo shard directory -> pseudo-GT label tag ("" = keypoints only)
 WAYMO_LABEL_DIRS = {
+    "v1_pseudo3": "v3",
     "v1_pseudo2": "v2",
     "v1_pseudo": "v1",
     "v1_lidarhmr": "lhmr",
@@ -862,7 +864,7 @@ def build(
 <span class="chip b">beats every compared pipeline (below the top three)</span>
 <span>· lower is better except mAP · shaded rows are our runs · the published pipelines are static</span>
 <span class="chip grey">grey</span><span>to be retrained (numbers kept, reason in the last column); grey rows are not ranked</span>
-<span>· first column: Waymo label source of the training, &#10003; (v2 | v1 | lhmr | pedgen) = pseudo-GT SMPL mesh, &#10007; = the 3D and 2D keypoints only</span></div></section>
+<span>· first column: Waymo label source of the training, &#10003; (v2 | v1 | lhmr | pedgen) = pseudo-GT SMPL mesh (v3 = v2 refit with the hip-centre term and joint offsets), &#10007; = the 3D and 2D keypoints only</span></div></section>
 {body}
 <section class="notes">
 <p><b>The 3D box bug: nearly every row below is superseded.</b> Until

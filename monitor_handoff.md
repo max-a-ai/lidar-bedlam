@@ -4,11 +4,7 @@
 
 ## Currently running (regenerated every hourly tick)
 
-| run | step | of target | progress | time left | waymo MPJPE | sloper MPJPE | 3dpw MPJPE |
-|---|---|---|---|---|---|---|---|
-| `lidar-bedlam` | – | – | queued | – | – | – | – |
-
-Arrows compare the latest evaluation with the previous one: `⇘` improving by more than 3 %, `↘` improving by 0.5–3 %, `→` flat within ±0.5 %, `↗` worsening by 0.5–3 %, `⇗` worsening by more than 3 %. Lower MPJPE is better, so a down arrow is a run that is still learning.
+_Nothing in the queue._
 
 <!-- RUNNING:END -->
 
@@ -42,7 +38,7 @@ finished and the queue is empty).
 `/hnvme/workspace/v103fe17-lidar-bedlam`, outputs in `outputs/<run>-000/`
 (metrics.jsonl, val_*.json, DONE marker), Slurm logs `outputs/slurm-<run>-*.out`.
 
-**The queue is empty as of 2026-09-18.** The live picture is the "Currently
+**All six m-series mains and both t-short tests finished on 2026-09-22; m-boxhead-kp (keypoints only) won Waymo at 60.1 mm.** The live picture is the "Currently
 running" table at the top of this file; this section records what each run
 is for and what to do when it finishes.
 
@@ -53,6 +49,7 @@ is for and what to do when it finishes.
 | t-short-simlidar-000 | 9k-step hand test, Waymo returns simulated on the pseudo-GT mesh | nothing (val plots only) |
 | b-ratio-90/80/70/60-001, b-ratio-50-000 | ablation 8 rerun under the box fix (`8df62e5`: box size term dropped on Waymo rows); 50/50 is new (jobs 874734-874738) | full-set eval |
 | m-boxhead / m-nobox / m-boxhead-kp / m-gate-none / m-chamfer / m-prior (-000) | jobs 880923-880928; the six 15k mains under the box fix on one split (configs/m_*.yaml); resumable with `RUN_NAME=<run>` and `EXTRA_SET="optim.max_steps=N"`; the board has a group for them | nothing (val plots only); report Waymo MPJPE, transl, mAP |
+| m-boxhead-v3-000 | run 7: box head on pseudo-GT v3 labels (`real/v1_pseudo3`, fitter with hip-centre term + joint offsets); same split as the six mains | nothing (val plots only); compare with m-boxhead-000 and m-boxhead-kp-000 |
 | t-short-boxhead-000 | 15k-step test of the padded box head (`d473c55`): Waymo box loss trains a residual head on the detached mesh box; main mixture 75 % BEDLAM + all real; watch Waymo MPJPE, transl and mAP together | nothing (val plots only); report Waymo wrist bend, transl, mAP |
 | t-short-nobox-000 | 9k-step hand test, t_short_real recipe with `loss.box3d=0` (Waymo box labels are padded 0.9 x 1.0 m, the mesh box is 0.6 x 0.6 m; suspected cause of the bent hands) | nothing (val plots only); report Waymo wrist bend |
 
@@ -130,30 +127,36 @@ layout described under "What a tick reports".
 
 ## What a tick reports (changed 2026-09-21)
 
-Five parts, in this order, and nothing else. The `tick-it` skill
+Three parts, in this order, and nothing else. The `tick-it` skill
 (`~/.claude/skills/tick-it/SKILL.md`) is the general form of this.
 
-1. **The clock headline**: `## 13:00`, the full hour, alone on the line.
-   Not the minute the cron happened to fire.
-2. **The raw queue, no words attached**: a fenced block holding the
-   verbatim output of Helma's `sq` alias (`squeue -u $USER`), exactly as it
-   came back. No added column, no filtered row, no prose inside the block.
-   An empty queue means the header line on its own. `ssh helma sq` fails
-   (`command not found`) because `.bash_aliases` is not read by a
-   non-interactive shell -- send `squeue -u $USER` instead. Job names are
-   all `lidar-bedlam`; the run-name mapping belongs in the interpretation,
-   not inside the block.
-3. **Sub-headings: what is monitored.** One line each:
-   - repository: `max-a-ai/lidar-bedlam`, local
-     `/home/max/Documents/lidar-bedlam`, cluster
-     `/hnvme/workspace/v103fe17-lidar-bedlam`
-   - wandb project: `lidar-bedlam` (offline mirror; compute nodes have no
-     internet, the login-node loop pushes `metrics.jsonl`)
-   - jobs: Slurm on Helma, partition `h100`, account `v103fe17`
-4. **The link** to the scoreboard artifact, on its own line.
-5. **The interpretation**: what changed since the last tick, what finished,
-   what failed, what you submitted, what it means. Deltas, not absolutes
-   (`14 -> 10 pending`). One line if nothing changed.
+**1. Labelled markdown rows, then the queue.** Plain rows, not a code
+block, with the links live so they open from the chat:
+
+    **Tick:** 13:00
+
+    **Online Repo:** https://github.com/max-a-ai/lidar-bedlam
+    **Local WS:** ~/Documents/lidar-bedlam
+    **Cluster (helma):** `lidar-bedlam` -> /hnvme/workspace/v103fe17-lidar-bedlam
+    **wandb:** https://wandb.ai/erik_hm/lidar-bedlam
+    **Cluster Queue:**
+
+Straight after the `Cluster Queue:` row, the output of `squeue -u $USER`
+in a fenced block, verbatim: no added column, no filtered row, no prose
+inside the block; an empty queue is the header line alone. `ssh helma sq`
+fails (`command not found`) because `.bash_aliases` is not read by a
+non-interactive shell -- send `squeue -u $USER` instead. Job names are all
+`lidar-bedlam`; the run-name mapping belongs in the interpretation, not
+inside the block.
+
+The clock row is the full hour, not the minute the cron fired.
+
+**2. The scoreboard**, as a clickable link on its own row:
+`**Scoreboard:** [LiDAR-BEDLAM Scoreboard](https://claude.ai/artifact/WAL7pLwJJYqjs4KKvUBtnK)`
+
+**3. The interpretation**: what changed since the last tick, what finished,
+what failed, what you submitted, what it means. Deltas, not absolutes
+(`14 -> 10 pending`). One line if nothing changed.
 
 ## Hourly routine (from the repo root /home/max/Documents/lidar-bedlam)
 
