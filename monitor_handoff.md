@@ -4,7 +4,11 @@
 
 ## Currently running (regenerated every hourly tick)
 
-_Nothing in the queue._
+| run | step | of target | progress | time left | waymo MPJPE | sloper MPJPE | 3dpw MPJPE |
+|---|---|---|---|---|---|---|---|
+| `m-boxhead-v3-000` | – | – | starting | – | – | – | – |
+
+Arrows compare the latest evaluation with the previous one: `⇘` improving by more than 3 %, `↘` improving by 0.5–3 %, `→` flat within ±0.5 %, `↗` worsening by 0.5–3 %, `⇗` worsening by more than 3 %. Lower MPJPE is better, so a down arrow is a run that is still learning.
 
 <!-- RUNNING:END -->
 
@@ -49,8 +53,8 @@ is for and what to do when it finishes.
 | t-short-simlidar-000 | 9k-step hand test, Waymo returns simulated on the pseudo-GT mesh | nothing (val plots only) |
 | b-ratio-90/80/70/60-001, b-ratio-50-000 | ablation 8 rerun under the box fix (`8df62e5`: box size term dropped on Waymo rows); 50/50 is new (jobs 874734-874738) | full-set eval |
 | m-boxhead / m-nobox / m-boxhead-kp / m-gate-none / m-chamfer / m-prior (-000) | jobs 880923-880928; the six 15k mains under the box fix on one split (configs/m_*.yaml); resumable with `RUN_NAME=<run>` and `EXTRA_SET="optim.max_steps=N"`; the board has a group for them | nothing (val plots only); report Waymo MPJPE, transl, mAP |
-| m-boxhead-v3-000 | run 7: box head on pseudo-GT v3 labels (`real/v1_pseudo3`, fitter with hip-centre term + joint offsets); same split as the six mains | nothing (val plots only); compare with m-boxhead-000 and m-boxhead-kp-000 |
-| d-token-prior-kp / d-token-prior-v3 / d-token-head-kp / d-token-head-v3 (-000) | debug runs: token-manifold prior (option 1) and token pose head (option 2), each on keypoints-only and on pseudo-GT v3; two chained jobs (CONFIGS= in train.sbatch), board group "Debug" | nothing (val plots only); report Waymo MPJPE, transl, mAP and hands |
+| m-boxhead-v3-000 | job 883008, running since 2026-09-22; run 7: box head on pseudo-GT v3 labels (`real/v1_pseudo3`, fitter with hip-centre term + joint offsets); same split as the six mains | nothing (val plots only); compare with m-boxhead-000 and m-boxhead-kp-000 |
+| d-token-prior-kp / d-token-prior-v3 / d-token-head-kp / d-token-head-v3 (-000) | jobs 883044 (prior chain) and 883045 (head chain), submitted 2026-09-22; debug runs: token-manifold prior (option 1) and token pose head (option 2), each on keypoints-only and on pseudo-GT v3; two chained jobs (CONFIGS= in train.sbatch), board group "Debug" | nothing (val plots only); report Waymo MPJPE, transl, mAP and hands |
 | t-short-boxhead-000 | 15k-step test of the padded box head (`d473c55`): Waymo box loss trains a residual head on the detached mesh box; main mixture 75 % BEDLAM + all real; watch Waymo MPJPE, transl and mAP together | nothing (val plots only); report Waymo wrist bend, transl, mAP |
 | t-short-nobox-000 | 9k-step hand test, t_short_real recipe with `loss.box3d=0` (Waymo box labels are padded 0.9 x 1.0 m, the mesh box is 0.6 x 0.6 m; suspected cause of the bent hands) | nothing (val plots only); report Waymo wrist bend |
 
