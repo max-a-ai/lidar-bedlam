@@ -1,16 +1,19 @@
-"""Gallery of a trained checkpoint on a 3D-box dataset (nuScenes by default).
+"""Gallery of a trained checkpoint on a 3D-box dataset (nuScenes or TUMTraf).
 
 Picks pedestrians spread over the source, runs the model once on the
-batch, and draws one row per sample: the rectified crop with the predicted
-mesh wireframe projected onto it, and the mesh among the LiDAR returns of
-the labelled box in 3D. Box datasets carry no SMPL or keypoint labels, so
-the figure is qualitative; the title carries the return count and depth.
+batch, and draws one row per sample: the plain rectified crop, the crop
+with the predicted mesh wireframe projected onto it, and the mesh among
+the LiDAR returns of the labelled box in 3D. Box datasets carry no SMPL or
+keypoint labels, so the figure is qualitative; the title carries the
+return count and depth.
 
     uv run python lidar_bedlam/scripts/box_dataset_gallery.py \\
         --out outputs/gallery/nuscenes_mini.png --n 6
     uv run python lidar_bedlam/scripts/box_dataset_gallery.py \\
         --checkpoint outputs/helma/ckpt/m-boxhead-000/last.pt \\
         --config configs/m_boxhead.yaml --out outputs/gallery/boxhead.png
+    uv run python lidar_bedlam/scripts/box_dataset_gallery.py \\
+        --dataset tumtraf --out outputs/gallery/tumtraf_r02_s01.png
 """
 
 from __future__ import annotations
@@ -46,7 +49,7 @@ def draw(
     batch = batch_of(source, indices)
     pred = predictor(batch)
     verts_all = pred["vertices"].float().cpu().numpy()
-    fig = plt.figure(figsize=(8.4, 3.6 * len(indices)))
+    fig = plt.figure(figsize=(11.4, 3.6 * len(indices)))
     for row, i in enumerate(indices):
         verts = verts_all[row]
         img = (denormalise(batch["image"][row]) * 255).astype(np.uint8)
@@ -54,7 +57,12 @@ def draw(
         valid = batch["points_valid"][row].numpy().astype(bool)
         pts = batch["points"][row].numpy()[valid]
         label = getattr(source, "category", lambda _i: source.name)(i)
-        ax = fig.add_subplot(len(indices), 2, 2 * row + 1)
+        ax0 = fig.add_subplot(len(indices), 3, 3 * row + 1)
+        ax0.imshow(img)
+        ax0.set_xticks([])
+        ax0.set_yticks([])
+        ax0.set_title(f"{source.name} {label} #{i}", fontsize=8)
+        ax = fig.add_subplot(len(indices), 3, 3 * row + 2)
         ax.imshow(img)
         eval_vis._wire(ax, eval_vis._project(k, verts), faces, "red")
         ax.set_xlim(0, img.shape[1])
@@ -62,11 +70,10 @@ def draw(
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(
-            f"{source.name} {label} #{i} | {len(pts)} returns | "
-            f"depth {float(verts[:, 2].mean()):.1f} m",
+            f"{len(pts)} returns | depth {float(verts[:, 2].mean()):.1f} m",
             fontsize=8,
         )
-        ax3 = fig.add_subplot(len(indices), 2, 2 * row + 2, projection="3d")
+        ax3 = fig.add_subplot(len(indices), 3, 3 * row + 3, projection="3d")
         if len(pts):
             ax3.scatter(pts[:, 0], pts[:, 2], -pts[:, 1], s=1.5, c="0.45")
         sub = verts[::4]
@@ -95,6 +102,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n", type=int, default=6, help="samples, spread evenly")
     ap.add_argument("--checkpoint", type=Path, default=NOBOX_CHECKPOINT)
     ap.add_argument("--config", type=Path, default=NOBOX_CONFIG)
+    ap.add_argument(
+        "--dataset", choices=("nuscenes", "tumtraf"), default="nuscenes"
+    )
     ap.add_argument("--version", default="v1.0-mini")
     ap.add_argument(
         "--categories",
@@ -105,17 +115,26 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--min-box-height-px", type=int, default=64)
     args = ap.parse_args(argv)
 
-    from lidar_bedlam.data.nuscenes_boxes import (
-        NuScenesSource,
-        nuscenes_scenes,
-    )
+    source: Any
+    if args.dataset == "tumtraf":
+        from lidar_bedlam.data.tumtraf import TumTrafSource
 
-    source = NuScenesSource(
-        nuscenes_scenes(version=args.version),
-        categories=tuple(args.categories.split(",")),
-        min_points=args.min_points,
-        min_box_height_px=args.min_box_height_px,
-    )
+        source = TumTrafSource(
+            min_points=args.min_points,
+            min_box_height_px=args.min_box_height_px,
+        )
+    else:
+        from lidar_bedlam.data.nuscenes_boxes import (
+            NuScenesSource,
+            nuscenes_scenes,
+        )
+
+        source = NuScenesSource(
+            nuscenes_scenes(version=args.version),
+            categories=tuple(args.categories.split(",")),
+            min_points=args.min_points,
+            min_box_height_px=args.min_box_height_px,
+        )
     n = min(args.n, len(source))
     if n == 0:
         sys.stdout.write("no samples pass the filters\n")
