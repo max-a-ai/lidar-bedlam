@@ -4,11 +4,7 @@
 
 ## Currently running (regenerated every hourly tick)
 
-| run | step | of target | progress | time left | waymo MPJPE | sloper MPJPE | 3dpw MPJPE |
-|---|---|---|---|---|---|---|---|
-| `m-boxhead-v3-000` | – | – | starting | – | – | – | – |
-
-Arrows compare the latest evaluation with the previous one: `⇘` improving by more than 3 %, `↘` improving by 0.5–3 %, `→` flat within ±0.5 %, `↗` worsening by 0.5–3 %, `⇗` worsening by more than 3 %. Lower MPJPE is better, so a down arrow is a run that is still learning.
+_Nothing in the queue._
 
 <!-- RUNNING:END -->
 
@@ -66,6 +62,20 @@ starts until the Waymo hand problem is settled.
 
 Do not launch, restart or cancel any training without the user's word; the
 schedule of what comes next is `.docs/retrain_schedule.md`.
+
+## wandb mirror: a run without images on wandb
+The login-node mirror hit NFS "Stale file handle" errors on 2026-09-22 and
+uploaded `m-boxhead-v3-000` without its `image/val_plot_*` rows (the PNGs
+were there, the history rows were not). Fix used: delete the wandb run,
+pull `outputs/<run>/{metrics.jsonl,config.json,DONE,vis/}` to
+`outputs/helma/runs/<run>/`, drop its `.mirror_offset`/`.mirror_id`, and
+re-mirror locally from a scratch root that symlinks only that run:
+
+    WANDB_MIRROR_DIR=$S/remirror/wandb .venv/bin/python lidar_bedlam/scripts/wandb_mirror.py --root $S/remirror --once
+
+The re-mirrored run gets a `-m<digits>` id suffix; the name stays. Check
+with the wandb API that `scan_history(keys=["image/val_plot_waymo_val"])`
+returns one row per evaluation before telling the user it is fixed.
 
 ## Monitor 1: b- and t-series validation lines (persistent, polls every 10 min)
 Create with the Monitor tool: persistent=true, timeout_ms=3600000,
@@ -295,6 +305,13 @@ nodes have no internet, and a changed lock makes `uv run` try to install.
 New shard directories go to `resources/data/generated/<dir>` on Helma (npz
 only) with the `.tokens.npy` sidecars hard-linked from `real/v1`; add the
 directory to `STAGE_DIRS` when submitting.
+
+## Not monitoring: BEDLAM 1.0 vs 2.0 notebook
+`notebooks/bedlam_v1_vs_v2.ipynb` (builder
+`lidar_bedlam/scripts/build_bedlam_compare_notebook.py`) compares the two
+releases from the NAS copies; it caches BEDLAM 2.0 camera CSVs, overview
+sheets and a few frames under `outputs/bedlam2_cache` (gitignored). It has
+no cluster side and nothing for the hourly tick.
 
 ## Standing rules (hooks enforce them)
 - Claude pushes only after the user's explicit go in the chat, never on its
