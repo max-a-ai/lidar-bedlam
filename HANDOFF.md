@@ -42,7 +42,7 @@ improves in-the-wild SMPL estimation including 3D placement. Eurographics
 | Build backend | **hatchling** | stable, well-documented |
 | Project layout | **flat**: `lidar-bedlam/lidar_bedlam/` with `scripts/` and `slurm/` inside the package; `resources/` (data, pretrained checkpoints) and `outputs/` gitignored | top level stays minimal; Python import names cannot contain `-` |
 | Package layout | fixed: `data/ models/ losses/ metrics/ train/ utils/` + domain packages | see "Package structure" below |
-| Linter / formatter | **Ruff** (79 cols), excludes `third_party/`, `notebooks/` | |
+| Linter / formatter | **Ruff** (79 cols), excludes `third_party/` and `*.ipynb`; `notebooks/ipynb-assets/` is linted and type-checked | |
 | Type checker | **mypy** (strict) on `lidar_bedlam/ tests/ lidar_bedlam/scripts/` | |
 | Entry points | `lidar_bedlam/scripts/lidar-bedlam-main.py` (train), `lidar_bedlam/scripts/lidar-bedlam-eval.py` | named after the repo; **the wandb hook matches `main.py` only, extend its regex to `*-main.py`** |
 | Synthetic source | **BEDLAM v1 only**, 12 groups | full 32-bit depth per frame; BEDLAM 2.0 (29 TB) skipped |
@@ -74,7 +74,7 @@ lidar-bedlam/
 │   ├── slurm/               # cluster jobs: train.sbatch (chain job), wandb_mirror.sh
 │   └── __init__.py  __main__.py  app.py  py.typed
 ├── configs/                 # one yaml per experiment (main, real/synth only, ablations, smoke)
-├── notebooks/               # capabilities.ipynb: quick visual checks of what the repo can do
+├── notebooks/               # NNN-slug.ipynb, one question each; cell bodies in ipynb-assets/; README.md generated
 ├── tests/                   # pytest, one file per module group
 ├── third_party/             # baseline repos as git submodules
 ├── .docs/                   # the record (hidden: needs `tree -a`): progress.md, notes, figures/, latex-draft/, runs/
@@ -135,8 +135,11 @@ browsers; enable "Show hidden files" to see it.
   once per login session (`.docs/cluster.md`).
 - Submit from the repo root on Helma:
   `sbatch --partition=h100 --job-name=<name> --export=ALL,CONFIG=configs/<x>.yaml lidar_bedlam/slurm/train.sbatch`.
-- The notebook is generated code: edit `lidar_bedlam/scripts/build_debug_notebook.py`,
-  rebuild, verify with `lidar_bedlam/scripts/verify_notebook.py`.
+- Notebooks follow the numbered convention: `notebooks/NNN-slug.ipynb` opens with
+  `# <question>`, `## Checks` and `**Verdict:**`; every code cell is parameters plus one
+  call into `notebooks/ipynb-assets/nbNNN_slug.py` (linted, mypy strict). Execute with
+  `lidar_bedlam/scripts/verify_notebook.py --notebook <file>`, regenerate the index with
+  `lidar_bedlam/scripts/nb_index.py` (`--check` audits).
 - The paper must stay anonymous: no rig names (FUSE-Bike, AVA), no group
   or first-person naming of own datasets.
 

@@ -13,7 +13,7 @@ uv run python -m lidar_bedlam.body.convert_smpl \
     resources/data/body_models/smpl/SMPL_NEUTRAL.pkl \
     resources/data/generated/body_models/smpl/SMPL_NEUTRAL.pkl
 uv run pytest
-uv run jupyter lab notebooks/capabilities.ipynb   # quick visual checks on real data
+uv run jupyter lab notebooks/000-capabilities.ipynb   # entry notebook; index in notebooks/README.md
 ```
 
 Training (local smoke; the cluster job is `lidar_bedlam/slurm/train.sbatch`):

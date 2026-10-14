@@ -253,7 +253,7 @@ forced to float32 under autocast. Smoke run: 40 steps on the 4090. 5 tests
 ViT with TokenHMR ViT-H weights (0 missing keys), point tokenizer, gated
 dual cross-attention decoder with routing priors, SMPL heads (6D
 rotations, translation via crop intrinsics), differentiable SMPL, 3D box;
-`notebooks/capabilities.ipynb`.
+`notebooks/capabilities.ipynb` (now `notebooks/000-capabilities.ipynb`).
 
 ## Experiments
 

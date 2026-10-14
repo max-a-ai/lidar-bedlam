@@ -307,8 +307,8 @@ only) with the `.tokens.npy` sidecars hard-linked from `real/v1`; add the
 directory to `STAGE_DIRS` when submitting.
 
 ## Not monitoring: BEDLAM 1.0 vs 2.0 notebook
-`notebooks/bedlam_v1_vs_v2.ipynb` (builder
-`lidar_bedlam/scripts/build_bedlam_compare_notebook.py`) compares the two
+`notebooks/003-bedlam-v1-vs-v2.ipynb` (cell bodies in
+`notebooks/ipynb-assets/nb003_bedlam_v1_vs_v2.py`) compares the two
 releases from the NAS copies; it caches BEDLAM 2.0 camera CSVs, overview
 sheets and a few frames under `outputs/bedlam2_cache` (gitignored). It has
 no cluster side and nothing for the hourly tick.
