@@ -115,8 +115,8 @@ def point_to_surface_distance(
 
 def draw_points(
     ax: Any,
-    uv: NDArray[np.floating],
-    values: NDArray[np.floating] | None = None,
+    uv: NDArray[np.number[Any]],
+    values: NDArray[np.number[Any]] | None = None,
     size: float = 4.0,
     cmap: str = "turbo",
     label: str | None = None,

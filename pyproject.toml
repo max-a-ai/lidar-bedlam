@@ -64,7 +64,7 @@ explicit = true
 line-length = 79
 target-version = "py312"
 src = ["."]
-extend-exclude = ["third_party", "notebooks", "resources", "outputs"]
+extend-exclude = ["third_party", "notebooks/*.ipynb", "resources", "outputs"]
 
 [tool.ruff.lint]
 select = [
@@ -80,11 +80,6 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# notebook cell sources embedded as strings are not subject to the 79-col rule
-"lidar_bedlam/scripts/build_debug_notebook.py" = ["E501"]
-"lidar_bedlam/scripts/build_pseudo_gt_notebook.py" = ["E501"]
-"lidar_bedlam/scripts/build_hand_probe_notebook.py" = ["E501"]
-"lidar_bedlam/scripts/build_bedlam_compare_notebook.py" = ["E501"]
 # the page template (CSS, prose) is embedded as strings
 "lidar_bedlam/scripts/build_scoreboard.py" = ["E501"]
 "lidar_bedlam/scripts/pocket_board.py" = ["E501"]
@@ -95,7 +90,7 @@ quote-style = "double"
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["lidar_bedlam", "tests"]
+files = ["lidar_bedlam", "tests", "notebooks/ipynb-assets"]
 warn_unused_ignores = true
 warn_redundant_casts = true
 
@@ -107,5 +102,6 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["build_debug_notebook", "build_pseudo_gt_notebook", "verify_notebook", "lidar_bedlam.scripts.build_debug_notebook", "lidar_bedlam.scripts.build_pseudo_gt_notebook", "lidar_bedlam.scripts.verify_notebook", "build_hand_probe_notebook", "lidar_bedlam.scripts.build_hand_probe_notebook", "build_bedlam_compare_notebook", "lidar_bedlam.scripts.build_bedlam_compare_notebook", "build_inference_notebooks", "lidar_bedlam.scripts.build_inference_notebooks", "build_cardata_notebook", "lidar_bedlam.scripts.build_cardata_notebook"]
+# notebook cell bodies and builders call the untyped IPython display API
+module = ["verify_notebook", "lidar_bedlam.scripts.verify_notebook", "build_inference_notebooks", "lidar_bedlam.scripts.build_inference_notebooks", "build_cardata_notebook", "lidar_bedlam.scripts.build_cardata_notebook", "nb000_capabilities", "nb001_waymo_pseudo_gt", "nb002_hand_pose_probe", "nb003_bedlam_v1_vs_v2"]
 disallow_untyped_calls = false

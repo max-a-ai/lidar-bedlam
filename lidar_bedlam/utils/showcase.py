@@ -118,6 +118,8 @@ class ValIndex:
         cfg = load_config(config)
         src = next(s for s in cfg.data.val if s.name == source)
         self.shards = [Shard(p) for p in source_shards(src)]
+        # the scan variant the config trains on; 3DPW shards have no "real"
+        self.variant = src.variant
         self.where: dict[str, tuple[Shard, int]] = {}
         for sh in self.shards:
             for i, k in enumerate(sh.array("key")):
@@ -125,6 +127,11 @@ class ValIndex:
 
     def __len__(self) -> int:
         return len(self.where)
+
+    def _variant(self, sh: Shard) -> str:
+        if self.variant in sh.variants:
+            return self.variant
+        return sh.variants[0]
 
     def row(self, key: str) -> dict[str, Any]:
         """Image, crop intrinsics, LiDAR returns and labels of one record."""
@@ -134,7 +141,7 @@ class ValIndex:
             "dataset": str(sh.array("dataset")[i]),
             "image": np.asarray(sh.row("image", i)),
             "intrinsics": sh.row("intrinsics", i).astype(np.float64),
-            "points": sh.scan(i, "real").points.astype(np.float64),
+            "points": sh.scan(i, self._variant(sh)).points.astype(np.float64),
             "joints3d": sh.row("joints3d", i).astype(np.float64),
             "joints3d_valid": sh.row("joints3d_valid", i).astype(bool),
             "joint_convention": str(sh.array("joint_convention")[i]),

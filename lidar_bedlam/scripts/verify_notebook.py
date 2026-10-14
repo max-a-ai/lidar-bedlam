@@ -1,15 +1,15 @@
 """Execute a notebook; fail on cell or widget errors.
 
 Widget cells (ipywidgets ``Output``) make nbclient wait for its per-cell
-timeout after the work is done, so the timeout is kept short; every cell's
-real work finishes in well under a minute.
+timeout after the work is done, so the timeout is kept short; a slow cell
+raises its own limit with the cell metadata ``{"timeout": seconds}``.
 
 The executed copy is written next to the source as
 ``<name>.executed.ipynb`` (git-ignored). Usage::
 
     uv run python lidar_bedlam/scripts/verify_notebook.py [--timeout 120]
     uv run python lidar_bedlam/scripts/verify_notebook.py \\
-        --notebook notebooks/waymo_pseudo_gt.ipynb
+        --notebook notebooks/001-waymo-pseudo-gt.ipynb
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from typing import Any
 import nbformat
 from nbclient import NotebookClient
 
-DEFAULT = Path("notebooks/capabilities.ipynb")
+DEFAULT = Path("notebooks/000-capabilities.ipynb")
 
 
 def widget_errors(nb: Any) -> list[str]:
@@ -52,6 +52,8 @@ def main(argv: list[str] | None = None) -> int:
     client = NotebookClient(
         nb,
         timeout=args.timeout,
+        # a cell may raise its own limit with metadata {"timeout": seconds}
+        timeout_func=lambda c: int(c.metadata.get("timeout", args.timeout)),
         kernel_name="python3",
         allow_errors=True,
         resources={"metadata": {"path": str(src.parent)}},
