@@ -22,6 +22,7 @@ import torch
 from torch import Tensor, nn
 
 from lidar_bedlam.body.smpl import NUM_BETAS, NUM_BODY_JOINTS
+from lidar_bedlam.models.bev_pillars import BevTrunk
 from lidar_bedlam.models.point_encoder import PointTokenizer
 from lidar_bedlam.models.rotation import IDENTITY_ROT6D, rot6d_to_matrix
 from lidar_bedlam.models.selective_attention import (
@@ -58,6 +59,14 @@ class ModelConfig:
     # so every body pose lies on the codebook manifold
     pose_head: str = "rot6d"
     tokenizer_path: Path | None = None
+    # "fusion": image tokens + point tokens through the selective decoder;
+    # "bev": a frozen HEAL PointPillars BEV map of the points, the cells
+    # around the person mapped to the group features (models.bev_pillars)
+    trunk: str = "fusion"
+    bev_weights: Path | None = None
+    bev_window: int = 32  # pillar cells (0.4 m) run through the backbone
+    bev_roi: int = 4  # stride-2 cells (0.8 m) read around the person
+    bev_finetune: bool = False
 
 
 class TokenPoseHead(nn.Module):
@@ -236,10 +245,31 @@ class SelectiveFusionModel(nn.Module):
         # learned by the chamfer term (metres)
         self.clothing_offset = nn.Parameter(torch.tensor(0.02))
         self.iou_head = nn.Linear(cfg.dim, 1)
-        self.points = PointTokenizer(
-            cfg.dim, cfg.point_tokens, cfg.point_knn, num_heads=cfg.num_heads
-        )
-        self.decoder = SelectiveDecoder(cfg.dim, cfg.num_heads, cfg.num_layers)
+        self.points: PointTokenizer | None = None
+        self.decoder: SelectiveDecoder | None = None
+        self.bev: BevTrunk | None = None
+        if cfg.trunk == "fusion":
+            self.points = PointTokenizer(
+                cfg.dim,
+                cfg.point_tokens,
+                cfg.point_knn,
+                num_heads=cfg.num_heads,
+            )
+            self.decoder = SelectiveDecoder(
+                cfg.dim, cfg.num_heads, cfg.num_layers
+            )
+        elif cfg.trunk == "bev":
+            self.bev = BevTrunk(
+                cfg.dim,
+                len(JOINT_GROUPS),
+                cfg.bev_weights,
+                window=cfg.bev_window,
+                roi=cfg.bev_roi,
+                finetune=cfg.bev_finetune,
+            )
+        else:
+            msg = f"unknown trunk {cfg.trunk!r}"
+            raise ValueError(msg)
         self.heads = SmplHeads(cfg.dim, cfg.init_depth_m)
         self.tokenizer: nn.Module | None = None
         self.token_head: TokenPoseHead | None = None
@@ -301,9 +331,15 @@ class SelectiveFusionModel(nn.Module):
 
     def forward(self, batch: dict[str, Tensor]) -> dict[str, Tensor]:
         """Predict from ``image`` / ``tokens``, ``points``, ``intrinsics``."""
-        img = self.image_tokens(batch)
-        pts, _ = self.points(batch["points"])
-        feats, gates = self.decoder(img, pts)
+        if self.bev is not None:
+            feats = self.bev(batch["points"], batch.get("points_valid"))
+            # no modality gates in the BEV trunk: one fused input
+            gates = feats.new_zeros(1, feats.shape[0], feats.shape[1])
+        else:
+            assert self.points is not None and self.decoder is not None
+            img = self.image_tokens(batch)
+            pts, _ = self.points(batch["points"])
+            feats, gates = self.decoder(img, pts)
         rots, betas, raw_t, offset = self.heads(feats)
         commit: Tensor | None = None
         if self.token_head is not None and self.tokenizer is not None:

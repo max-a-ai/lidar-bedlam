@@ -1,0 +1,46 @@
+# Debug: BEV trunk dummy. The person's LiDAR returns go through HEAL's frozen PointPillars (OPV2V LiDAR checkpoint) to a 256-channel BEV map at 0.8 m; the 4x4 cells around the person are mapped to the joint-group features and the usual SMPL heads (rot6d, point-anchored translation, padded box). No image. Same split and v3 labels as the mains, short 5k schedule.
+experiment: d-bev-dummy
+seed: 0
+body_models: ${DATA_ROOT}/body_models
+checkpoint_root: outputs
+data:
+  train:
+    - {name: waymo, dirs: ["${DATA_ROOT}/real/v1_pseudo3"], pattern: "waymo_train_*.npz", weight: 0.0381}
+    - {name: sloper4d, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_train_*.npz", weight: 0.1748}
+    - {name: synth, dirs: ["${DATA_ROOT}/synth/v1", "${DATA_ROOT}/synth/v1_groups02-11", "${DATA_ROOT}/synth/v1_group12"], pattern: "*.npz", weight: 0.75, variant: random_main}
+    - {name: threedpw, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_train_*.npz", weight: 0.0371, variant: random_main}
+  val:
+    - {name: waymo_val, dirs: ["${DATA_ROOT}/real/v1"], pattern: "waymo_val_*.npz"}
+    - {name: sloper4d_test, dirs: ["${DATA_ROOT}/real/v1"], pattern: "sloper4d_test_*.npz"}
+    - {name: threedpw_test, dirs: ["${DATA_ROOT}/meshlidar/v1"], pattern: "threedpw_test_*.npz"}
+  n_points: 1024
+  use_augmented_image: 0.5
+  point_augment: true
+  require_tokens: false
+  num_workers: 16
+  val_max_samples: 10000
+model:
+  dim: 512
+  num_heads: 8
+  num_layers: 4
+  point_tokens: 128
+  point_knn: 16
+  init_depth_m: 8.0
+  use_backbone: false
+  gate_mode: learned
+  pose_head: rot6d
+  trunk: bev
+  bev_window: 32
+  bev_roi: 4
+  bev_finetune: false
+  transl_anchor: points
+optim:
+  batch_size: 1024
+  lr: 3.0e-4
+  weight_decay: 0.05
+  warmup_steps: 500
+  max_steps: 5000
+  grad_clip: 1.0
+  amp: true
+  eval_every_steps: 1000
+  checkpoint_every_steps: 1000

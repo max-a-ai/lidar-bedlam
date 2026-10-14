@@ -55,6 +55,12 @@ class ModelSection:
     # rotations come from the frozen TokenHMR tokenizer's decoder, fed by a
     # query head that predicts its latent (models.fusion.TokenPoseHead)
     pose_head: str = "rot6d"
+    # fusion: image + point tokens through the selective decoder; bev: a
+    # frozen HEAL PointPillars BEV map of the points (models.bev_pillars)
+    trunk: str = "fusion"
+    bev_window: int = 32
+    bev_roi: int = 4
+    bev_finetune: bool = False
 
 
 @dataclass

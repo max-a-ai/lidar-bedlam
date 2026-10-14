@@ -216,6 +216,7 @@ GROUPS: list[Group] = [
             ("token prior, pseudo-GT v3", ["d-token-prior-v3-000"]),
             ("token head, kp", ["d-token-head-kp-000"]),
             ("token head, pseudo-GT v3", ["d-token-head-v3-000"]),
+            ("BEV trunk dummy (HEAL pillars, 5k)", ["d-bev-dummy-000"]),
             ("box head, kp (reference)", ["m-boxhead-kp-000"]),
             ("box head, pseudo-GT v2 (reference)", ["m-boxhead-000"]),
         ],

@@ -84,6 +84,7 @@ def build_dataset(
 
 
 TOKENIZER_FILE = "tokenhmr_tokenizer.pt"  # next to the body models
+BEV_WEIGHTS_FILE = "heal_pointpillars.pth"  # HEAL OPV2V LiDAR checkpoint
 
 
 def build_model(cfg: TrainConfig) -> SelectiveFusionModel:
@@ -103,11 +104,16 @@ def build_model(cfg: TrainConfig) -> SelectiveFusionModel:
             use_backbone=m.use_backbone,
             pose_head=m.pose_head,
             tokenizer_path=Path(cfg.body_models) / TOKENIZER_FILE,
+            trunk=m.trunk,
+            bev_weights=Path(cfg.body_models) / BEV_WEIGHTS_FILE,
+            bev_window=m.bev_window,
+            bev_roi=m.bev_roi,
+            bev_finetune=m.bev_finetune,
         )  # fmt: skip
     )
-    decoder = model.decoder
-    assert isinstance(decoder, SelectiveDecoder)
-    decoder.set_gate_mode(m.gate_mode)
+    if model.decoder is not None:
+        assert isinstance(model.decoder, SelectiveDecoder)
+        model.decoder.set_gate_mode(m.gate_mode)
     return model
 
 
