@@ -192,6 +192,7 @@ def test_pose_prior_is_zero_at_the_mean_and_masked(tmp_path) -> None:  # type: i
     pred = {"body_pose": off, "betas": torch.zeros(2, 10)}
     batch = {"has_smpl": torch.tensor([False, True])}
     loss = FusionLoss(LossWeights(pose_prior=1.0), prior=prior)
+    assert loss.prior is not None
     energy = loss.prior(as_rotmats(pred["body_pose"], 23))
     from lidar_bedlam.losses.smpl import _masked_mean
 

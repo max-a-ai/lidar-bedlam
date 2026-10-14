@@ -266,6 +266,7 @@ def test_padded_box_trains_head_and_translation_only() -> None:
     tg = [heads.transl_head.weight.grad, heads.offset_head.weight.grad]
     assert any(g is not None and g.abs().sum() > 0 for g in tg)
     for name, head in heads.rot_heads.items():
+        assert isinstance(head, torch.nn.Linear)
         g = head.weight.grad
         assert g is None or g.abs().sum() == 0, name
     g = heads.shape_head.weight.grad
