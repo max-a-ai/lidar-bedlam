@@ -44,6 +44,23 @@ gantt
 
 ## Data
 
+### 2026-10-15 00:50 — BEV trunk dummy from HEAL PointPillars (8c60386)
+First test of "SMPL from BEV features": `models/bev_pillars.py` ports HEAL's
+PointPillars LiDAR branch (pillar VFE, scatter, three-stage BEV backbone,
+shrink conv; OPV2V checkpoint loaded strictly from
+`body_models/heal_pointpillars.pth`, copied from `~/Documents/v2b`) and
+`model.trunk: bev` plugs it into the fusion model in place of the image and
+point tokens: the person's returns are moved to HEAL's LiDAR frame (centroid
+at z = -0.9 m), pillared on the global 0.4 m grid, a 32-cell window is run
+through the frozen backbone, and the 4x4 stride-2 cells around the person
+are mapped to the joint-group features the SMPL heads read (gates are
+zeros). `configs/d_bev_dummy.yaml` (5k steps, batch 1024, v3 labels, main
+split) runs on Helma as d-bev-dummy-000 (job 1022051); a 20-step local smoke
+went through training, eval and checkpoints. Next: BEV features of the
+full sweep (HEAL fused map) instead of per-person pillars, then the
+discretised pose+shape codebook (`~/Documents/codebook`) as the output
+space.
+
 ### 2026-09-15 — 3DPW test split, tokens, LiDAR-HMR pseudo-GT
 `threedpw_test` shards (6,617 records, 16 shards) with ViT-H tokens, on
 Helma, listed as a validation source in all 50 configs. LiDAR-HMR's Waymo
