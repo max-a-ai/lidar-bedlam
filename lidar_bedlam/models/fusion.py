@@ -239,8 +239,10 @@ class SelectiveFusionModel(nn.Module):
             for p in self.backbone.parameters():
                 p.requires_grad_(False)
         self.img_proj = nn.Linear(cfg.vit.embed_dim, cfg.dim)
-        # stands in for the image tokens of LiDAR-only samples
+        # stand in for the image tokens of LiDAR-only samples and for the
+        # point tokens of camera-only samples (train.modality dropout)
         self.no_image = nn.Parameter(torch.zeros(1, 1, cfg.dim))
+        self.no_points = nn.Parameter(torch.zeros(1, 1, cfg.dim))
         # clothing offset of the LiDAR returns outside the body surface,
         # learned by the chamfer term (metres)
         self.clothing_offset = nn.Parameter(torch.tensor(0.02))
@@ -339,6 +341,9 @@ class SelectiveFusionModel(nn.Module):
             assert self.points is not None and self.decoder is not None
             img = self.image_tokens(batch)
             pts, _ = self.points(batch["points"])
+            if "has_points" in batch:
+                keep = batch["has_points"].to(pts.dtype)[:, None, None]
+                pts = keep * pts + (1 - keep) * self.no_points.expand_as(pts)
             feats, gates = self.decoder(img, pts)
         rots, betas, raw_t, offset = self.heads(feats)
         commit: Tensor | None = None

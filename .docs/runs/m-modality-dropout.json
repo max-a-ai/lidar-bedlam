@@ -1,0 +1,26 @@
+{
+  "run": "m-modality-dropout",
+  "expected_run_name": "m-modality-dropout-000",
+  "config": "configs/m_modality_dropout.yaml",
+  "commit": "see git log: 'add: sensor-modality dropout ...'",
+  "purpose": "one model that works with camera + LiDAR, camera only and LiDAR only; per training sample the image or the points are dropped (p = 0.3 each, never both), so the decoder learns the no_image / no_points tokens and the camera-anchored translation fallback",
+  "based_on": "m-boxhead-v3-000 (padded box head, pseudo-GT v3 labels, main split 75 % BEDLAM + all real, 15k steps, batch 2048)",
+  "submit": "cd /hnvme/workspace/v103fe17-lidar-bedlam && git pull --ff-only && sbatch --job-name=m-modality-dropout --export=ALL,CONFIG=configs/m_modality_dropout.yaml lidar_bedlam/slurm/train.sbatch",
+  "prerequisites": [
+    "Helma checkout at origin/main after the push of the dropout commit (git rev-parse HEAD == origin/main)",
+    "no code change on Helma needed; the data staging is the standard STAGE_DIRS set"
+  ],
+  "watch": {
+    "val_sources": [
+      "waymo_val, sloper4d_test, threedpw_test (both sensors)",
+      "waymo_val_img, sloper4d_test_img, threedpw_test_img (image only: points removed)",
+      "waymo_val_pts, sloper4d_test_pts, threedpw_test_pts (points only: image removed)"
+    ],
+    "metrics": "val/<source>/mpjpe, pa_mpjpe, transl_err, map in outputs/m-modality-dropout-000/metrics.jsonl and val_*.json",
+    "reference": "m-boxhead-v3-000: Waymo 60.4 mm, transl 0.074 m, mAP 0.64 (both sensors); v2-abl-image-only / v2-abl-lidar-only are the fixed-gate single-sensor ablations",
+    "success": "both-sensor rows within a few mm of m-boxhead-v3; _pts rows near the lidar-only ablation; _img rows near the image-only ablation; no row diverging (nan / > 300 mm) after step 3000"
+  },
+  "on_done": "nothing automatic; report the nine val rows against the references; the board needs a Debug/Main row for the run (build_scoreboard.py) if it should appear",
+  "eval_cost_note": "nine val sources at 6000 samples each, every 1000 steps; if an eval takes longer than 5 min lower data.val_max_samples via EXTRA_SET",
+  "prepared": "2026-10-16 by the development session (lidar-bedlam); the monitoring session starts it"
+}

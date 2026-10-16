@@ -20,6 +20,9 @@ class SourceConfig:
     weight: float = 1.0  # fraction of each batch (normalised over sources)
     variant: str = "random_main"  # LiDAR scan variant
     max_shards: int = 0  # 0 = all (used by the data-scaling ablation)
+    # validation only: evaluate the records with one sensor removed
+    # (both | image | points, see train.modality)
+    modality: str = "both"
 
 
 @dataclass
@@ -34,6 +37,10 @@ class DataConfig:
     require_tokens: bool = True
     num_workers: int = 8
     val_max_samples: int = 4000
+    # sensor-modality dropout per training sample (train.modality): the
+    # image or the points are removed with these probabilities, never both
+    drop_image_p: float = 0.0
+    drop_points_p: float = 0.0
 
 
 @dataclass

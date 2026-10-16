@@ -43,11 +43,13 @@ from lidar_bedlam.models.fusion import ModelConfig, SelectiveFusionModel
 from lidar_bedlam.models.selective_attention import SelectiveDecoder
 from lidar_bedlam.models.vit import VIT_H
 from lidar_bedlam.train.config import SourceConfig, TrainConfig, to_dict
+from lidar_bedlam.train.modality import drop_modalities, force_modality
 from lidar_bedlam.train.sampler import MixtureBatchSampler, concat
 from lidar_bedlam.utils.eval_vis import eval_figures
 
 TENSOR_KEYS = (
     "image", "tokens", "points", "points_valid", "intrinsics", "has_image",
+    "has_points",
     "has_smpl", "global_orient", "body_pose", "betas", "transl", "joints3d",
     "joints3d_valid", "kp2d", "has_kp2d", "box3d", "has_box3d",
 )  # fmt: skip
@@ -137,6 +139,7 @@ class Trainer:
         self.cfg = cfg
         self.run_dir = run_dir
         self.run_name = run_name
+        self.val_modality: dict[str, str] = {}  # val source -> kept sensor
         self.rank = int(os.environ.get("RANK", "0"))
         self.world = int(os.environ.get("WORLD_SIZE", "1"))
         self.local_rank = int(os.environ.get("LOCAL_RANK", "0"))
@@ -274,6 +277,7 @@ class Trainer:
         """One loader per validation source (rank 0 only evaluates)."""
         out: dict[str, DataLoader[Item]] = {}
         for s in self.cfg.data.val:
+            self.val_modality[s.name] = s.modality
             ds = build_dataset(s, self.cfg, train=False)
             n = min(len(ds), self.cfg.data.val_max_samples)
             subset = torch.utils.data.Subset(ds, list(range(n)))
@@ -348,8 +352,10 @@ class Trainer:
         results: dict[str, MetricSummary] = {}
         for name, loader in loaders.items():
             samples = []
+            modality = self.val_modality.get(name, "both")
             for batch in loader:
                 b = to_device(batch, self.device)
+                b = force_modality(b, modality)
                 pred = self.model(tensors_only(b))
                 samples.extend(sample_metrics(pred, b, self.smpl_eval))
             results[name] = summarize(samples)
@@ -392,6 +398,9 @@ class Trainer:
             if self.stop_requested:
                 break
             b = to_device(batch, self.device)
+            b = drop_modalities(
+                b, cfg.data.drop_image_p, cfg.data.drop_points_p
+            )
             lr = self.lr_at(self.step)
             for g in self.optimizer.param_groups:
                 g["lr"] = lr
