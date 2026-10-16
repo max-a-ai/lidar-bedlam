@@ -86,6 +86,7 @@ def run_model(
         )
         keys: list[str] = []
         verts, transl, orient, betas, gates = [], [], [], [], []
+        body_pose: list[NDArray[np.float64]] = []
         for batch in loader:
             b = to_device(batch, torch.device(device))
             pred = model(tensors_only(b))
@@ -95,6 +96,10 @@ def run_model(
             rot = pred["global_orient"].double().cpu().numpy()
             orient.append(matrix_to_axis_angle(rot.reshape(-1, 3, 3)))
             betas.append(pred["betas"].double().cpu().numpy())
+            bp = pred["body_pose"].double().cpu().numpy()  # (B, 23, 3, 3)
+            body_pose.append(
+                matrix_to_axis_angle(bp.reshape(-1, 3, 3)).reshape(-1, 69)
+            )
             g = pred["gates"].float().cpu().numpy()  # (L, B, G)
             gates.append(np.transpose(g, (1, 0, 2)).astype(np.float16))
         arrays: dict[str, Any] = {
@@ -103,6 +108,7 @@ def run_model(
             "transl": np.concatenate(transl),
             "global_orient": np.concatenate(orient),
             "betas": np.concatenate(betas),
+            "body_pose": np.concatenate(body_pose),
             "gates": np.concatenate(gates),
             "meta/method": np.array("ours"),
             "meta/step": np.array(int(state.get("step", -1))),
